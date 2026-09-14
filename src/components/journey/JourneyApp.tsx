@@ -192,7 +192,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
         <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
-          {JOURNEY_CITY_SEQUENCE.map((item, index) => {
+          {JOURNEY_CITY_SEQUENCE.map((item) => {
             const itemStatus = getCityStatus(state, item.id);
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
             return (
@@ -201,7 +201,6 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
                 <div className="destination-card__overlay" />
                 <div className="destination-card__content">
                   <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
-                  <div className="passport-stamp passport-stamp--small"><span>第 {String(index + 1).padStart(2, '0')} 站</span><b>{item.name}</b></div>
                 </div>
               </section>
             );
@@ -254,7 +253,7 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
   return (
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
-        <h1>我的世界</h1>
+        <h1>我的环球旅程</h1>
         <p>跑过的地方，都会在地球上留下光。</p>
       </header>
       <section className="world-globe-panel">

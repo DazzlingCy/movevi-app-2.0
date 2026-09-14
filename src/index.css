@@ -177,7 +177,7 @@ h1, h2, h3, p { margin-top: 0; }
 .destination-carousel__meta { display: flex; align-items: center; justify-content: space-between; padding: 9px 4px 0; color: #666b75; font-size: 8px; }
 .destination-carousel__meta span:first-child { color: #aeb4ff; font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: .06em; }
 .destination-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 19, 25, .02) 20%, rgba(4, 19, 25, .75) 100%); }
-.destination-card__content { position: absolute; inset: auto 19px 18px; display: flex; align-items: flex-end; justify-content: space-between; z-index: 2; }
+.destination-card__content { position: absolute; inset: auto 19px 18px; display: flex; align-items: flex-end; justify-content: flex-start; z-index: 2; }
 .destination-card__kicker { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.76); }
 .destination-card__kicker svg { width: 13px; }
 .destination-card h2 { margin: 0; font-family: var(--font-display); font-size: 42px; line-height: 1; }
