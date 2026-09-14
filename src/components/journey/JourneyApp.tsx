@@ -198,9 +198,6 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
             return (
               <section className="destination-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
                 <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
-                <div className="city-artwork__contours" aria-hidden="true" />
-                <span className="city-artwork__code">{item.latitude.toFixed(1)}°N / {item.longitude.toFixed(1)}°E</span>
-                <strong className="destination-card__ghost">{item.englishName}</strong>
                 <div className="destination-card__overlay" />
                 <div className="destination-card__content">
                   <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
@@ -254,11 +251,9 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
 
 function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState; totals: ReturnType<typeof getJourneyTotals>; onOpenCity: (cityId: string) => void; onCities: () => void }) {
   const current = getJourneyCity(state.currentCityId)!;
-  const remaining = 10 - getCompletedRouteIds(state, current.id).length;
   return (
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
-        <p className="eyebrow">Your world</p>
         <h1>我的世界</h1>
         <p>跑过的地方，都会在地球上留下光。</p>
       </header>
@@ -267,11 +262,6 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
           <JourneyGlobe state={state} onOpenCity={onOpenCity} />
         </Suspense>
         <div className="world-globe-panel__status"><i /><span>当前</span><strong>{current.name}</strong></div>
-      </section>
-      <section className="world-progress-card">
-        <div><span>旅程进度</span><strong>{current.name} · {10 - remaining}/10</strong></div>
-        <ProgressSegments completed={10 - remaining} />
-        <p>北京、上海已完成。再完成 {remaining} 条路线即可选择下一站。</p>
       </section>
       <section className="journey-totals journey-totals--world" aria-label="我的旅程数字">
         <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
@@ -566,6 +556,11 @@ export default function JourneyApp() {
     if (status !== 'current' && status !== 'completed') return;
     setSelectedRouteId(null); setRouteCityId(cityId);
   };
+  const openCityRoutesFromList = (cityId: string) => {
+    setCityListOpen(false);
+    setSelectedRouteId(null);
+    setRouteCityId(cityId);
+  };
   const openLegacyRoute = (routeIndex: number) => {
     const cityForRoutes = routeCityId ? getJourneyCity(routeCityId) : undefined;
     if (!cityForRoutes) return;
@@ -621,7 +616,7 @@ export default function JourneyApp() {
         : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onDevice={() => setUtilityMode('device')} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
-        {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={setHomeCityId} onClose={() => setCityListOpen(false)} /></motion.div>}
+        {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
         {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
       </AnimatePresence>
       {!runningRoute && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
