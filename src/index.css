@@ -164,16 +164,19 @@ h1, h2, h3, p { margin-top: 0; }
 .destination-carousel {
   display: flex;
   gap: 12px;
-  width: 100%;
+  width: calc(100% + 40px);
+  margin-inline: -20px;
+  padding-inline: 20px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 20px;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
 }
 .destination-carousel::-webkit-scrollbar { display: none; }
 .destination-carousel:focus-visible { border-radius: var(--radius-lg); outline-offset: 4px; }
-.destination-carousel .destination-journey-card { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; box-shadow: none; }
+.destination-carousel .destination-journey-card { flex: 0 0 86%; scroll-snap-align: center; scroll-snap-stop: always; box-shadow: none; }
 .destination-carousel__meta { display: flex; align-items: center; justify-content: space-between; padding: 9px 4px 0; color: #666b75; font-size: 8px; }
 .destination-carousel__meta span:first-child { color: #aeb4ff; font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: .06em; }
 .destination-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 19, 25, .02) 20%, rgba(4, 19, 25, .75) 100%); }

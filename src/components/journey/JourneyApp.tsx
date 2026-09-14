@@ -149,7 +149,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const carousel = carouselRef.current;
     const target = carousel?.querySelector<HTMLElement>(`[data-city-id="${city.id}"]`);
     if (!carousel || !target) return;
-    carousel.scrollTo({ left: target.offsetLeft - carousel.offsetLeft, behavior: 'auto' });
+    carousel.scrollTo({ left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2, behavior: 'auto' });
   }, [city.id]);
 
   const selectNearestCity = () => {
@@ -158,8 +158,9 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id]')];
     const firstCard = cards[0];
     if (!firstCard) return;
+    const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
     const next = cards.reduce((nearest, card) => (
-      Math.abs(card.offsetLeft - carousel.offsetLeft - carousel.scrollLeft) < Math.abs(nearest.offsetLeft - carousel.offsetLeft - carousel.scrollLeft) ? card : nearest
+      Math.abs(card.offsetLeft + card.clientWidth / 2 - viewportCenter) < Math.abs(nearest.offsetLeft + nearest.clientWidth / 2 - viewportCenter) ? card : nearest
     ), firstCard);
     if (next.dataset.cityId && next.dataset.cityId !== city.id) onBrowseCity(next.dataset.cityId);
   };
