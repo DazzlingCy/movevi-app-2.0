@@ -85,8 +85,17 @@ const toLegacyCity = (city: JourneyCity, state: JourneyState): CityData => {
   };
 };
 
+const getRouteListOpenCount = (state: JourneyState, cityId: string) => {
+  const city = getJourneyCity(cityId);
+  const completedCount = getCompletedRouteIds(state, cityId).length;
+  if (!city) return 0;
+  if (completedCount >= city.routes.length || getCityStatus(state, cityId) === 'completed') return city.routes.length;
+  return Math.max(1, completedCount);
+};
+
 const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteListItem => {
   const status = getRouteStatus(state, route.cityId, route.id);
+  const listOpenCount = getRouteListOpenCount(state, route.cityId);
   return {
     title: route.name,
     distance: route.distanceKm.toFixed(1),
@@ -96,7 +105,7 @@ const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteL
     spots: route.landmarks.join(' — '),
     intro: route.description,
     isCompleted: status === 'completed',
-    isUnlocked: status !== 'locked'
+    isUnlocked: status !== 'locked' && route.order <= listOpenCount
   };
 };
 
@@ -302,6 +311,7 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
             <button className={`city-list-card city-list-card--${status}${selectedCityId === item.id ? ' is-selected' : ''}`} type="button" key={item.id} onClick={() => { onSelect(item.id); onClose(); }} aria-pressed={selectedCityId === item.id} style={cityStyle(item)}>
               <span className="city-list-card__number">{String(index + 1).padStart(2, '0')}</span>
               <span className="city-list-card__status">{status === 'completed' ? <Check /> : status === 'current' ? <MapPin /> : status === 'locked' ? <LockKeyhole /> : <Sparkles />}{statusText[status]}</span>
+              {status === 'completed' && <span className="city-list-card__stamp" aria-hidden="true"><b>已完成</b><small>COMPLETED</small></span>}
               <strong>{item.name}</strong><small>{item.englishName}</small><i><span style={{ width: `${completed * 10}%` }} /></i>
             </button>
           );
@@ -317,7 +327,6 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
         <h1>我的环球旅程</h1>
-        <p>跑过的地方，都会在地球上留下光。</p>
       </header>
       <section className="world-globe-panel">
         <Suspense fallback={<div className="globe-loading" role="status"><Globe2 /><span>正在加载你的世界</span></div>}>
@@ -638,6 +647,7 @@ export default function JourneyApp() {
     if (!cityForRoutes) return;
     const route = cityForRoutes.routes[routeIndex - 1];
     if (!route) return;
+    if (route.order > getRouteListOpenCount(state, cityForRoutes.id)) return;
     const status = getRouteStatus(state, cityForRoutes.id, route.id);
     if (status === 'locked') return;
     if (status === 'discoverable') {
@@ -724,7 +734,7 @@ export default function JourneyApp() {
         : state.currentPage === 'cityComplete' ? <motion.div className="screen-layer" key="city-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CityCompletePage city={currentCity} candidates={candidateCities} selectedId={effectiveCandidateId} onSelect={setSelectedCandidateId} onContinue={() => effectiveCandidateId && dispatch({ type: 'SELECT_NEXT_CITY', cityId: effectiveCandidateId })} /></motion.div>
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
         : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
-        : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getOpenRouteCount(getCompletedRouteIds(state, routeSheetCity.id).length)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
+        : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
