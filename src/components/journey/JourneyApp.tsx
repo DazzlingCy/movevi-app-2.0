@@ -133,16 +133,17 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
-  const completed = getCompletedRouteIds(state, city.id).length;
-  const cityStatus = getCityStatus(state, city.id);
-  const canOpenRoutes = cityStatus === 'current' || cityStatus === 'completed';
-  const progressCopy = cityStatus === 'completed'
+  const getProgressCopy = (item: JourneyCity) => {
+    const itemCompleted = getCompletedRouteIds(state, item.id).length;
+    const itemStatus = getCityStatus(state, item.id);
+    return itemStatus === 'completed'
     ? '这座城市的 10 段旅程已全部完成'
-    : cityStatus === 'current'
-      ? `还有 ${10 - completed} 段旅程等待发现`
-      : cityStatus === 'candidate'
+    : itemStatus === 'current'
+      ? `还有 ${10 - itemCompleted} 段旅程等待发现`
+      : itemStatus === 'candidate'
         ? `完成${getJourneyCity(state.currentCityId)?.name ?? '当前城市'}后可选择为下一站`
         : '完成前序旅程后逐步开放';
+  };
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -187,9 +188,9 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
       window.setTimeout(() => { swipedRef.current = false; }, 80);
     }
   };
-  const handleRoutesClick = () => {
+  const handleRoutesClick = (cityId: string) => {
     if (swipedRef.current) return;
-    onRoutes(city.id);
+    onRoutes(cityId);
   };
 
   return (
@@ -205,31 +206,35 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
         <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
-          {JOURNEY_CITY_SEQUENCE.map((item) => {
+          {JOURNEY_CITY_SEQUENCE.map((item, index) => {
             const itemStatus = getCityStatus(state, item.id);
+            const itemCompleted = getCompletedRouteIds(state, item.id).length;
+            const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
             return (
-              <section className="destination-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
-                <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
-                <div className="destination-card__overlay" />
-                <div className="destination-card__content">
-                  <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
+              <section className="destination-journey-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
+                <div className="destination-card">
+                  <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+                  <div className="destination-card__overlay" />
+                  <div className="destination-card__content">
+                    <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
+                  </div>
                 </div>
+                <div className="destination-carousel__meta" aria-hidden={item.id !== city.id}><span>{String(index + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
+                <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
+                  <div className="journey-progress__topline">
+                    <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
+                    <p>{getProgressCopy(item)}</p>
+                  </div>
+                  <ProgressSegments completed={itemCompleted} />
+                  <button className="primary-button" type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
+                    {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : itemStatus === 'candidate' ? `${item.name} · 下一站候选` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+                  </button>
+                </section>
               </section>
             );
           })}
         </div>
-        <div className="destination-carousel__meta" aria-live="polite"><span>{String(cityIndex + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
-        <section className="journey-progress" aria-label={`${city.name}旅程进度`}>
-          <div className="journey-progress__topline">
-            <div><span>城市进度</span><strong>{completed}<small>/10</small></strong></div>
-            <p>{progressCopy}</p>
-          </div>
-          <ProgressSegments completed={completed} />
-          <button className="primary-button" type="button" onClick={handleRoutesClick} disabled={!canOpenRoutes}>
-            {cityStatus === 'completed' ? `查看${city.name}旅程` : cityStatus === 'current' ? `继续${city.name}旅程` : cityStatus === 'candidate' ? `${city.name} · 下一站候选` : `${city.name} · 尚未开放`} {canOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
-          </button>
-        </section>
       </section>
       <section className="home-quick-actions" aria-label="快捷入口">
         <button type="button" onClick={() => onLegacyFeature('onlineSupport')}>
