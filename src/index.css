@@ -558,6 +558,14 @@ body { background: var(--bg); }
 .journey-progress__topline p { color: var(--muted); }
 .progress-segments span { background: #26282e; }
 .progress-segments span.is-complete { background: var(--map); }
+.home-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
+.home-quick-actions button { min-height: 78px; display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-content: center; padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: #0f1014; color: #f2f3f7; text-align: left; }
+.home-quick-actions button:active { transform: scale(.985); background: #15161b; }
+.home-quick-actions span { grid-row: 1 / 3; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: rgba(102,112,232,.13); color: #b8beff; }
+.home-quick-actions button:nth-child(2) span { background: rgba(255,149,79,.12); color: #ffb36d; }
+.home-quick-actions svg { width: 18px; height: 18px; }
+.home-quick-actions strong { min-width: 0; font-size: 13px; font-weight: 600; }
+.home-quick-actions small { min-width: 0; margin-top: 3px; color: var(--muted); font-size: 9px; white-space: nowrap; }
 .primary-button { min-height: 50px; border-radius: 12px; background: var(--navy); box-shadow: none; font-size: 14px; font-weight: 600; transition: transform .16s ease, background .16s ease; }
 .primary-button:active { transform: scale(.98); }
 .secondary-button { border-color: var(--line); border-radius: 12px; background: #111216; }
@@ -729,6 +737,9 @@ body { background: var(--bg); }
   .page--home { padding-top: max(12px, env(safe-area-inset-top)); }
   .home-heading { margin: 12px 0 11px; }
   .destination-card { height: 260px; }
+  .journey-progress { padding-block: 15px 16px; }
+  .home-quick-actions { margin-top: 10px; }
+  .home-quick-actions button { min-height: 66px; padding: 10px; }
   .world-globe-panel { min-height: 465px; height: 62vh; }
   .profile-header { margin-bottom: 16px; }
   .profile-identity { padding: 14px; }

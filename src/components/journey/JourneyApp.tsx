@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useReducer, useRef, useState, type CSSProper
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
-  Clock3, Compass, Footprints, Globe2, Headphones, LockKeyhole, Mail, Map, MapPin,
+  Clock3, Compass, Flame, Footprints, Globe2, Headphones, HeadphonesIcon, LockKeyhole, Mail, Map, MapPin,
   Medal, MessageSquare, MonitorSmartphone, Navigation, Pause, Play, RotateCcw, Route,
   Settings, Sparkles, SquarePen, UserRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
@@ -13,10 +13,13 @@ import {
   getCompletedRouteIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
 } from '../../journey/state';
 import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../journey/types';
+import { getWeightPlanRewardAmount, type WeightPlanRewardRecord } from '../../lib/weightPlan';
 import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import EventsTab from '../EventsTab';
+import OnlineSupportView from '../OnlineSupportView';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
+import WeightLossPlanView from '../WeightLossPlanView';
 import Modal from './Modal';
 
 const JourneyGlobe = lazy(() => import('./JourneyGlobe'));
@@ -113,9 +116,19 @@ interface HomePageProps {
   onRoutes: (cityId: string) => void;
   onBrowseCity: (cityId: string) => void;
   onDevice: () => void;
+  onLegacyFeature: (feature: LegacyFeature) => void;
 }
 
-function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevice }: HomePageProps) {
+type LegacyFeature = 'onlineSupport' | 'weightLossPlan';
+
+type WeightRouteTarget = {
+  cityId: string;
+  routeIndex: number;
+  image: string;
+  day: number;
+};
+
+function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevice, onLegacyFeature }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
@@ -217,6 +230,18 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
             {cityStatus === 'completed' ? `查看${city.name}旅程` : cityStatus === 'current' ? `继续${city.name}旅程` : cityStatus === 'candidate' ? `${city.name} · 下一站候选` : `${city.name} · 尚未开放`} {canOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
           </button>
         </section>
+      </section>
+      <section className="home-quick-actions" aria-label="快捷入口">
+        <button type="button" onClick={() => onLegacyFeature('onlineSupport')}>
+          <span><HeadphonesIcon /></span>
+          <strong>在线客服</strong>
+          <small>设备与路线问题</small>
+        </button>
+        <button type="button" onClick={() => onLegacyFeature('weightLossPlan')}>
+          <span><Flame /></span>
+          <strong>打卡红包</strong>
+          <small>30天运动计划</small>
+        </button>
       </section>
     </main>
   );
@@ -527,6 +552,16 @@ export default function JourneyApp() {
   const [manualReducedMotion, setManualReducedMotion] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [legacyFeature, setLegacyFeature] = useState<LegacyFeature | null>(null);
+  const [weightRoute, setWeightRoute] = useState<WeightRouteTarget | null>(null);
+  const [runningWeightRoute, setRunningWeightRoute] = useState<WeightRouteTarget | null>(null);
+  const [weightPlanStarted, setWeightPlanStarted] = useState(false);
+  const [weightCompletedDays, setWeightCompletedDays] = useState<number[]>([]);
+  const [weightRewardBoxes, setWeightRewardBoxes] = useState<number[]>([]);
+  const [weightOpenedRewardDays, setWeightOpenedRewardDays] = useState<number[]>([]);
+  const [weightRewardHistory, setWeightRewardHistory] = useState<WeightPlanRewardRecord[]>([]);
+  const [activationClaimed, setActivationClaimed] = useState(false);
+  const [firstRouteClaimed, setFirstRouteClaimed] = useState(false);
   const systemReducedMotion = useReducedMotion();
   const reduceMotion = Boolean(systemReducedMotion || manualReducedMotion);
   const currentCity = getJourneyCity(state.currentCityId)!;
@@ -591,6 +626,31 @@ export default function JourneyApp() {
     setActiveTab(tab);
     dispatch({ type: 'NAVIGATE', page: tab === 'world' ? 'map' : 'home' });
   };
+  const openLegacyFeature = (feature: LegacyFeature) => {
+    setLegacyFeature(feature);
+    setRouteCityId(null);
+    setSelectedRouteId(null);
+  };
+  const openWeightRoute = (cityId: string, routeIndex: number, image: string, day: number) => {
+    setWeightRoute({ cityId, routeIndex, image, day });
+  };
+  const completeWeightRoute = (target: WeightRouteTarget) => {
+    setWeightCompletedDays(days => [...new Set([...days, target.day])].sort((a, b) => a - b));
+    setWeightRewardBoxes(days => [...new Set([...days, target.day])].sort((a, b) => a - b));
+    setRunningWeightRoute(null);
+    setLegacyFeature('weightLossPlan');
+  };
+  const openWeightReward = (day: number) => {
+    if (!weightRewardBoxes.includes(day)) return { success: false, message: '完成当天路线后即可领取红包' };
+    if (weightOpenedRewardDays.includes(day)) return { success: false, message: '这一天的红包已领取' };
+    const amount = getWeightPlanRewardAmount(day);
+    setWeightOpenedRewardDays(days => [...new Set([...days, day])].sort((a, b) => a - b));
+    setWeightRewardHistory(records => [
+      { day, amount, openedAt: new Date().toLocaleString('zh-CN', { hour12: false }) },
+      ...records
+    ]);
+    return { success: true, message: `第${day}天红包已到账`, amount };
+  };
 
   const runningCity = runningRoute ? getJourneyCity(runningRoute.cityId) : undefined;
   const runningRouteData = runningRoute ? getJourneyRoute(runningRoute.cityId, runningRoute.routeId) : undefined;
@@ -603,7 +663,11 @@ export default function JourneyApp() {
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
-        {runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
+        {runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
+        : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
+        : legacyFeature === 'onlineSupport' ? <motion.div className="screen-layer" key="online-support" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><OnlineSupportView onBack={() => setLegacyFeature(null)} /></motion.div>
+        : legacyFeature === 'weightLossPlan' ? <motion.div className="screen-layer" key="weight-loss-plan" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeightLossPlanView started={weightPlanStarted} completedDays={weightCompletedDays} rewardBoxes={weightRewardBoxes} openedRewardDays={weightOpenedRewardDays} rewardHistory={weightRewardHistory} newbieTasks={{ treadmillActivated: deviceConnected, activationClaimed, completedRoutes: getJourneyTotals(state).completedRoutes, firstRouteClaimed }} onBack={() => setLegacyFeature(null)} onStartPlan={() => setWeightPlanStarted(true)} onOpenReward={openWeightReward} onClaimActivationTask={() => { setActivationClaimed(true); setNotice('首次激活红包已领取'); }} onClaimFirstRouteTask={() => { setFirstRouteClaimed(true); setNotice('首次路线红包已领取'); }} onNavigateToRouteDetail={openWeightRoute} /></motion.div>
+        : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
         : state.currentPage === 'routeComplete' && state.lastRun && lastRunCity && lastRunRoute ? <motion.div className="screen-layer" key="route-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><RouteCompletePage city={lastRunCity} route={lastRunRoute} completed={getCompletedRouteIds(state, lastRunCity.id).length} result={state.lastRun} firstCompletion={state.lastRun.isFirstCompletion} onNext={() => { setActiveTab('home'); dispatch({ type: 'NAVIGATE', page: 'home' }); window.setTimeout(() => openCity(state.currentCityId), 0); }} onMap={() => selectPrimaryTab('world')} /></motion.div>
         : state.currentPage === 'cityComplete' ? <motion.div className="screen-layer" key="city-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CityCompletePage city={currentCity} candidates={candidateCities} selectedId={effectiveCandidateId} onSelect={setSelectedCandidateId} onContinue={() => effectiveCandidateId && dispatch({ type: 'SELECT_NEXT_CITY', cityId: effectiveCandidateId })} /></motion.div>
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
@@ -612,13 +676,13 @@ export default function JourneyApp() {
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
-        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onDevice={() => setUtilityMode('device')} /></motion.div>}
+        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
         {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
       </AnimatePresence>
-      {!runningRoute && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!runningRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );
