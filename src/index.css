@@ -523,6 +523,7 @@ body { background: var(--bg); }
 .eyebrow { color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
 
 .topbar { min-height: 42px; }
+.page--home .topbar { justify-content: flex-end; min-height: 36px; }
 .movevi-wordmark { display: flex; align-items: center; gap: 9px; }
 .movevi-wordmark > span { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 8px; color: #d8dbff; font-size: 8px; font-weight: 700; letter-spacing: -.04em; }
 .movevi-wordmark strong { font-size: 11px; font-weight: 600; letter-spacing: .14em; }
@@ -533,15 +534,18 @@ body { background: var(--bg); }
 .icon-button, .avatar-button { border-color: var(--line); background: #111216; }
 .icon-button--paper { background: #16171c; }
 
-.home-heading { margin: 29px 0 19px; }
-.home-heading h1 { font-family: var(--font-display); font-size: clamp(35px, 9vw, 42px); font-weight: 600; letter-spacing: -.055em; }
+.page--home { padding-top: max(14px, env(safe-area-inset-top)); }
+.home-heading { margin: 18px 0 15px; }
+.home-heading h1 { font-family: var(--font-display); font-size: clamp(32px, 8vw, 38px); font-weight: 600; letter-spacing: -.055em; }
 .home-heading .eyebrow { color: #757a84; font-size: 10px; font-weight: 500; }
 .home-city-swipe-zone { touch-action: pan-x pan-y; user-select: none; }
-.destination-card { height: 255px; border: 1px solid rgba(255,255,255,.1); border-radius: 22px; background: #111216; box-shadow: 0 18px 44px rgba(0,0,0,.28); }
-.destination-card__overlay { background: linear-gradient(180deg, rgba(3,4,7,.04) 22%, rgba(3,4,7,.9) 100%); }
+.destination-card { height: 306px; border: 1px solid rgba(255,255,255,.1); border-radius: 22px; background: #111216; box-shadow: 0 18px 44px rgba(0,0,0,.28); }
+.destination-card__photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.78) brightness(.58) contrast(.96); transform: scale(1.02); }
+.destination-card__overlay { background: linear-gradient(180deg, rgba(3,4,7,.06) 0%, rgba(3,4,7,.36) 45%, rgba(3,4,7,.95) 100%); }
 .destination-card__kicker { color: rgba(255,255,255,.62); font-weight: 500; }
 .destination-card h2 { font-size: 44px; font-weight: 600; }
 .destination-card p { color: rgba(255,255,255,.55); }
+.destination-card__ghost { position: absolute; z-index: 1; top: 56px; left: 17px; max-width: 330px; color: rgba(255,255,255,.14); font-family: var(--font-display); font-size: 62px; font-weight: 800; line-height: .82; letter-spacing: -.07em; text-transform: uppercase; }
 .city-artwork { filter: saturate(.62) brightness(.72); background: linear-gradient(145deg, color-mix(in srgb, var(--city-accent) 48%, #05070c), #171821); }
 .city-artwork__sun { border-color: rgba(255,255,255,.16); box-shadow: 0 0 0 17px rgba(255,255,255,.025), 0 0 0 42px rgba(255,255,255,.015); }
 .city-artwork__contours { opacity: .17; }
@@ -549,7 +553,7 @@ body { background: var(--bg); }
 .city-artwork__skyline { opacity: .55; }
 .passport-stamp { color: #b8beff; border-color: rgba(184,190,255,.72); }
 
-.journey-progress { margin-top: 12px; padding: 17px; border-color: var(--line); border-radius: 18px; background: #0f1014; }
+.journey-progress { margin-top: 11px; padding: 20px 17px 22px; border-color: var(--line); border-radius: 18px; background: #0f1014; }
 .journey-progress__topline span { color: var(--muted); font-weight: 400; }
 .journey-progress__topline strong { font-family: var(--font-display); font-weight: 600; }
 .journey-progress__topline p { color: var(--muted); }
@@ -562,6 +566,9 @@ body { background: var(--bg); }
 .journey-totals div { border-color: var(--line); }
 .journey-totals strong { font-family: var(--font-display); font-weight: 600; }
 .journey-totals span { color: var(--muted); }
+.journey-totals--world { margin: 18px 20px 16px; padding: 0; }
+.journey-totals--world strong { font-size: 30px; }
+.journey-totals--world span { font-size: 10px; }
 .world-link { display: none; }
 
 .bottom-nav {
@@ -725,7 +732,9 @@ body { background: var(--bg); }
 
 @media (max-height: 780px) {
   .page { padding-bottom: calc(98px + env(safe-area-inset-bottom)); }
-  .destination-card { height: 205px; }
+  .page--home { padding-top: max(12px, env(safe-area-inset-top)); }
+  .home-heading { margin: 12px 0 11px; }
+  .destination-card { height: 260px; }
   .world-globe-panel { min-height: 400px; height: 53vh; }
   .world-progress-card { padding-block: 11px; }
   .profile-header { margin-bottom: 16px; }

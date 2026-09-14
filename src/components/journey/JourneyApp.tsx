@@ -109,15 +109,13 @@ function ProgressSegments({ completed }: { completed: number }) {
 interface HomePageProps {
   state: JourneyState;
   city: JourneyCity;
-  totals: ReturnType<typeof getJourneyTotals>;
   deviceConnected: boolean;
   onRoutes: (cityId: string) => void;
   onBrowseCity: (cityId: string) => void;
-  onMap: () => void;
   onDevice: () => void;
 }
 
-function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity, onMap, onDevice }: HomePageProps) {
+function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevice }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
@@ -184,14 +182,12 @@ function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity
   return (
     <main className="page page--home" id="main-content">
       <header className="topbar">
-        <div className="movevi-wordmark"><span>MV</span><strong>MOVEVI</strong></div>
         <button className="utility-chip" type="button" onClick={onDevice} aria-label="查看设备连接状态">
           <TreadmillIcon connected={deviceConnected} />
           <span>{deviceConnected ? '设备在线' : '未连接'}</span>
         </button>
       </header>
       <section className="home-heading">
-        <p className="eyebrow">Movevi journey · 第 {String(cityIndex + 1).padStart(2, '0')} 站</p>
         <h1>今天去哪里？</h1>
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
@@ -201,7 +197,10 @@ function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
             return (
               <section className="destination-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
-                <CityArtwork city={item} />
+                <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+                <div className="city-artwork__contours" aria-hidden="true" />
+                <span className="city-artwork__code">{item.latitude.toFixed(1)}°N / {item.longitude.toFixed(1)}°E</span>
+                <strong className="destination-card__ghost">{item.englishName}</strong>
                 <div className="destination-card__overlay" />
                 <div className="destination-card__content">
                   <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
@@ -223,14 +222,6 @@ function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity
           </button>
         </section>
       </section>
-      <section className="journey-totals" aria-label="我的旅程数字">
-        <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
-        <div><strong>{totals.completedRoutes}</strong><span>条路线</span></div>
-        <div><strong>{totals.discoveredSpots}</strong><span>处景点</span></div>
-      </section>
-      <button className="world-link" type="button" onClick={onMap}>
-        <Map /><span><strong>查看我的世界</strong><small>你已经跑过 {totals.completedCities} 座城市</small></span><ArrowRight />
-      </button>
     </main>
   );
 }
@@ -261,7 +252,7 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
   );
 }
 
-function MapPage({ state, onOpenCity, onCities }: { state: JourneyState; onOpenCity: (cityId: string) => void; onCities: () => void }) {
+function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState; totals: ReturnType<typeof getJourneyTotals>; onOpenCity: (cityId: string) => void; onCities: () => void }) {
   const current = getJourneyCity(state.currentCityId)!;
   const remaining = 10 - getCompletedRouteIds(state, current.id).length;
   return (
@@ -281,6 +272,11 @@ function MapPage({ state, onOpenCity, onCities }: { state: JourneyState; onOpenC
         <div><span>旅程进度</span><strong>{current.name} · {10 - remaining}/10</strong></div>
         <ProgressSegments completed={10 - remaining} />
         <p>北京、上海已完成。再完成 {remaining} 条路线即可选择下一站。</p>
+      </section>
+      <section className="journey-totals journey-totals--world" aria-label="我的旅程数字">
+        <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
+        <div><strong>{totals.completedRoutes}</strong><span>条路线</span></div>
+        <div><strong>{totals.discoveredSpots}</strong><span>处景点</span></div>
       </section>
       <button className="primary-button" type="button" onClick={onCities}>全球城市列表 <Globe2 /></button>
     </main>
@@ -621,8 +617,8 @@ export default function JourneyApp() {
         : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getOpenRouteCount(getCompletedRouteIds(state, routeSheetCity.id).length)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
-        : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
-        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} totals={totals} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onMap={() => selectPrimaryTab('world')} onDevice={() => setUtilityMode('device')} /></motion.div>}
+        : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
+        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onDevice={() => setUtilityMode('device')} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={setHomeCityId} onClose={() => setCityListOpen(false)} /></motion.div>}
