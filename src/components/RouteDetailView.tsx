@@ -1,4 +1,4 @@
-import { Play, ChevronRight, Wifi } from 'lucide-react';
+import { Play, ChevronRight } from 'lucide-react';
 import { getRouteData } from '../data/cities';
 import CityImage from './CityImage';
 import type { CityRouteListItem } from './CityRoutesView';
@@ -141,9 +141,6 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
 
       {/* Bottom Action Bar */}
       <div className="absolute bottom-0 left-0 right-0 bg-white/94 backdrop-blur-xl border-t border-slate-100 px-6 pt-3 pb-8 z-30">
-         <div className="mb-2 flex items-center justify-center gap-1.5 text-[10px] font-bold text-emerald-700">
-           <Wifi size={12} /> 跑步机已连接，点击即可开始
-         </div>
          <button onClick={onStart} className="bg-[#2ecc71] hover:bg-[#27ae60] text-white w-full min-h-14 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg shadow-[#2ecc71]/30 transition-transform active:scale-[.98]">
             <Play className="fill-white mr-2" size={20} />
             {collectionIntent === 'collect' ? '开始收集' : collectionIntent === 'review' ? '再跑一次' : '开始跑步'}

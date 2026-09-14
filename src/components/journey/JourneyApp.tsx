@@ -658,7 +658,21 @@ export default function JourneyApp() {
     if (!route) return;
     startRun(route);
   };
-  const completeRun = (result: RunResult) => { if (!runningRoute) return; dispatch({ type: 'COMPLETE_ROUTE', ...runningRoute, result }); setRunningRoute(null); setSelectedRouteId(null); setSelectedCandidateId(null); };
+  const completeRun = (result: RunResult) => {
+    if (!runningRoute) return;
+    const alreadyCompleted = getCompletedRouteIds(state, runningRoute.cityId).includes(runningRoute.routeId);
+    const completedAfterRun = getCompletedRouteIds(state, runningRoute.cityId).length + (alreadyCompleted ? 0 : 1);
+    const willCompleteCurrentCity = runningRoute.cityId === state.currentCityId && completedAfterRun >= 10;
+    const completedCityId = runningRoute.cityId;
+    dispatch({ type: 'COMPLETE_ROUTE', ...runningRoute, result });
+    setRunningRoute(null);
+    setSelectedRouteId(null);
+    setSelectedCandidateId(null);
+    if (!willCompleteCurrentCity) {
+      dispatch({ type: 'NAVIGATE', page: 'home' });
+      setRouteCityId(completedCityId);
+    }
+  };
   const resetDemo = () => { dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
   const selectPrimaryTab = (tab: PrimaryTab) => {
     setActiveTab(tab);
