@@ -1,18 +1,20 @@
 import { Play, ChevronRight, Wifi } from 'lucide-react';
 import { getRouteData } from '../data/cities';
 import CityImage from './CityImage';
+import type { CityRouteListItem } from './CityRoutesView';
 
 interface RouteDetailViewProps {
   cityId: string;
   routeIndex: number;
   image: string;
+  routeOverride?: CityRouteListItem;
   collectionIntent?: 'review' | 'collect';
   onBack: () => void;
   onStart: () => void;
 }
 
-export default function RouteDetailView({ cityId, routeIndex, image, collectionIntent, onBack, onStart }: RouteDetailViewProps) {
-  const routeData = getRouteData(cityId, routeIndex);
+export default function RouteDetailView({ cityId, routeIndex, image, routeOverride, collectionIntent, onBack, onStart }: RouteDetailViewProps) {
+  const routeData = routeOverride ?? getRouteData(cityId, routeIndex);
 
   return (
     <div className="w-full h-full bg-[#f4f6f8] text-slate-800 font-sans relative flex flex-col hide-scrollbar">

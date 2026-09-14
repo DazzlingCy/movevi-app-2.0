@@ -6,14 +6,29 @@ import CityImage from './CityImage';
 
 import { getRouteData } from '../data/cities';
 
+export interface CityRouteListItem {
+  title: string;
+  distance: string;
+  duration: string;
+  calories: string;
+  rating: string;
+  spots: string;
+  intro: string;
+  isCompleted?: boolean;
+  isUnlocked?: boolean;
+}
+
 interface CityRoutesViewProps {
   city: CityData;
   onBack: () => void;
   onRouteClick: (routeIndex: number) => void;
   onExploreNext?: (currentCityId: string) => void;
+  routeItems?: CityRouteListItem[];
+  completedRouteIndices?: number[];
+  openRouteCount?: number;
 }
 
-export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext }: CityRoutesViewProps) {
+export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
   const [showLitModal, setShowLitModal] = useState(false);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [isLightingUp, setIsLightingUp] = useState(false);
@@ -99,15 +114,16 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
 
       {/* Route List */}
       <div className="px-4 space-y-4">
-        {Array.from({ length: Math.max(city.routes, 3) }).map((_, i) => {
+        {Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }).map((_, i) => {
           // Adjust logic so earlier routes are completed/unlocked for demo purpose
           const routeId = i + 1;
-          const isCompleted = city.completedRouteIndices?.includes(routeId);
+          const routeOverride = routeItems?.[i];
+          const isCompleted = routeOverride?.isCompleted ?? completedRouteIndices?.includes(routeId) ?? city.completedRouteIndices?.includes(routeId);
           // Unlock the first one, or ones that are completed, or the one next to the last completed
-          const lastCompleted = (city.completedRouteIndices || []).reduce((max, cur) => Math.max(max, cur), 0);
-          const isUnlocked = routeId === 1 || isCompleted || routeId === lastCompleted + 1;
+          const lastCompleted = (completedRouteIndices ?? city.completedRouteIndices ?? []).reduce((max, cur) => Math.max(max, cur), 0);
+          const isUnlocked = routeOverride?.isUnlocked ?? (openRouteCount ? routeId <= openRouteCount : routeId === 1 || isCompleted || routeId === lastCompleted + 1);
 
-          const routeData = getRouteData(city.id, routeId);
+          const routeData = routeOverride ?? getRouteData(city.id, routeId);
           const numSpots = routeData.spots.split('—').length || 3;
           const runners = 1890 - i * 300;
 

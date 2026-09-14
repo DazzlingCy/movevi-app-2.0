@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
@@ -6,13 +6,17 @@ import {
   Medal, MessageSquare, MonitorSmartphone, Navigation, Pause, Play, RotateCcw, Route,
   Settings, Sparkles, SquarePen, UserRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
+import { CITIES, type CityData } from '../../data/cities';
 import { getJourneyCity, getJourneyRoute, JOURNEY_SEQUENCE } from '../../journey/data';
 import {
   createDemoJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
   getCompletedRouteIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
 } from '../../journey/state';
 import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../journey/types';
+import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import EventsTab from '../EventsTab';
+import RouteDetailView from '../RouteDetailView';
+import RunPlaybackView from '../RunPlaybackView';
 import Modal from './Modal';
 
 const JourneyGlobe = lazy(() => import('./JourneyGlobe'));
@@ -28,6 +32,59 @@ const formatDuration = (seconds: number) => {
 };
 
 const cityStyle = (city: JourneyCity) => ({ '--city-accent': city.accent } as CSSProperties);
+
+const cityImageFor = (city: JourneyCity) =>
+  CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
+  ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200';
+
+const toLegacyCity = (city: JourneyCity, state: JourneyState): CityData => {
+  const completed = getCompletedRouteIds(state, city.id).length;
+  return {
+    id: city.id,
+    name: city.name,
+    englishName: city.englishName,
+    continent: city.continent,
+    x: 0,
+    y: 0,
+    lat: city.latitude,
+    lng: city.longitude,
+    image: cityImageFor(city),
+    routes: city.routes.length,
+    spots: city.routes.flatMap(route => route.landmarks).length,
+    completed,
+    status: completed >= city.routes.length ? 'lit' : completed > 0 ? 'in-progress' : 'unlit',
+    completedRouteIndices: city.routes.filter(route => getCompletedRouteIds(state, city.id).includes(route.id)).map(route => route.order),
+    description: city.description
+  };
+};
+
+const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteListItem => {
+  const status = getRouteStatus(state, route.cityId, route.id);
+  return {
+    title: route.name,
+    distance: route.distanceKm.toFixed(1),
+    duration: `${String(route.durationMinutes).padStart(2, '0')}:00`,
+    calories: String(route.calories),
+    rating: '4.8',
+    spots: route.landmarks.join(' — '),
+    intro: route.description,
+    isCompleted: status === 'completed',
+    isUnlocked: status !== 'locked'
+  };
+};
+
+function TreadmillIcon({ connected = true }: { connected?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="treadmill-icon">
+      <path d="M5 17.5h10.4c1.4 0 2.6-.9 3-2.2l1.2-3.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.8 19.5h13.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8.5 17.5 13 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M12.2 7.5h5.3c.7 0 1.2.5 1.2 1.2v1.1c0 .7-.5 1.2-1.2 1.2h-6.9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16.1 8.9h.1" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+      {connected && <circle cx="20" cy="5" r="2" fill="currentColor" />}
+    </svg>
+  );
+}
 
 function CityArtwork({ city, compact = false }: { city: JourneyCity; compact?: boolean }) {
   return (
@@ -62,6 +119,8 @@ interface HomePageProps {
 
 function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity, onMap, onDevice }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
   const completed = getCompletedRouteIds(state, city.id).length;
   const cityStatus = getCityStatus(state, city.id);
@@ -100,13 +159,34 @@ function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity
     const nextCity = JOURNEY_CITY_SEQUENCE[Math.min(JOURNEY_CITY_SEQUENCE.length - 1, Math.max(0, cityIndex + direction))];
     if (nextCity) onBrowseCity(nextCity.id);
   };
+  const handleSwipeStart = (event: PointerEvent<HTMLElement>) => {
+    swipeStartRef.current = { x: event.clientX, y: event.clientY };
+    swipedRef.current = false;
+  };
+  const handleSwipeEnd = (event: PointerEvent<HTMLElement>) => {
+    if (!swipeStartRef.current) return;
+    const deltaX = event.clientX - swipeStartRef.current.x;
+    const deltaY = event.clientY - swipeStartRef.current.y;
+    swipeStartRef.current = null;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+    const nextCity = JOURNEY_CITY_SEQUENCE[Math.min(JOURNEY_CITY_SEQUENCE.length - 1, Math.max(0, cityIndex + (deltaX < 0 ? 1 : -1)))];
+    if (nextCity && nextCity.id !== city.id) {
+      swipedRef.current = true;
+      onBrowseCity(nextCity.id);
+      window.setTimeout(() => { swipedRef.current = false; }, 80);
+    }
+  };
+  const handleRoutesClick = () => {
+    if (swipedRef.current) return;
+    onRoutes(city.id);
+  };
 
   return (
     <main className="page page--home" id="main-content">
       <header className="topbar">
         <div className="movevi-wordmark"><span>MV</span><strong>MOVEVI</strong></div>
         <button className="utility-chip" type="button" onClick={onDevice} aria-label="查看设备连接状态">
-          {deviceConnected ? <Wifi aria-hidden="true" /> : <WifiOff aria-hidden="true" />}
+          <TreadmillIcon connected={deviceConnected} />
           <span>{deviceConnected ? '设备在线' : '未连接'}</span>
         </button>
       </header>
@@ -114,32 +194,34 @@ function HomePage({ state, city, totals, deviceConnected, onRoutes, onBrowseCity
         <p className="eyebrow">Movevi journey · 第 {String(cityIndex + 1).padStart(2, '0')} 站</p>
         <h1>今天去哪里？</h1>
       </section>
-      <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
-        {JOURNEY_CITY_SEQUENCE.map((item, index) => {
-          const itemStatus = getCityStatus(state, item.id);
-          const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
-          return (
-            <section className="destination-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
-              <CityArtwork city={item} />
-              <div className="destination-card__overlay" />
-              <div className="destination-card__content">
-                <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
-                <div className="passport-stamp passport-stamp--small"><span>第 {String(index + 1).padStart(2, '0')} 站</span><b>{item.name}</b></div>
-              </div>
-            </section>
-          );
-        })}
-      </div>
-      <div className="destination-carousel__meta" aria-live="polite"><span>{String(cityIndex + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
-      <section className="journey-progress" aria-label={`${city.name}旅程进度`}>
-        <div className="journey-progress__topline">
-          <div><span>城市进度</span><strong>{completed}<small>/10</small></strong></div>
-          <p>{progressCopy}</p>
+      <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
+        <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
+          {JOURNEY_CITY_SEQUENCE.map((item, index) => {
+            const itemStatus = getCityStatus(state, item.id);
+            const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
+            return (
+              <section className="destination-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
+                <CityArtwork city={item} />
+                <div className="destination-card__overlay" />
+                <div className="destination-card__content">
+                  <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
+                  <div className="passport-stamp passport-stamp--small"><span>第 {String(index + 1).padStart(2, '0')} 站</span><b>{item.name}</b></div>
+                </div>
+              </section>
+            );
+          })}
         </div>
-        <ProgressSegments completed={completed} />
-        <button className="primary-button" type="button" onClick={() => onRoutes(city.id)} disabled={!canOpenRoutes}>
-          {cityStatus === 'completed' ? `查看${city.name}旅程` : cityStatus === 'current' ? `继续${city.name}旅程` : cityStatus === 'candidate' ? `${city.name} · 下一站候选` : `${city.name} · 尚未开放`} {canOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
-        </button>
+        <div className="destination-carousel__meta" aria-live="polite"><span>{String(cityIndex + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
+        <section className="journey-progress" aria-label={`${city.name}旅程进度`}>
+          <div className="journey-progress__topline">
+            <div><span>城市进度</span><strong>{completed}<small>/10</small></strong></div>
+            <p>{progressCopy}</p>
+          </div>
+          <ProgressSegments completed={completed} />
+          <button className="primary-button" type="button" onClick={handleRoutesClick} disabled={!canOpenRoutes}>
+            {cityStatus === 'completed' ? `查看${city.name}旅程` : cityStatus === 'current' ? `继续${city.name}旅程` : cityStatus === 'candidate' ? `${city.name} · 下一站候选` : `${city.name} · 尚未开放`} {canOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+          </button>
+        </section>
       </section>
       <section className="journey-totals" aria-label="我的旅程数字">
         <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
@@ -442,7 +524,7 @@ function UtilityPanel({ mode, deviceConnected, manualReducedMotion, onToggleDevi
   return (
     <Modal labelId="utility-title" onClose={onClose} className="utility-panel">
       <header className="sheet-header"><div><span>{mode === 'device' ? 'Device' : 'Account'}</span><h2 id="utility-title">{mode === 'device' ? '我的设备' : '个人与设置'}</h2></div><button className="icon-button icon-button--paper" type="button" onClick={onClose} aria-label="关闭面板"><X /></button></header>
-      {mode === 'device' ? <><section className={`device-card ${deviceConnected ? 'is-online' : ''}`}><div className="device-card__icon">{deviceConnected ? <Wifi /> : <WifiOff />}</div><div><strong>MOVEVI Runner S1</strong><span>{deviceConnected ? '已连接 · 信号良好' : '当前未连接'}</span></div><i /></section><button className="secondary-button" type="button" onClick={onToggleDevice}>{deviceConnected ? '断开设备' : '连接设备'}</button><div className="help-note"><CircleHelp /><p><strong>连接遇到问题？</strong><span>确认跑步机已开机，并让手机靠近设备。</span></p></div></> : <><section className="account-card"><span className="account-avatar">沐</span><div><strong>沐小六</strong><small>MOVEVI ID · MV-3026</small></div></section><div className="settings-list"><div><Settings /><span><strong>减少动效</strong><small>直接呈现旅程结果</small></span><button className={`switch ${manualReducedMotion ? 'is-on' : ''}`} type="button" onClick={onToggleMotion} aria-pressed={manualReducedMotion}><i /></button></div><div><Headphones /><span><strong>帮助与反馈</strong><small>设备连接、跑步与账号问题</small></span><ArrowRight /></div><button type="button" onClick={onReset}><RotateCcw /><span><strong>恢复演示状态</strong><small>回到东京 6/10</small></span><ArrowRight /></button></div></>}
+      {mode === 'device' ? <><section className={`device-card ${deviceConnected ? 'is-online' : ''}`}><div className="device-card__icon"><TreadmillIcon connected={deviceConnected} /></div><div><strong>MOVEVI Runner S1</strong><span>{deviceConnected ? '已连接 · 信号良好' : '当前未连接'}</span></div><i /></section><button className="secondary-button" type="button" onClick={onToggleDevice}>{deviceConnected ? '断开设备' : '连接设备'}</button><div className="help-note"><CircleHelp /><p><strong>连接遇到问题？</strong><span>确认跑步机已开机，并让手机靠近设备。</span></p></div></> : <><section className="account-card"><span className="account-avatar">沐</span><div><strong>沐小六</strong><small>MOVEVI ID · MV-3026</small></div></section><div className="settings-list"><div><Settings /><span><strong>减少动效</strong><small>直接呈现旅程结果</small></span><button className={`switch ${manualReducedMotion ? 'is-on' : ''}`} type="button" onClick={onToggleMotion} aria-pressed={manualReducedMotion}><i /></button></div><div><Headphones /><span><strong>帮助与反馈</strong><small>设备连接、跑步与账号问题</small></span><ArrowRight /></div><button type="button" onClick={onReset}><RotateCcw /><span><strong>恢复演示状态</strong><small>回到东京 6/10</small></span><ArrowRight /></button></div></>}
     </Modal>
   );
 }
@@ -488,12 +570,31 @@ export default function JourneyApp() {
     if (status !== 'current' && status !== 'completed') return;
     setSelectedRouteId(null); setRouteCityId(cityId);
   };
+  const openLegacyRoute = (routeIndex: number) => {
+    const cityForRoutes = routeCityId ? getJourneyCity(routeCityId) : undefined;
+    if (!cityForRoutes) return;
+    const route = cityForRoutes.routes[routeIndex - 1];
+    if (!route) return;
+    const status = getRouteStatus(state, cityForRoutes.id, route.id);
+    if (status === 'locked') return;
+    if (status === 'discoverable') {
+      dispatch({ type: 'REVEAL_ROUTE', cityId: cityForRoutes.id, routeId: route.id });
+      setNotice(`${route.name}，已揭晓`);
+    }
+    setSelectedRouteId(route.id);
+  };
   const handleRouteSelect = (route: JourneyRoute) => {
     const status = getRouteStatus(state, route.cityId, route.id);
     if (status === 'discoverable') { dispatch({ type: 'REVEAL_ROUTE', cityId: route.cityId, routeId: route.id }); setNotice(`${route.name}，已揭晓`); return; }
     if (status === 'revealed' || status === 'completed') setSelectedRouteId(route.id);
   };
   const startRun = (route: JourneyRoute) => { if (!deviceConnected) setDeviceConnected(true); setRunningRoute({ cityId: route.cityId, routeId: route.id }); setRouteCityId(null); };
+  const startSelectedRoute = () => {
+    if (!routeCityId || !selectedRouteId) return;
+    const route = getJourneyRoute(routeCityId, selectedRouteId);
+    if (!route) return;
+    startRun(route);
+  };
   const completeRun = (result: RunResult) => { if (!runningRoute) return; dispatch({ type: 'COMPLETE_ROUTE', ...runningRoute, result }); setRunningRoute(null); setSelectedRouteId(null); setSelectedCandidateId(null); };
   const resetDemo = () => { dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
   const selectPrimaryTab = (tab: PrimaryTab) => {
@@ -504,6 +605,7 @@ export default function JourneyApp() {
   const runningCity = runningRoute ? getJourneyCity(runningRoute.cityId) : undefined;
   const runningRouteData = runningRoute ? getJourneyRoute(runningRoute.cityId, runningRoute.routeId) : undefined;
   const routeSheetCity = routeCityId ? getJourneyCity(routeCityId) : undefined;
+  const selectedRouteData = routeSheetCity && selectedRouteId ? getJourneyRoute(routeSheetCity.id, selectedRouteId) : undefined;
   const lastRunCity = state.lastRun ? getJourneyCity(state.lastRun.cityId) : undefined;
   const lastRunRoute = state.lastRun ? getJourneyRoute(state.lastRun.cityId, state.lastRun.routeId) : undefined;
   const pendingCity = state.pendingNextCityId ? getJourneyCity(state.pendingNextCityId) : undefined;
@@ -511,10 +613,12 @@ export default function JourneyApp() {
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
-        {runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPage city={runningCity} route={runningRouteData} reduceMotion={reduceMotion} onCancel={() => setRunningRoute(null)} onComplete={completeRun} /></motion.div>
+        {runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
         : state.currentPage === 'routeComplete' && state.lastRun && lastRunCity && lastRunRoute ? <motion.div className="screen-layer" key="route-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><RouteCompletePage city={lastRunCity} route={lastRunRoute} completed={getCompletedRouteIds(state, lastRunCity.id).length} result={state.lastRun} firstCompletion={state.lastRun.isFirstCompletion} onNext={() => { setActiveTab('home'); dispatch({ type: 'NAVIGATE', page: 'home' }); window.setTimeout(() => openCity(state.currentCityId), 0); }} onMap={() => selectPrimaryTab('world')} /></motion.div>
         : state.currentPage === 'cityComplete' ? <motion.div className="screen-layer" key="city-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CityCompletePage city={currentCity} candidates={candidateCities} selectedId={effectiveCandidateId} onSelect={setSelectedCandidateId} onContinue={() => effectiveCandidateId && dispatch({ type: 'SELECT_NEXT_CITY', cityId: effectiveCandidateId })} /></motion.div>
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
+        : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
+        : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getOpenRouteCount(getCompletedRouteIds(state, routeSheetCity.id).length)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
@@ -522,10 +626,9 @@ export default function JourneyApp() {
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={setHomeCityId} onClose={() => setCityListOpen(false)} /></motion.div>}
-        {routeSheetCity && !runningRoute && <motion.div className="overlay-layer" key="routes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RouteSheet city={routeSheetCity} state={state} selectedRouteId={selectedRouteId} deviceConnected={deviceConnected} onClose={() => { setRouteCityId(null); setSelectedRouteId(null); }} onSelectRoute={handleRouteSelect} onBackToList={() => setSelectedRouteId(null)} onStart={startRun} /></motion.div>}
         {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
       </AnimatePresence>
-      {!runningRoute && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!runningRoute && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );

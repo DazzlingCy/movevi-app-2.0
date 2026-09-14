@@ -3,11 +3,14 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Check, ChevronLeft, Clock3, Flame, MapPin, Pause, Play, Route, Square, Wifi } from 'lucide-react';
 import { CITIES, getRouteData } from '../data/cities';
 import CityImage from './CityImage';
+import type { CityRouteListItem } from './CityRoutesView';
 
 interface RunPlaybackViewProps {
   cityId: string;
   routeIndex: number;
   image: string;
+  cityName?: string;
+  routeOverride?: CityRouteListItem;
   onExit: () => void;
   onComplete: (stats: { distance: number; duration: number; calories: number }) => void;
 }
@@ -23,7 +26,7 @@ const parsePlannedDuration = (value: string) => {
   return minutes * 60 + seconds;
 };
 
-export default function RunPlaybackView({ cityId, routeIndex, image, onExit, onComplete }: RunPlaybackViewProps) {
+export default function RunPlaybackView({ cityId, routeIndex, image, cityName: cityNameOverride, routeOverride, onExit, onComplete }: RunPlaybackViewProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [distance, setDistance] = useState(0);
   const [time, setTime] = useState(0);
@@ -31,8 +34,8 @@ export default function RunPlaybackView({ cityId, routeIndex, image, onExit, onC
   const reduceMotion = useReducedMotion();
 
   const city = CITIES.find(item => String(item.id) === String(cityId));
-  const route = getRouteData(cityId, routeIndex);
-  const cityName = city?.name ?? '城市';
+  const route = routeOverride ?? getRouteData(cityId, routeIndex);
+  const cityName = cityNameOverride ?? city?.name ?? '城市';
   const plannedDistance = Number(route.distance) || 0;
   const plannedDuration = parsePlannedDuration(route.duration);
 

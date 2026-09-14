@@ -528,12 +528,15 @@ body { background: var(--bg); }
 .movevi-wordmark strong { font-size: 11px; font-weight: 600; letter-spacing: .14em; }
 .utility-chip { min-height: 34px; padding-inline: 11px; border-color: var(--line); background: #0f1014; color: #d0d3db; font-size: 10px; font-weight: 500; }
 .utility-chip svg { color: var(--success); }
+.utility-chip .treadmill-icon { width: 20px; height: 20px; color: var(--success); }
+.device-card__icon .treadmill-icon { width: 24px; height: 24px; color: var(--success); }
 .icon-button, .avatar-button { border-color: var(--line); background: #111216; }
 .icon-button--paper { background: #16171c; }
 
 .home-heading { margin: 29px 0 19px; }
 .home-heading h1 { font-family: var(--font-display); font-size: clamp(35px, 9vw, 42px); font-weight: 600; letter-spacing: -.055em; }
 .home-heading .eyebrow { color: #757a84; font-size: 10px; font-weight: 500; }
+.home-city-swipe-zone { touch-action: pan-x pan-y; user-select: none; }
 .destination-card { height: 255px; border: 1px solid rgba(255,255,255,.1); border-radius: 22px; background: #111216; box-shadow: 0 18px 44px rgba(0,0,0,.28); }
 .destination-card__overlay { background: linear-gradient(180deg, rgba(3,4,7,.04) 22%, rgba(3,4,7,.9) 100%); }
 .destination-card__kicker { color: rgba(255,255,255,.62); font-weight: 500; }
