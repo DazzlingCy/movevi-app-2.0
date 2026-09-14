@@ -1,0 +1,8 @@
+{
+  "name": "木卫六APP",
+  "description": "一款跑步机产品，通过在各国城市拍摄的运动视频，为用户提供沉浸式的运动体验。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
