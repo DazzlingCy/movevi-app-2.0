@@ -36,8 +36,32 @@ const formatDuration = (seconds: number) => {
 
 const cityStyle = (city: JourneyCity) => ({ '--city-accent': city.accent } as CSSProperties);
 
+const JOURNEY_CITY_IMAGES: Record<string, string> = {
+  hangzhou: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/%E6%9D%AD%E5%B7%9E%E9%92%B1%E6%B1%9F%E6%96%B0%E5%9F%8E_4_%28cropped%29.jpg/1280px-%E6%9D%AD%E5%B7%9E%E9%92%B1%E6%B1%9F%E6%96%B0%E5%9F%8E_4_%28cropped%29.jpg',
+  beijing: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Skyline_of_Beijing_CBD_with_B-5906_approaching_%2820211016171955%29_%281%29.jpg/1280px-Skyline_of_Beijing_CBD_with_B-5906_approaching_%2820211016171955%29_%281%29.jpg',
+  shanghai: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Huangpu_Park_20124-Shanghai_%2832208802494%29.jpg/1280px-Huangpu_Park_20124-Shanghai_%2832208802494%29.jpg',
+  xian: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/City_wall_of_Xi%27an_51550-Xian_%2827959363326%29.jpg/1280px-City_wall_of_Xi%27an_51550-Xian_%2827959363326%29.jpg',
+  tokyo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Skyscrapers_of_Shinjuku_2009_January.jpg/1280px-Skyscrapers_of_Shinjuku_2009_January.jpg',
+  paris: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=1200',
+  london: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/London_Skyline_%28125508655%29.jpeg/1280px-London_Skyline_%28125508655%29.jpeg',
+  'new-york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&q=80&w=1200',
+  sydney: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1200',
+  rio: 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&q=80&w=1200',
+  cairo: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&q=80&w=1200',
+  bangkok: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&q=80&w=1200',
+  mumbai: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Gateway_of_India_%28cropped%29.jpg/1280px-Gateway_of_India_%28cropped%29.jpg',
+  singapore: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=1200',
+  moscow: 'https://images.unsplash.com/photo-1513326738677-b964603b136d?auto=format&fit=crop&q=80&w=1200',
+  'los-angeles': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Los_Angeles%2C_Winter_2016.jpg/1280px-Los_Angeles%2C_Winter_2016.jpg',
+  rome: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=1200',
+  dubai: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=1200',
+  berlin: 'https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&q=80&w=1200',
+  toronto: 'https://images.unsplash.com/photo-1517935706615-2717063c2225?auto=format&fit=crop&q=80&w=1200'
+};
+
 const cityImageFor = (city: JourneyCity) =>
-  CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
+  JOURNEY_CITY_IMAGES[city.id]
+  ?? CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
   ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200';
 
 const toLegacyCity = (city: JourneyCity, state: JourneyState): CityData => {
@@ -130,6 +154,8 @@ type WeightRouteTarget = {
 
 function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevice, onLegacyFeature }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const hasAlignedCarouselRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
@@ -137,22 +163,32 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const itemCompleted = getCompletedRouteIds(state, item.id).length;
     const itemStatus = getCityStatus(state, item.id);
     return itemStatus === 'completed'
-    ? '这座城市的 10 段旅程已全部完成'
-    : itemStatus === 'current'
-      ? `还有 ${10 - itemCompleted} 段旅程等待发现`
-      : itemStatus === 'candidate'
-        ? `完成${getJourneyCity(state.currentCityId)?.name ?? '当前城市'}后可选择为下一站`
-        : '完成前序旅程后逐步开放';
+      ? ''
+      : itemStatus === 'current'
+        ? `还有 ${10 - itemCompleted} 段旅程等待发现`
+        : itemStatus === 'candidate'
+          ? '完成前序旅程后逐步开放'
+          : '完成前序旅程后逐步开放';
   };
 
   useEffect(() => {
     const carousel = carouselRef.current;
     const target = carousel?.querySelector<HTMLElement>(`[data-city-id="${city.id}"]`);
     if (!carousel || !target) return;
-    carousel.scrollTo({ left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2, behavior: 'auto' });
+    programmaticScrollRef.current = true;
+    carousel.scrollTo({
+      left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2,
+      behavior: hasAlignedCarouselRef.current ? 'smooth' : 'auto'
+    });
+    hasAlignedCarouselRef.current = true;
+    const releaseProgrammaticScroll = window.setTimeout(() => {
+      programmaticScrollRef.current = false;
+    }, 420);
+    return () => window.clearTimeout(releaseProgrammaticScroll);
   }, [city.id]);
 
   const selectNearestCity = () => {
+    if (programmaticScrollRef.current) return;
     const carousel = carouselRef.current;
     if (!carousel) return;
     const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id]')];
@@ -197,6 +233,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   return (
     <main className="page page--home" id="main-content">
       <header className="topbar">
+        <button className="utility-chip utility-chip--support" type="button" onClick={() => onLegacyFeature('onlineSupport')} aria-label="打开在线客服">
+          <HeadphonesIcon />
+          <span>在线客服</span>
+        </button>
         <button className="utility-chip" type="button" onClick={onDevice} aria-label="查看设备连接状态">
           <TreadmillIcon connected={deviceConnected} />
           <span>{deviceConnected ? '设备在线' : '未连接'}</span>
@@ -204,6 +244,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
       </header>
       <section className="home-heading">
         <h1>今天去哪里？</h1>
+        <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('weightLossPlan')} aria-label="打开打卡红包">
+          <Flame />
+          <span>打卡红包</span>
+        </button>
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
         <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
@@ -213,7 +257,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
             const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
             return (
-              <section className="destination-journey-card" data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
+              <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
                 <div className="destination-card">
                   <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
                   <div className="destination-card__overlay" />
@@ -225,10 +269,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
                 <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
                   <div className="journey-progress__topline">
                     <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
-                    <p>{getProgressCopy(item)}</p>
+                    {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
                   </div>
                   <ProgressSegments completed={itemCompleted} />
-                  <button className="primary-button" type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
+                  <button className={`primary-button journey-cta journey-cta--${itemStatus}`} type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
                     {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : itemStatus === 'candidate' ? `${item.name} · 下一站候选` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
                   </button>
                 </section>
@@ -236,18 +280,6 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
             );
           })}
         </div>
-      </section>
-      <section className="home-quick-actions" aria-label="快捷入口">
-        <button type="button" onClick={() => onLegacyFeature('onlineSupport')}>
-          <span><HeadphonesIcon /></span>
-          <strong>在线客服</strong>
-          <small>设备与路线问题</small>
-        </button>
-        <button type="button" onClick={() => onLegacyFeature('weightLossPlan')}>
-          <span><Flame /></span>
-          <strong>打卡红包</strong>
-          <small>30天运动计划</small>
-        </button>
       </section>
     </main>
   );
