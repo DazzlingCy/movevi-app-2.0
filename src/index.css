@@ -710,7 +710,7 @@ body { background: var(--bg); }
 .journey-totals div { border-color: var(--line); }
 .journey-totals strong { font-family: var(--font-display); font-weight: 600; }
 .journey-totals span { color: var(--muted); }
-.journey-totals--world { margin: 18px 20px 16px; padding: 0; }
+.journey-totals--world { margin: 16px 20px 14px; padding: 0; }
 .journey-totals--world strong { font-size: 30px; }
 .journey-totals--world span { font-size: 10px; }
 .world-link { display: none; }
@@ -753,8 +753,8 @@ body { background: var(--bg); }
 .world-header > p:last-child { margin: 6px 0 0; color: #8a8f98; font-size: 12px; }
 .world-globe-panel {
   position: relative;
-  height: min(71vh, 646px);
-  min-height: 566px;
+  height: min(66vh, 604px);
+  min-height: 526px;
   overflow: hidden;
   border-bottom: 1px solid rgba(255,255,255,.075);
   background:
@@ -765,7 +765,7 @@ body { background: var(--bg); }
 .world-globe-panel::before {
   content: "";
   position: absolute;
-  inset: 64px 10px 56px;
+  inset: 64px 0 56px;
   z-index: 1;
   pointer-events: none;
   border-radius: 50%;
@@ -785,7 +785,7 @@ body { background: var(--bg); }
     radial-gradient(circle at 50% 44%, transparent 46%, rgba(2,3,6,.14) 67%, rgba(2,3,6,.72) 100%),
     linear-gradient(180deg, rgba(2,3,6,.2) 0%, transparent 33%, rgba(2,3,6,.68) 100%);
 }
-.world-globe-panel canvas { transform: scale(1.1) translateY(10px); transform-origin: center center; filter: saturate(.74) brightness(1.08) contrast(.98) drop-shadow(0 0 18px rgba(190,200,220,.1)); }
+.world-globe-panel canvas { transform: translateY(8px); transform-origin: center center; filter: saturate(.74) brightness(1.08) contrast(.98) drop-shadow(0 0 18px rgba(190,200,220,.1)); }
 .globe-loading { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; color: var(--muted); font-size: 10px; }
 .globe-loading svg { width: 34px; height: 34px; color: #838bf2; animation: globeBreathe 1.8s ease-in-out infinite; }
 .world-globe-panel__status { position: absolute; z-index: 15; left: 22px; bottom: 20px; display: grid; grid-template-columns: 8px auto 1fr; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid rgba(255,255,255,.11); border-radius: 12px; background: rgba(15,16,20,.72); backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px); font-size: 10px; }
@@ -794,7 +794,7 @@ body { background: var(--bg); }
 .world-globe-panel__status strong { font-weight: 600; }
 .page--world > .primary-button {
   width: calc(100% - 40px);
-  margin: 0 20px;
+  margin: 0 20px 24px;
   background: #f5f5f7;
   color: #121318;
   border-radius: 14px;
@@ -923,7 +923,7 @@ body { background: var(--bg); }
   .destination-card { height: 286px; }
   .journey-progress { padding-block: 15px 16px; }
   .destination-journey-card .journey-progress { padding-block: 13px 16px; }
-  .world-globe-panel { min-height: 475px; height: 64vh; }
+  .world-globe-panel { min-height: 430px; height: 58vh; }
   .profile-header { margin-bottom: 16px; }
   .profile-identity { padding: 14px; }
   .profile-metrics { margin-bottom: 16px; padding-block: 12px; }

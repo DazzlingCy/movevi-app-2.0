@@ -46,7 +46,7 @@ const NIGHT_EARTH_TEXTURE_URL = `${viteBaseUrl}globe/earth-night.webp`;
 const COUNTRIES_TOPOLOGY_URL = `${viteBaseUrl}globe/countries-110m.json`;
 const CAMERA_ALTITUDE = 1.78;
 const REDUCED_CAMERA_ALTITUDE = 1.95;
-const HOME_CAMERA_ALTITUDE = 4.2;
+const HOME_CAMERA_ALTITUDE = 2.55;
 const GLOBE_BOOTSTRAP_RETRY_MS = 120;
 
 type CountryPolygon = {
