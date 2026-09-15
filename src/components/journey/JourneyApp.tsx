@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
@@ -166,6 +166,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const hasAlignedCarouselRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<number | null>(null);
+  const scrollAnimationFrameRef = useRef<number | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
@@ -181,13 +182,47 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
           : '完成前序旅程后逐步开放';
   };
 
+  const updateCarouselCardVisuals = useCallback(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id]')];
+    const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
+    const influenceDistance = Math.max(1, carousel.clientWidth * 0.58);
+
+    cards.forEach(card => {
+      const cardCenter = card.offsetLeft + card.clientWidth / 2;
+      const distanceRatio = Math.min(1, Math.abs(cardCenter - viewportCenter) / influenceDistance);
+      const closeness = 1 - distanceRatio;
+      const eased = closeness * closeness * (3 - 2 * closeness);
+      card.style.setProperty('--journey-card-scale', (0.92 + eased * 0.08).toFixed(3));
+      card.style.setProperty('--journey-card-y', `${(8 - eased * 8).toFixed(2)}px`);
+      card.style.setProperty('--journey-card-opacity', (0.62 + eased * 0.38).toFixed(3));
+      card.style.setProperty('--journey-card-saturate', (0.78 + eased * 0.22).toFixed(3));
+      card.style.setProperty('--journey-card-brightness', (0.68 + eased * 0.32).toFixed(3));
+    });
+  }, []);
+
+  const requestCarouselVisualUpdate = useCallback(() => {
+    if (scrollAnimationFrameRef.current) return;
+    scrollAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      scrollAnimationFrameRef.current = null;
+      updateCarouselCardVisuals();
+    });
+  }, [updateCarouselCardVisuals]);
+
   useEffect(() => {
     const carousel = carouselRef.current;
     const target = carousel?.querySelector<HTMLElement>(`[data-city-id="${city.id}"]`);
     if (!carousel || !target) return;
+    const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
+    if (Math.abs(carousel.scrollLeft - targetLeft) < 3) {
+      requestCarouselVisualUpdate();
+      return;
+    }
     programmaticScrollRef.current = true;
     carousel.scrollTo({
-      left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2,
+      left: targetLeft,
       behavior: hasAlignedCarouselRef.current ? 'smooth' : 'auto'
     });
     hasAlignedCarouselRef.current = true;
@@ -197,8 +232,9 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     return () => {
       window.clearTimeout(releaseProgrammaticScroll);
       if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+      if (scrollAnimationFrameRef.current) window.cancelAnimationFrame(scrollAnimationFrameRef.current);
     };
-  }, [city.id]);
+  }, [city.id, requestCarouselVisualUpdate]);
 
   const selectNearestCity = () => {
     if (programmaticScrollRef.current) return;
@@ -215,9 +251,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   };
 
   const scheduleNearestCitySelection = () => {
+    requestCarouselVisualUpdate();
     if (programmaticScrollRef.current) return;
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
-    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 170);
+    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 100);
   };
 
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -237,12 +274,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const deltaY = event.clientY - swipeStartRef.current.y;
     swipeStartRef.current = null;
     if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-    const nextCity = JOURNEY_CITY_SEQUENCE[Math.min(JOURNEY_CITY_SEQUENCE.length - 1, Math.max(0, cityIndex + (deltaX < 0 ? 1 : -1)))];
-    if (nextCity && nextCity.id !== city.id) {
-      swipedRef.current = true;
-      onBrowseCity(nextCity.id);
-      window.setTimeout(() => { swipedRef.current = false; }, 80);
-    }
+    swipedRef.current = true;
+    window.setTimeout(() => { swipedRef.current = false; }, 180);
   };
   const handleRoutesClick = (cityId: string) => {
     if (swipedRef.current) return;

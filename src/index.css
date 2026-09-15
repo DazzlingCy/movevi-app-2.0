@@ -178,7 +178,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .destination-carousel::-webkit-scrollbar { display: none; }
 .destination-carousel:focus-visible { border-radius: var(--radius-lg); outline-offset: 4px; }
-.destination-carousel .destination-journey-card { flex: 0 0 88%; scroll-snap-align: center; scroll-snap-stop: always; box-shadow: none; }
+.destination-carousel .destination-journey-card { flex: 0 0 88%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
 .destination-carousel__meta { display: flex; align-items: center; justify-content: space-between; padding: 9px 4px 0; color: #666b75; font-size: 8px; }
 .destination-carousel__meta span:first-child { color: #aeb4ff; font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: .06em; }
 .destination-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 19, 25, .02) 20%, rgba(4, 19, 25, .75) 100%); }
@@ -674,22 +674,29 @@ body { background: var(--bg); }
 .home-city-swipe-zone::before { left: -20px; background: linear-gradient(90deg, var(--paper), transparent); }
 .home-city-swipe-zone::after { right: -20px; background: linear-gradient(270deg, var(--paper), transparent); }
 .destination-journey-card {
+  --journey-card-scale: .92;
+  --journey-card-y: 8px;
+  --journey-card-opacity: .62;
+  --journey-card-saturate: .78;
+  --journey-card-brightness: .68;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.095);
   border-radius: 24px;
   background: #0f1014;
   box-shadow: 0 22px 58px rgba(0,0,0,.26);
-  transform: scale(.92) translateY(8px);
-  opacity: .62;
-  filter: saturate(.78) brightness(.68);
+  transform: scale(var(--journey-card-scale)) translateY(var(--journey-card-y));
+  opacity: var(--journey-card-opacity);
+  filter: saturate(var(--journey-card-saturate)) brightness(var(--journey-card-brightness));
   transform-origin: center center;
-  transition: transform .42s cubic-bezier(.16,1,.3,1), opacity .34s ease, filter .34s ease;
+  transition: transform .12s linear, opacity .12s linear, filter .12s linear;
   will-change: transform, opacity;
 }
 .destination-journey-card.is-active {
-  transform: scale(1);
-  opacity: 1;
-  filter: none;
+  --journey-card-scale: 1;
+  --journey-card-y: 0px;
+  --journey-card-opacity: 1;
+  --journey-card-saturate: 1;
+  --journey-card-brightness: 1;
 }
 .destination-journey-card .destination-carousel__meta { padding: 13px 18px 0; }
 .destination-card { height: 392px; border: 0; border-radius: 23px 23px 0 0; background: #111216; box-shadow: none; }
