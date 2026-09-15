@@ -165,6 +165,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const carouselRef = useRef<HTMLDivElement>(null);
   const hasAlignedCarouselRef = useRef(false);
   const programmaticScrollRef = useRef(false);
+  const scrollSettleTimerRef = useRef<number | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
@@ -193,7 +194,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const releaseProgrammaticScroll = window.setTimeout(() => {
       programmaticScrollRef.current = false;
     }, 420);
-    return () => window.clearTimeout(releaseProgrammaticScroll);
+    return () => {
+      window.clearTimeout(releaseProgrammaticScroll);
+      if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    };
   }, [city.id]);
 
   const selectNearestCity = () => {
@@ -208,6 +212,12 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
       Math.abs(card.offsetLeft + card.clientWidth / 2 - viewportCenter) < Math.abs(nearest.offsetLeft + nearest.clientWidth / 2 - viewportCenter) ? card : nearest
     ), firstCard);
     if (next.dataset.cityId && next.dataset.cityId !== city.id) onBrowseCity(next.dataset.cityId);
+  };
+
+  const scheduleNearestCitySelection = () => {
+    if (programmaticScrollRef.current) return;
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 120);
   };
 
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -259,12 +269,12 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
         </button>
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
-        <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={selectNearestCity} onKeyDown={handleCarouselKeyDown}>
+        <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={scheduleNearestCitySelection} onKeyDown={handleCarouselKeyDown}>
           {JOURNEY_CITY_SEQUENCE.map((item, index) => {
             const itemStatus = getCityStatus(state, item.id);
             const itemCompleted = getCompletedRouteIds(state, item.id).length;
             const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
-            const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : itemStatus === 'candidate' ? '下一站候选' : '全球目的地';
+            const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
             return (
               <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
                 <div className="destination-card">
@@ -281,8 +291,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
                     {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
                   </div>
                   <ProgressSegments completed={itemCompleted} />
-                  <button className={`primary-button journey-cta journey-cta--${itemStatus}`} type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
-                    {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : itemStatus === 'candidate' ? `${item.name} · 下一站候选` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+                  <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
+                    {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
                   </button>
                 </section>
               </section>
@@ -295,7 +305,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
 }
 
 function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: JourneyState; selectedCityId: string; onSelect: (cityId: string) => void; onClose: () => void }) {
-  const statusText = { completed: '已完成', current: '当前', candidate: '候选', locked: '未开放' } as const;
+  const statusText = { completed: '已完成', current: '当前', candidate: '', locked: '未开放' } as const;
   return (
     <Modal labelId="city-list-title" onClose={onClose} className="city-list-sheet">
       <header className="sheet-header">
@@ -307,11 +317,14 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
         {JOURNEY_CITY_SEQUENCE.map((item, index) => {
           const status = getCityStatus(state, item.id);
           const completed = getCompletedRouteIds(state, item.id).length;
+          const StatusIcon = status === 'completed' ? Check : status === 'current' ? MapPin : status === 'locked' ? LockKeyhole : null;
           return (
             <button className={`city-list-card city-list-card--${status}${selectedCityId === item.id ? ' is-selected' : ''}`} type="button" key={item.id} onClick={() => { onSelect(item.id); onClose(); }} aria-pressed={selectedCityId === item.id} style={cityStyle(item)}>
               <span className="city-list-card__number">{String(index + 1).padStart(2, '0')}</span>
-              <span className="city-list-card__status">{status === 'completed' ? <Check /> : status === 'current' ? <MapPin /> : status === 'locked' ? <LockKeyhole /> : <Sparkles />}{statusText[status]}</span>
+              {StatusIcon && <span className="city-list-card__status"><StatusIcon />{statusText[status]}</span>}
               {status === 'completed' && <span className="city-list-card__stamp" aria-hidden="true"><b>已完成</b><small>COMPLETED</small></span>}
+              {status === 'current' && <span className="city-list-card__pin" aria-hidden="true"><MapPin /><b>正在点亮</b></span>}
+              {status === 'locked' && <span className="city-list-card__fog-lock" aria-hidden="true"><LockKeyhole /></span>}
               <strong>{item.name}</strong><small>{item.englishName}</small><i><span style={{ width: `${completed * 10}%` }} /></i>
             </button>
           );
@@ -327,6 +340,7 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
         <h1>我的环球旅程</h1>
+        <p>跑过的城市，都会在这里点亮</p>
       </header>
       <section className="world-globe-panel">
         <Suspense fallback={<div className="globe-loading" role="status"><Globe2 /><span>正在加载你的世界</span></div>}>
@@ -334,12 +348,14 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
         </Suspense>
         <div className="world-globe-panel__status"><i /><span>当前</span><strong>{current.name}</strong></div>
       </section>
-      <section className="journey-totals journey-totals--world" aria-label="我的旅程数字">
-        <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
-        <div><strong>{totals.completedRoutes}</strong><span>条路线</span></div>
-        <div><strong>{totals.discoveredSpots}</strong><span>处景点</span></div>
-      </section>
-      <button className="primary-button" type="button" onClick={onCities}>全球城市列表 <Globe2 /></button>
+      <div className="world-summary-panel">
+        <section className="journey-totals journey-totals--world" aria-label="我的旅程数字">
+          <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
+          <div><strong>{totals.completedRoutes}</strong><span>条路线</span></div>
+          <div><strong>{totals.discoveredSpots}</strong><span>处景点</span></div>
+        </section>
+        <button className="primary-button" type="button" onClick={onCities}>全球城市列表 <Globe2 /></button>
+      </div>
     </main>
   );
 }
@@ -557,7 +573,7 @@ type PrimaryTab = 'home' | 'world' | 'activity' | 'profile';
 
 function BottomNavigation({ active, onChange }: { active: PrimaryTab; onChange: (tab: PrimaryTab) => void }) {
   const items = [
-    { id: 'home' as const, label: '今日', icon: Compass },
+    { id: 'home' as const, label: '首页', icon: Compass },
     { id: 'world' as const, label: '世界', icon: Globe2 },
     { id: 'activity' as const, label: '活动', icon: CalendarDays },
     { id: 'profile' as const, label: '我的', icon: UserRound }

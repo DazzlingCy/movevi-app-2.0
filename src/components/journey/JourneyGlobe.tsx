@@ -46,6 +46,7 @@ export default function JourneyGlobe({ state, onOpenCity }: JourneyGlobeProps) {
       cities={cities}
       appearance="night"
       focusCityId={state.currentCityId}
+      focusAltitude={2.16}
       onCityClick={city => onOpenCity(city.id)}
     />
   );

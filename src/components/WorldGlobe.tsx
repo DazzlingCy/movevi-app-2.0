@@ -9,6 +9,7 @@ interface WorldGlobeProps {
   cities: CityData[];
   appearance?: 'default' | 'aurora' | 'night';
   focusCityId?: string;
+  focusAltitude?: number;
   targetFlight?: { fromCityId: string; toCityId: string } | null;
   onCityClick: (city: CityData) => void;
   onFlightComplete?: () => void;
@@ -281,7 +282,7 @@ function FlatMapFallback({ cities, appearance, onCityClick }: { cities: CityData
   );
 }
 
-export default function WorldGlobe({ cities, appearance = 'default', focusCityId, targetFlight, onCityClick, onFlightComplete }: WorldGlobeProps) {
+export default function WorldGlobe({ cities, appearance = 'default', focusCityId, focusAltitude = HOME_CAMERA_ALTITUDE, targetFlight, onCityClick, onFlightComplete }: WorldGlobeProps) {
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const idleTimerRef = useRef<number | null>(null);
   const flightTimersRef = useRef<number[]>([]);
@@ -493,7 +494,7 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
         || cities.find(item => item.status === 'lit')
         || cities[0];
       if (city) {
-        focusCity(city, 850, HOME_CAMERA_ALTITUDE);
+        focusCity(city, 850, focusAltitude);
         homeFocusCityIdRef.current = city.id;
       }
       clearIdleTimer();
@@ -507,7 +508,7 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
     } finally {
       configuringRef.current = false;
     }
-  }, [applyGlobeLighting, cities, clearIdleTimer, focusCity, focusCityId, scheduleAutoRotate, setAutoRotate]);
+  }, [applyGlobeLighting, cities, clearIdleTimer, focusAltitude, focusCity, focusCityId, scheduleAutoRotate, setAutoRotate]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -544,10 +545,10 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
 
     clearIdleTimer();
     setAutoRotate(false);
-    focusCity(city, 720, HOME_CAMERA_ALTITUDE);
+    focusCity(city, 720, focusAltitude);
     homeFocusCityIdRef.current = city.id;
     scheduleAutoRotate();
-  }, [clearIdleTimer, focusCity, focusCityId, isReady, scheduleAutoRotate, setAutoRotate, targetFlight]);
+  }, [clearIdleTimer, focusAltitude, focusCity, focusCityId, isReady, scheduleAutoRotate, setAutoRotate, targetFlight]);
 
   useEffect(() => {
     const globe = globeRef.current;
