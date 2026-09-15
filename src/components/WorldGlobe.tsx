@@ -355,11 +355,11 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
   useEffect(() => () => auroraOceanMaterial.dispose(), [auroraOceanMaterial]);
 
   const nightEarthMaterial = useMemo(() => new THREE.MeshPhongMaterial({
-    color: new THREE.Color('#f1f6ff'),
-    emissive: new THREE.Color('#081525'),
-    emissiveIntensity: 0.62,
-    specular: new THREE.Color('#6da7c7'),
-    shininess: 10
+    color: new THREE.Color('#f6f7fb'),
+    emissive: new THREE.Color('#101521'),
+    emissiveIntensity: 0.46,
+    specular: new THREE.Color('#a0a8ba'),
+    shininess: 7
   }), []);
 
   useEffect(() => () => nightEarthMaterial.dispose(), [nightEarthMaterial]);
@@ -381,10 +381,10 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
     }
 
     if (appearance === 'night') {
-      const ambient = new THREE.AmbientLight(0x6688aa, 0.52);
-      const moonlight = new THREE.DirectionalLight(0x90b7dc, 0.48);
+      const ambient = new THREE.AmbientLight(0x8f96a6, 0.6);
+      const moonlight = new THREE.DirectionalLight(0xd7deef, 0.42);
       moonlight.position.set(-1.8, 1.5, 2.6);
-      const cityRim = new THREE.DirectionalLight(0x4fc3e8, 0.46);
+      const cityRim = new THREE.DirectionalLight(0x8f96d8, 0.28);
       cityRim.position.set(2.4, 0.3, -1.6);
       globe.lights([ambient, moonlight, cityRim]);
       return;
@@ -907,7 +907,7 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
       role="application"
     >
       <div className="absolute inset-0 pointer-events-none">
-        <div className={`absolute inset-0 ${appearance === 'aurora' ? 'bg-[radial-gradient(circle_at_43%_31%,rgba(147,197,220,0.14),transparent_32%),radial-gradient(circle_at_58%_46%,rgba(56,189,248,0.07),transparent_46%)]' : appearance === 'night' ? 'bg-[radial-gradient(circle_at_47%_35%,rgba(96,165,250,0.11),transparent_34%),radial-gradient(circle_at_62%_48%,rgba(14,165,233,0.055),transparent_45%)]' : 'bg-[radial-gradient(circle_at_50%_38%,rgba(20,184,166,0.14),transparent_34%),radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_42%)]'}`} />
+        <div className={`absolute inset-0 ${appearance === 'aurora' ? 'bg-[radial-gradient(circle_at_43%_31%,rgba(147,197,220,0.14),transparent_32%),radial-gradient(circle_at_58%_46%,rgba(56,189,248,0.07),transparent_46%)]' : appearance === 'night' ? 'bg-[radial-gradient(circle_at_47%_35%,rgba(210,216,232,0.08),transparent_34%),radial-gradient(circle_at_62%_48%,rgba(126,134,243,0.035),transparent_45%)]' : 'bg-[radial-gradient(circle_at_50%_38%,rgba(20,184,166,0.14),transparent_34%),radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.10),transparent_42%)]'}`} />
         {starPoints.map(star => (
           <span
             key={star.id}
@@ -944,14 +944,14 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
         globeImageUrl={appearance === 'aurora' ? NATURAL_EARTH_TEXTURE_URL : appearance === 'night' ? NIGHT_EARTH_TEXTURE_URL : GLOBE_TEXTURE_URL}
         globeMaterial={appearance === 'aurora' ? auroraOceanMaterial : appearance === 'night' ? nightEarthMaterial : undefined}
         showAtmosphere
-        atmosphereColor={appearance === 'aurora' ? '#9bd7ee' : appearance === 'night' ? '#4da7d3' : '#67e8f9'}
-        atmosphereAltitude={appearance === 'aurora' ? 0.13 : appearance === 'night' ? 0.11 : 0.16}
+        atmosphereColor={appearance === 'aurora' ? '#9bd7ee' : appearance === 'night' ? '#b9c1d8' : '#67e8f9'}
+        atmosphereAltitude={appearance === 'aurora' ? 0.13 : appearance === 'night' ? 0.085 : 0.16}
         globeCurvatureResolution={5}
         polygonsData={countryPolygons}
         polygonAltitude={appearance === 'default' ? 0.003 : 0.0015}
         polygonCapColor={() => appearance === 'default' ? 'rgba(31, 63, 76, 0.72)' : 'rgba(255, 255, 255, 0)'}
-        polygonSideColor={() => appearance === 'aurora' ? 'rgba(34, 70, 86, 0.08)' : appearance === 'night' ? 'rgba(16, 46, 68, 0.06)' : 'rgba(8, 24, 39, 0.12)'}
-        polygonStrokeColor={() => appearance === 'aurora' ? 'rgba(185, 219, 228, 0.15)' : appearance === 'night' ? 'rgba(125, 186, 212, 0.11)' : 'rgba(125, 211, 252, 0.16)'}
+        polygonSideColor={() => appearance === 'aurora' ? 'rgba(34, 70, 86, 0.08)' : appearance === 'night' ? 'rgba(90, 98, 118, 0.045)' : 'rgba(8, 24, 39, 0.12)'}
+        polygonStrokeColor={() => appearance === 'aurora' ? 'rgba(185, 219, 228, 0.15)' : appearance === 'night' ? 'rgba(190, 198, 216, 0.085)' : 'rgba(125, 211, 252, 0.16)'}
         polygonsTransitionDuration={isReady ? 450 : 0}
         pointsData={[]}
         pointLat="lat"
