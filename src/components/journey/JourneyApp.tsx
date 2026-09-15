@@ -167,6 +167,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const programmaticScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<number | null>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
+  const mouseDragRef = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
@@ -264,6 +265,50 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const nextCity = JOURNEY_CITY_SEQUENCE[Math.min(JOURNEY_CITY_SEQUENCE.length - 1, Math.max(0, cityIndex + direction))];
     if (nextCity) onBrowseCity(nextCity.id);
   };
+
+  const handleCarouselPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    mouseDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      scrollLeft: event.currentTarget.scrollLeft,
+      dragged: false
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add('is-dragging');
+  };
+
+  const handleCarouselPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = mouseDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startX;
+    if (Math.abs(deltaX) > 3) drag.dragged = true;
+    if (!drag.dragged) return;
+
+    event.preventDefault();
+    event.currentTarget.scrollLeft = drag.scrollLeft - deltaX;
+    requestCarouselVisualUpdate();
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+  };
+
+  const finishCarouselPointerDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = mouseDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    event.currentTarget.classList.remove('is-dragging');
+    mouseDragRef.current = null;
+
+    if (drag.dragged) {
+      swipedRef.current = true;
+      window.setTimeout(() => { swipedRef.current = false; }, 180);
+      scheduleNearestCitySelection();
+    }
+  };
+
   const handleSwipeStart = (event: PointerEvent<HTMLElement>) => {
     swipeStartRef.current = { x: event.clientX, y: event.clientY };
     swipedRef.current = false;
@@ -302,7 +347,19 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
         </button>
       </section>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
-        <div className="destination-carousel" ref={carouselRef} role="region" tabIndex={0} aria-label="全球城市，可左右滑动切换" onScroll={scheduleNearestCitySelection} onKeyDown={handleCarouselKeyDown}>
+        <div
+          className="destination-carousel"
+          ref={carouselRef}
+          role="region"
+          tabIndex={0}
+          aria-label="全球城市，可左右滑动切换"
+          onScroll={scheduleNearestCitySelection}
+          onKeyDown={handleCarouselKeyDown}
+          onPointerDown={handleCarouselPointerDown}
+          onPointerMove={handleCarouselPointerMove}
+          onPointerUp={finishCarouselPointerDrag}
+          onPointerCancel={finishCarouselPointerDrag}
+        >
           {JOURNEY_CITY_SEQUENCE.map((item, index) => {
             const itemStatus = getCityStatus(state, item.id);
             const itemCompleted = getCompletedRouteIds(state, item.id).length;

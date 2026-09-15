@@ -175,7 +175,9 @@ h1, h2, h3, p { margin-top: 0; }
   scroll-padding-inline: 20px;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
+  cursor: grab;
 }
+.destination-carousel.is-dragging { cursor: grabbing; }
 .destination-carousel::-webkit-scrollbar { display: none; }
 .destination-carousel:focus-visible { border-radius: var(--radius-lg); outline-offset: 4px; }
 .destination-carousel .destination-journey-card { flex: 0 0 88%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
