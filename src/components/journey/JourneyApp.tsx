@@ -402,7 +402,6 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
         <div><span>20 destinations</span><h2 id="city-list-title">全球城市列表</h2></div>
         <button className="icon-button icon-button--paper" type="button" onClick={onClose} aria-label="关闭全球城市列表"><X /></button>
       </header>
-      <p className="city-list-sheet__intro">选择城市回到首页查看；当前与已完成城市可继续进入路线。</p>
       <div className="city-list-grid">
         {JOURNEY_CITY_SEQUENCE.map((item, index) => {
           const status = getCityStatus(state, item.id);
@@ -410,6 +409,8 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
           const StatusIcon = status === 'completed' ? Check : status === 'current' ? MapPin : status === 'locked' ? LockKeyhole : null;
           return (
             <button className={`city-list-card city-list-card--${status}${selectedCityId === item.id ? ' is-selected' : ''}`} type="button" key={item.id} onClick={() => { onSelect(item.id); onClose(); }} aria-pressed={selectedCityId === item.id} style={cityStyle(item)}>
+              <img className="city-list-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+              <span className="city-list-card__veil" aria-hidden="true" />
               <span className="city-list-card__number">{String(index + 1).padStart(2, '0')}</span>
               {StatusIcon && <span className="city-list-card__status"><StatusIcon />{statusText[status]}</span>}
               {status === 'completed' && <span className="city-list-card__stamp" aria-hidden="true"><b>已完成</b><small>COMPLETED</small></span>}

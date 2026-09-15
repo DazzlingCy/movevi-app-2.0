@@ -301,18 +301,20 @@ h1, h2, h3, p { margin-top: 0; }
 
 .city-list-sheet { max-height: 88%; }
 .city-list-sheet__intro { margin: -4px 2px 15px; color: var(--muted); font-size: 9px; line-height: 1.55; }
-.city-list-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding-bottom: 8px; }
-.city-list-card { position: relative; min-height: 108px; display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #14151a; color: inherit; text-align: left; }
-.city-list-card::after { content: ""; position: absolute; right: -22px; bottom: -28px; width: 72px; height: 72px; border: 1px solid color-mix(in srgb, var(--city-accent) 36%, transparent); border-radius: 50%; opacity: .5; }
-.city-list-card.is-selected { border-color: rgba(174,180,255,.7); background: #191b24; box-shadow: inset 0 0 0 1px rgba(174,180,255,.12); }
-.city-list-card__number { color: #5d616a; font: 700 8px ui-monospace, monospace; letter-spacing: .08em; }
-.city-list-card__status { position: absolute; z-index: 3; top: 11px; right: 11px; display: flex; align-items: center; gap: 3px; color: #666b75; font-size: 7px; }
+.city-list-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-bottom: 8px; }
+.city-list-card { position: relative; min-height: 128px; display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; isolation: isolate; padding: 13px; border: 1px solid rgba(255,255,255,.11); border-radius: 16px; background: #14151a; color: inherit; text-align: left; }
+.city-list-card::after { content: ""; position: absolute; right: -24px; bottom: -30px; z-index: 1; width: 78px; height: 78px; border: 1px solid color-mix(in srgb, var(--city-accent) 44%, transparent); border-radius: 50%; opacity: .48; }
+.city-list-card.is-selected { border-color: rgba(174,180,255,.78); background: #191b24; box-shadow: inset 0 0 0 1px rgba(174,180,255,.14), 0 12px 28px rgba(0,0,0,.24); }
+.city-list-card__photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; filter: saturate(.86) brightness(.72) contrast(.98); transform: scale(1.02); }
+.city-list-card__veil { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(4,5,9,.22) 0%, rgba(4,5,9,.34) 38%, rgba(4,5,9,.88) 100%), linear-gradient(90deg, rgba(4,5,9,.48), rgba(4,5,9,.08) 58%); }
+.city-list-card__number { position: relative; z-index: 3; display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border-radius: 99px; background: rgba(5,6,10,.38); color: rgba(214,219,255,.8); font: 700 8px ui-monospace, monospace; letter-spacing: .08em; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.city-list-card__status { position: absolute; z-index: 3; top: 11px; right: 11px; min-height: 18px; display: flex; align-items: center; gap: 3px; padding: 0 6px; border: 1px solid rgba(255,255,255,.12); border-radius: 99px; background: rgba(5,6,10,.4); color: rgba(235,238,247,.82); font-size: 7px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .city-list-card__status svg { width: 9px; height: 9px; }
 .city-list-card__stamp {
   position: absolute;
   right: 13px;
   bottom: 17px;
-  z-index: 2;
+  z-index: 4;
   width: 58px;
   height: 58px;
   display: grid;
@@ -320,13 +322,13 @@ h1, h2, h3, p { margin-top: 0; }
   align-content: center;
   border: 2px solid currentColor;
   border-radius: 50%;
-  color: rgba(46, 204, 113, .72);
+  color: rgba(130, 242, 190, .86);
   transform: rotate(-13deg);
   font-family: var(--font-display);
   text-align: center;
   pointer-events: none;
   opacity: .82;
-  box-shadow: inset 0 0 0 2px rgba(46,204,113,.08), 0 0 18px rgba(46,204,113,.08);
+  box-shadow: inset 0 0 0 2px rgba(46,204,113,.08), 0 0 18px rgba(46,204,113,.12);
 }
 .city-list-card__stamp::before {
   content: "";
@@ -342,7 +344,7 @@ h1, h2, h3, p { margin-top: 0; }
   position: absolute;
   right: 12px;
   bottom: 18px;
-  z-index: 2;
+  z-index: 4;
   min-width: 58px;
   display: inline-flex;
   align-items: center;
@@ -366,26 +368,28 @@ h1, h2, h3, p { margin-top: 0; }
   padding: 13px;
   color: rgba(135,140,150,.38);
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(20,21,26,0) 0%, rgba(20,21,26,.5) 100%);
+  background: linear-gradient(180deg, rgba(12,13,17,.1) 0%, rgba(12,13,17,.64) 100%);
 }
 .city-list-card__fog-lock svg {
   width: 28px;
   height: 28px;
   filter: blur(.15px);
 }
-.city-list-card > strong { position: relative; z-index: 1; margin-top: auto; font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
-.city-list-card > small { position: relative; z-index: 1; margin-top: 2px; color: #737781; font-size: 7px; letter-spacing: .06em; text-transform: uppercase; }
+.city-list-card > strong { position: relative; z-index: 3; margin-top: auto; color: #fff; font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -.02em; text-shadow: 0 2px 10px rgba(0,0,0,.36); }
+.city-list-card > small { position: relative; z-index: 3; margin-top: 2px; color: rgba(235,238,247,.62); font-size: 7px; letter-spacing: .06em; text-transform: uppercase; }
 .city-list-card > i { position: relative; z-index: 3; width: 100%; height: 3px; overflow: hidden; margin-top: 9px; border-radius: 3px; background: #272930; }
 .city-list-card > i span { display: block; height: 100%; border-radius: inherit; background: #7d86f3; }
 .city-list-card--completed .city-list-card__status { color: var(--success); opacity: 0; }
-.city-list-card--completed::after { border-color: rgba(46,204,113,.2); opacity: .38; }
+.city-list-card--completed::after { border-color: rgba(130,242,190,.28); opacity: .48; }
 .city-list-card--completed > i span { background: linear-gradient(90deg, #6ee7b7, #2ecc71); }
 .city-list-card--current .city-list-card__status { color: #c0c5ff; }
-.city-list-card--current::after { border-color: rgba(174,180,255,.32); opacity: .68; }
+.city-list-card--current::after { border-color: rgba(174,180,255,.42); opacity: .68; }
 .city-list-card--candidate::after { border-color: rgba(255,255,255,.08); opacity: .34; }
 .city-list-card--locked { opacity: .72; filter: grayscale(.24); }
+.city-list-card--locked .city-list-card__photo { filter: grayscale(.48) saturate(.55) brightness(.52); }
 .city-list-card--locked > strong,
-.city-list-card--locked > small { color: #777b84; }
+.city-list-card--locked > small { color: rgba(210,214,222,.44); }
+.city-list-card--locked > strong { color: rgba(235,238,247,.62); }
 .city-list-card--locked > i { opacity: .62; }
 
 .route-list__progress { display: flex; align-items: center; gap: 12px; }
