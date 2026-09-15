@@ -217,7 +217,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const scheduleNearestCitySelection = () => {
     if (programmaticScrollRef.current) return;
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
-    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 120);
+    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 170);
   };
 
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -340,7 +340,7 @@ function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState;
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
         <h1>我的环球旅程</h1>
-        <p>跑过的城市，都会在这里点亮</p>
+        <p>每一次奔跑，都会点亮新的城市记忆</p>
       </header>
       <section className="world-globe-panel">
         <Suspense fallback={<div className="globe-loading" role="status"><Globe2 /><span>正在加载你的世界</span></div>}>
