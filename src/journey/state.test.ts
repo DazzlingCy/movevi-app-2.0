@@ -4,6 +4,7 @@ import { JOURNEY_CITIES } from './data';
 import {
   createDemoJourneyState,
   getCandidateCityIds,
+  getCityStatus,
   getCompletedRouteIds,
   getRouteStatus,
   journeyReducer,
@@ -50,7 +51,7 @@ test('demo state points to Beijing, Shanghai and Tokyo data', () => {
   const state = createDemoJourneyState();
   assert.equal(state.currentCityId, 'tokyo');
   assert.deepEqual(state.completedCityIds, ['beijing', 'shanghai']);
-  assert.equal(getCompletedRouteIds(state, 'tokyo').length, 6);
+  assert.equal(getCompletedRouteIds(state, 'tokyo').length, 8);
   assert.equal(state.discoveredSpotKeys.length, 128);
 });
 
@@ -69,16 +70,28 @@ test('routes open at 3, 6 and 10 thresholds in arbitrary order', () => {
   state = revealAndComplete(state, 6);
   state = revealAndComplete(state, 4);
   state = revealAndComplete(state, 5);
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[6].id), 'discoverable');
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[7].id), 'locked');
+
+  state = revealAndComplete(state, 7);
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[7].id), 'discoverable');
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[8].id), 'locked');
+
+  state = revealAndComplete(state, 8);
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[8].id), 'discoverable');
+  assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[9].id), 'locked');
+
+  state = revealAndComplete(state, 9);
   assert.equal(getRouteStatus(state, 'tokyo', tokyo.routes[9].id), 'discoverable');
 });
 
 test('revealing an unknown route exposes it without completing it', () => {
   const state = createDemoJourneyState();
-  const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[6];
+  const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[8];
   assert.equal(getRouteStatus(state, 'tokyo', route.id), 'discoverable');
   const next = journeyReducer(state, { type: 'REVEAL_ROUTE', cityId: 'tokyo', routeId: route.id });
   assert.equal(getRouteStatus(next, 'tokyo', route.id), 'revealed');
-  assert.equal(getCompletedRouteIds(next, 'tokyo').length, 6);
+  assert.equal(getCompletedRouteIds(next, 'tokyo').length, 8);
 });
 
 test('repeated route completion is idempotent', () => {
@@ -86,22 +99,25 @@ test('repeated route completion is idempotent', () => {
   const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[0];
   const once = journeyReducer(initial, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId: route.id, result });
   const twice = journeyReducer(once, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId: route.id, result });
-  assert.equal(getCompletedRouteIds(twice, 'tokyo').length, 6);
+  assert.equal(getCompletedRouteIds(twice, 'tokyo').length, 8);
   assert.equal(twice.discoveredSpotKeys.length, initial.discoveredSpotKeys.length);
   assert.equal(twice.lastRun?.isFirstCompletion, false);
 });
 
 test('tenth route enters city completion and offers four expected candidates', () => {
   let state = createDemoJourneyState();
-  for (const order of [7, 8, 9, 10]) state = revealAndComplete(state, order);
+  state = revealAndComplete(state, 9);
+  state = revealAndComplete(state, 10);
   assert.equal(state.currentPage, 'cityComplete');
   assert.ok(state.completedCityIds.includes('tokyo'));
+  assert.equal(getCityStatus(state, 'tokyo'), 'completed');
   assert.deepEqual(getCandidateCityIds(state), ['paris', 'new-york', 'london', 'rome']);
 });
 
 test('selecting and arriving changes the unique current city with zero progress', () => {
   let state = createDemoJourneyState();
-  for (const order of [7, 8, 9, 10]) state = revealAndComplete(state, order);
+  state = revealAndComplete(state, 9);
+  state = revealAndComplete(state, 10);
   state = journeyReducer(state, { type: 'SELECT_NEXT_CITY', cityId: 'paris' });
   assert.equal(state.currentPage, 'travel');
   state = journeyReducer(state, { type: 'ARRIVE_NEXT_CITY' });

@@ -122,6 +122,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
           // Unlock the first one, or ones that are completed, or the one next to the last completed
           const lastCompleted = (completedRouteIndices ?? city.completedRouteIndices ?? []).reduce((max, cur) => Math.max(max, cur), 0);
           const isUnlocked = routeOverride?.isUnlocked ?? (openRouteCount ? routeId <= openRouteCount : routeId === 1 || isCompleted || routeId === lastCompleted + 1);
+          const isFreshlyUnlocked = isUnlocked && !isCompleted && routeId === lastCompleted + 1;
 
           const routeData = routeOverride ?? getRouteData(city.id, routeId);
           const numSpots = routeData.spots.split('—').length || 3;
@@ -131,8 +132,14 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
             <div 
               key={i} 
               onClick={() => isUnlocked && onRouteClick(routeId)}
-              className={`bg-white rounded-2xl p-4 flex gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${!isUnlocked ? 'opacity-70 grayscale-[20%]' : 'cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all'}`}
+              className={`relative bg-white rounded-2xl p-4 flex gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFreshlyUnlocked ? 'ring-2 ring-[#31d28c]/45 shadow-[0_8px_24px_rgba(49,210,140,0.18)]' : ''} ${!isUnlocked ? 'opacity-70 grayscale-[20%]' : 'cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all'}`}
             >
+              {isFreshlyUnlocked && (
+                <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700 shadow-sm">
+                  <Sparkles size={11} className="fill-emerald-300 text-emerald-500" />
+                  新解锁
+                </div>
+              )}
               {/* Left Image Area */}
               <div className="w-[100px] h-[130px] bg-slate-100 rounded-xl overflow-hidden shrink-0 relative shadow-inner">
                 <CityImage src={city.image} alt="Route" fallbackLabel={city.name} className="absolute inset-0 w-full h-full object-cover" />

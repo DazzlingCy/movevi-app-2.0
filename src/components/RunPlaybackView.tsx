@@ -301,7 +301,7 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
 
             <div className="flex w-full max-w-sm items-center gap-4 px-1">
               <button onClick={() => onComplete(result)} className="flex-1 rounded-2xl bg-[#cb2027] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(203,32,39,0.3)] transition-all active:scale-95">
-                结束训练
+                完成并返回
               </button>
               <button onClick={() => onComplete(result)} className="flex-1 rounded-2xl bg-[#26b180] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(38,177,128,0.3)] transition-all active:scale-95">
                 继续下一路线

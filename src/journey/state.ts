@@ -12,7 +12,7 @@ const routeIdsFor = (cityId: string, count: number) =>
 const initialCompletedRoutes: Record<string, string[]> = {
   beijing: routeIdsFor('beijing', 10),
   shanghai: routeIdsFor('shanghai', 10),
-  tokyo: routeIdsFor('tokyo', 6)
+  tokyo: routeIdsFor('tokyo', 8)
 };
 
 const initialRevealedRoutes: Record<string, string[]> = {
@@ -45,7 +45,7 @@ export const getRevealedRouteIds = (state: JourneyState, cityId: string) =>
 export const getOpenRouteCount = (completedCount: number) => {
   if (completedCount < 3) return 3;
   if (completedCount < 6) return 6;
-  return 10;
+  return Math.min(10, completedCount + 1);
 };
 
 export const getRouteStatus = (
@@ -76,8 +76,8 @@ export const getCandidateCityIds = (state: JourneyState, limit = 4): string[] =>
 };
 
 export const getCityStatus = (state: JourneyState, cityId: string): CityJourneyStatus => {
-  if (cityId === state.currentCityId) return 'current';
   if (state.completedCityIds.includes(cityId)) return 'completed';
+  if (cityId === state.currentCityId) return 'current';
   if (getCandidateCityIds(state).includes(cityId)) return 'candidate';
   return 'locked';
 };

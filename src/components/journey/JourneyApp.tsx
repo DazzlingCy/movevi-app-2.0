@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
@@ -27,6 +27,9 @@ const JourneyGlobe = lazy(() => import('./JourneyGlobe'));
 const JOURNEY_CITY_SEQUENCE: JourneyCity[] = JOURNEY_SEQUENCE
   .map(cityId => getJourneyCity(cityId))
   .filter((city): city is JourneyCity => Boolean(city));
+
+const CITY_CONTINENT_FILTERS = ['全部', '亚洲', '欧洲', '非洲', '北美洲', '南美洲', '大洋洲', '南极洲'] as const;
+type CityContinentFilter = (typeof CITY_CONTINENT_FILTERS)[number];
 
 const formatDuration = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -90,7 +93,7 @@ const getRouteListOpenCount = (state: JourneyState, cityId: string) => {
   const completedCount = getCompletedRouteIds(state, cityId).length;
   if (!city) return 0;
   if (completedCount >= city.routes.length || getCityStatus(state, cityId) === 'completed') return city.routes.length;
-  return Math.max(1, completedCount);
+  return getOpenRouteCount(completedCount);
 };
 
 const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteListItem => {
@@ -148,6 +151,9 @@ interface HomePageProps {
   deviceConnected: boolean;
   onRoutes: (cityId: string) => void;
   onBrowseCity: (cityId: string) => void;
+  onSelectNextCity: (cityId: string) => void;
+  focusNextStation: boolean;
+  onNextStationFocused: () => void;
   onDevice: () => void;
   onLegacyFeature: (feature: LegacyFeature) => void;
 }
@@ -161,7 +167,7 @@ type WeightRouteTarget = {
   day: number;
 };
 
-function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevice, onLegacyFeature }: HomePageProps) {
+function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const hasAlignedCarouselRef = useRef(false);
   const programmaticScrollRef = useRef(false);
@@ -171,6 +177,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
+  const nextStationCandidates = getCandidateCityIds(state, 3).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
+  const currentCityCompleted = getCompletedRouteIds(state, state.currentCityId).length >= 10 || state.completedCityIds.includes(state.currentCityId);
   const getProgressCopy = (item: JourneyCity) => {
     const itemCompleted = getCompletedRouteIds(state, item.id).length;
     const itemStatus = getCityStatus(state, item.id);
@@ -187,7 +195,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     const carousel = carouselRef.current;
     if (!carousel) return;
 
-    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id]')];
+    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
     const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
     const influenceDistance = Math.max(1, carousel.clientWidth * 0.58);
 
@@ -237,11 +245,30 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     };
   }, [city.id, requestCarouselVisualUpdate]);
 
+  useEffect(() => {
+    if (!focusNextStation) return;
+    const carousel = carouselRef.current;
+    const target = carousel?.querySelector<HTMLElement>('[data-next-station]');
+    if (!carousel || !target) return;
+
+    const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
+    programmaticScrollRef.current = true;
+    carousel.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    hasAlignedCarouselRef.current = true;
+
+    const releaseNextStationFocus = window.setTimeout(() => {
+      programmaticScrollRef.current = false;
+      requestCarouselVisualUpdate();
+      onNextStationFocused();
+    }, 460);
+    return () => window.clearTimeout(releaseNextStationFocus);
+  }, [focusNextStation, onNextStationFocused, requestCarouselVisualUpdate]);
+
   const selectNearestCity = () => {
     if (programmaticScrollRef.current) return;
     const carousel = carouselRef.current;
     if (!carousel) return;
-    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id]')];
+    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
     const firstCard = cards[0];
     if (!firstCard) return;
     const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
@@ -326,6 +353,16 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
     if (swipedRef.current) return;
     onRoutes(cityId);
   };
+  const handleCtaPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    swipeStartRef.current = null;
+    mouseDragRef.current = null;
+    swipedRef.current = false;
+  };
+  const handleNextCitySelect = (cityId: string) => {
+    if (swipedRef.current || !currentCityCompleted) return;
+    onSelectNextCity(cityId);
+  };
 
   return (
     <main className="page page--home" id="main-content">
@@ -366,26 +403,56 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
             const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
             return (
-              <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
-                <div className="destination-card">
-                  <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
-                  <div className="destination-card__overlay" />
-                  <div className="destination-card__content">
-                    <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
+              <Fragment key={item.id}>
+                <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
+                  <div className="destination-card">
+                    <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+                    <div className="destination-card__overlay" />
+                    <div className="destination-card__content">
+                      <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
+                    </div>
                   </div>
-                </div>
-                <div className="destination-carousel__meta" aria-hidden={item.id !== city.id}><span>{String(index + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
-                <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
-                  <div className="journey-progress__topline">
-                    <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
-                    {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
-                  </div>
-                  <ProgressSegments completed={itemCompleted} />
-                  <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onClick={() => handleRoutesClick(item.id)} disabled={!itemCanOpenRoutes}>
-                    {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
-                  </button>
+                  <div className="destination-carousel__meta" aria-hidden={item.id !== city.id}><span>{String(index + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
+                  <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
+                    <div className="journey-progress__topline">
+                      <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
+                      {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
+                    </div>
+                    <ProgressSegments completed={itemCompleted} />
+                    <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }} disabled={!itemCanOpenRoutes}>
+                      {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+                    </button>
+                  </section>
                 </section>
-              </section>
+                {item.id === state.currentCityId && (
+                  <section className={`destination-journey-card destination-next-card${currentCityCompleted ? ' is-ready' : ' is-locked'}`} data-next-station="true" key={`${item.id}-next-station`} aria-label="下一站选择卡片">
+                    <div className="next-station-card__hero">
+                      <span className="next-station-card__eyebrow"><Navigation /> 下一站</span>
+                      <h2>{currentCityCompleted ? '选择下一座城市' : '完成当前城市后开启'}</h2>
+                      <p>{currentCityCompleted ? '从 3 个推荐目的地中选择你的环球旅程下一站。' : `完成${getJourneyCity(state.currentCityId)?.name ?? '当前城市'}全部 10 段路线，即可解锁下一站选择。`}</p>
+                    </div>
+                    <div className="next-station-card__options" role="group" aria-label="下一站候选城市">
+                      {nextStationCandidates.map((candidate, candidateIndex) => (
+                        <button
+                          key={candidate.id}
+                          className="next-station-option"
+                          type="button"
+                          onPointerDown={handleCtaPointerDown}
+                          onClick={(event) => { event.stopPropagation(); handleNextCitySelect(candidate.id); }}
+                          disabled={!currentCityCompleted}
+                          style={cityStyle(candidate)}
+                        >
+                          <img src={cityImageFor(candidate)} alt="" aria-hidden="true" />
+                          <span>{String(candidateIndex + 1).padStart(2, '0')}</span>
+                          <strong>{candidate.name}</strong>
+                          <small>{candidate.englishName}</small>
+                        </button>
+                      ))}
+                    </div>
+                    {!currentCityCompleted && <div className="next-station-card__lock"><LockKeyhole /> 继续完成当前旅程</div>}
+                  </section>
+                )}
+              </Fragment>
             );
           })}
         </div>
@@ -395,15 +462,36 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onDevi
 }
 
 function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: JourneyState; selectedCityId: string; onSelect: (cityId: string) => void; onClose: () => void }) {
+  const [activeContinent, setActiveContinent] = useState<CityContinentFilter>('全部');
   const statusText = { completed: '已完成', current: '当前', candidate: '', locked: '未开放' } as const;
+  const visibleCities = JOURNEY_CITY_SEQUENCE
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => activeContinent === '全部' || item.continent === activeContinent);
+
   return (
     <Modal labelId="city-list-title" onClose={onClose} className="city-list-sheet">
       <header className="sheet-header">
-        <div><span>20 destinations</span><h2 id="city-list-title">全球城市列表</h2></div>
+        <div><span>{visibleCities.length} destinations</span><h2 id="city-list-title">全球城市列表</h2></div>
         <button className="icon-button icon-button--paper" type="button" onClick={onClose} aria-label="关闭全球城市列表"><X /></button>
       </header>
+      <nav className="city-continent-filter" aria-label="按大洲筛选城市">
+        {CITY_CONTINENT_FILTERS.map(continent => {
+          const active = activeContinent === continent;
+          return (
+            <button
+              className={active ? 'is-active' : ''}
+              type="button"
+              key={continent}
+              aria-pressed={active}
+              onClick={() => setActiveContinent(continent)}
+            >
+              <span>{continent}</span>
+            </button>
+          );
+        })}
+      </nav>
       <div className="city-list-grid">
-        {JOURNEY_CITY_SEQUENCE.map((item, index) => {
+        {visibleCities.map(({ item, index }) => {
           const status = getCityStatus(state, item.id);
           const completed = getCompletedRouteIds(state, item.id).length;
           const StatusIcon = status === 'completed' ? Check : status === 'current' ? MapPin : status === 'locked' ? LockKeyhole : null;
@@ -421,6 +509,13 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
           );
         })}
       </div>
+      {visibleCities.length === 0 && (
+        <div className="city-list-empty" role="status">
+          <Globe2 />
+          <strong>南极洲旅程筹备中</strong>
+          <span>新的目的地将在未来逐步开放</span>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -695,6 +790,7 @@ function UtilityPanel({ mode, deviceConnected, manualReducedMotion, onToggleDevi
 
 export default function JourneyApp() {
   const [state, dispatch] = useReducer(journeyReducer, undefined, createDemoJourneyState);
+  const nextStationFocusTimerRef = useRef<number | null>(null);
   const [activeTab, setActiveTab] = useState<PrimaryTab>('home');
   const [homeCityId, setHomeCityId] = useState(state.currentCityId);
   const [cityListOpen, setCityListOpen] = useState(false);
@@ -705,6 +801,7 @@ export default function JourneyApp() {
   const [deviceConnected, setDeviceConnected] = useState(true);
   const [manualReducedMotion, setManualReducedMotion] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [focusNextStation, setFocusNextStation] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [legacyFeature, setLegacyFeature] = useState<LegacyFeature | null>(null);
   const [weightRoute, setWeightRoute] = useState<WeightRouteTarget | null>(null);
@@ -738,6 +835,9 @@ export default function JourneyApp() {
     return () => window.clearTimeout(timer);
   }, [notice]);
   useEffect(() => setHomeCityId(state.currentCityId), [state.currentCityId]);
+  useEffect(() => () => {
+    if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current);
+  }, []);
 
   const openCity = (cityId: string) => {
     const status = getCityStatus(state, cityId);
@@ -785,12 +885,25 @@ export default function JourneyApp() {
     setRunningRoute(null);
     setSelectedRouteId(null);
     setSelectedCandidateId(null);
-    if (!willCompleteCurrentCity) {
+    if (willCompleteCurrentCity) {
+      setActiveTab('home');
+      setHomeCityId(state.currentCityId);
+      setFocusNextStation(false);
+      setNotice(`${getJourneyCity(state.currentCityId)?.name ?? '当前城市'}旅程已完成 · 请选择下一站`);
+      dispatch({ type: 'NAVIGATE', page: 'home' });
+      if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current);
+      nextStationFocusTimerRef.current = window.setTimeout(() => {
+        setFocusNextStation(true);
+        nextStationFocusTimerRef.current = null;
+      }, reduceMotion ? 40 : 260);
+    } else {
       dispatch({ type: 'NAVIGATE', page: 'home' });
       setRouteCityId(completedCityId);
+      if (!alreadyCompleted && completedAfterRun < 10) setNotice(`路线 ${String(completedAfterRun + 1).padStart(2, '0')} 已解锁`);
     }
   };
-  const resetDemo = () => { dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
+  const resetDemo = () => { if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current); nextStationFocusTimerRef.current = null; dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setFocusNextStation(false); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
+  const clearNextStationFocus = useCallback(() => setFocusNextStation(false), []);
   const selectPrimaryTab = (tab: PrimaryTab) => {
     setActiveTab(tab);
     dispatch({ type: 'NAVIGATE', page: tab === 'world' ? 'map' : 'home' });
@@ -845,7 +958,7 @@ export default function JourneyApp() {
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
-        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
+        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
