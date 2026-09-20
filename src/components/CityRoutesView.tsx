@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, BarChart2, Globe2, Lock, Award, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart2, Globe2, Lock, Award, Route, Sparkles } from 'lucide-react';
 import { CityData } from '../data/cities';
 import CityImage from './CityImage';
 
 import { getRouteData } from '../data/cities';
+import CityRouteOverviewView from './CityRouteOverviewView';
 
 export interface CityRouteListItem {
   title: string;
@@ -30,6 +31,7 @@ interface CityRoutesViewProps {
 
 export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
   const [showLitModal, setShowLitModal] = useState(false);
+  const [showOverview, setShowOverview] = useState(false);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [isLightingUp, setIsLightingUp] = useState(false);
   const [activeTab, setActiveTab] = useState(city.id === '1' ? '环西湖' : '精选推荐');
@@ -39,11 +41,22 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
     : ['精选推荐', '文化探索', '现代都市', '自然风光'];
 
   useEffect(() => {
+    setShowOverview(false);
     if (city.justLit) {
       setIsCardFlipped(false);
       setShowLitModal(true);
     }
-  }, [city.justLit]);
+  }, [city.id, city.justLit]);
+
+  if (showOverview) {
+    return (
+      <CityRouteOverviewView
+        city={city}
+        routeItems={routeItems}
+        onBack={() => setShowOverview(false)}
+      />
+    );
+  }
 
   const handleCloseLitModal = () => {
     setShowLitModal(false);
@@ -69,7 +82,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
           <button onClick={onBack} className="p-2 -ml-2 drop-shadow-md">
             <ChevronLeft size={32} />
           </button>
-          <button className="p-2 -mr-2 drop-shadow-md">
+          <button type="button" onClick={() => setShowOverview(true)} aria-label="查看路线概览" className="p-2 -mr-2 drop-shadow-md">
             <BarChart2 size={24} />
           </button>
         </div>
@@ -85,8 +98,10 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
             </h2>
           </div>
           
-          <button className="px-8 py-2.5 rounded-full bg-gradient-to-b from-[#ff8c5a] to-[#f45c2c] text-white font-bold tracking-widest border-2 border-white/40 shadow-[0_5px_15px_rgba(244,92,44,0.4)] text-lg">
-            路线概览图
+          <button type="button" onClick={() => setShowOverview(true)} aria-label="查看路线概览" className="group flex min-w-[188px] items-center gap-3 rounded-2xl border border-white/25 bg-black/40 px-3 py-2.5 !text-white shadow-[0_10px_28px_rgba(0,0,0,.24)] backdrop-blur-xl transition hover:bg-black/50 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-orange-500">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#ff8c5a,#f45c2c)] text-white shadow-[0_5px_14px_rgba(244,92,44,.34)]"><Route size={19} /></span>
+            <strong className="min-w-0 flex-1 text-left text-[15px] font-black tracking-normal text-white">路线概览</strong>
+            <ChevronRight size={18} className="text-white/60 transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
       </div>

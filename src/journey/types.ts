@@ -52,6 +52,7 @@ export interface JourneyState {
 }
 
 export type JourneyAction =
+  | { type: 'START_JOURNEY'; cityId: string }
   | { type: 'NAVIGATE'; page: 'home' | 'map' }
   | { type: 'REVEAL_ROUTE'; cityId: string; routeId: string }
   | { type: 'COMPLETE_ROUTE'; cityId: string; routeId: string; result: RunResult }

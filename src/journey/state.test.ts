@@ -3,9 +3,11 @@ import test from 'node:test';
 import { JOURNEY_CITIES } from './data';
 import {
   createDemoJourneyState,
+  createPrototypeJourneyState,
   getCandidateCityIds,
   getCityStatus,
   getCompletedRouteIds,
+  getHomeJourneyCityIds,
   getRouteStatus,
   journeyReducer,
   validateJourneyCatalogue
@@ -34,6 +36,26 @@ const revealAndComplete = (state: JourneyState, order: number) => {
   const revealed = journeyReducer(state, { type: 'REVEAL_ROUTE', cityId: 'tokyo', routeId });
   return journeyReducer(revealed, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId, result });
 };
+
+test('prototype journey starts selected city at 9/10 with two completed cities', () => {
+  const state = createPrototypeJourneyState('paris');
+  assert.equal(state.currentCityId, 'paris');
+  assert.equal(state.completedCityIds.length, 2);
+  assert.equal(getCompletedRouteIds(state, 'paris').length, 9);
+  state.completedCityIds.forEach(cityId => assert.equal(getCompletedRouteIds(state, cityId).length, 10));
+  assert.ok(state.discoveredSpotKeys.length > 0);
+  assert.equal(state.currentPage, 'home');
+  assert.equal(getHomeJourneyCityIds(state)[2], 'paris');
+});
+
+test('home journey order never places a locked city before the current city', () => {
+  const freshShanghai = createPrototypeJourneyState('shanghai');
+  assert.equal(getHomeJourneyCityIds(freshShanghai)[2], 'shanghai');
+  assert.ok(getHomeJourneyCityIds(freshShanghai).slice(0, 2).every(cityId => getCityStatus(freshShanghai, cityId) === 'completed'));
+
+  const demo = createDemoJourneyState();
+  assert.deepEqual(getHomeJourneyCityIds(demo).slice(0, 3), ['beijing', 'shanghai', 'tokyo']);
+});
 
 test('catalogue contains exactly 20 cities and 200 complete unique routes', () => {
   assert.deepEqual(validateJourneyCatalogue(), {

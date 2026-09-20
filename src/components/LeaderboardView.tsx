@@ -1,174 +1,161 @@
 import { useState } from 'react';
-import { ChevronRight, Trophy, Zap, Info, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Activity, ChevronLeft, Footprints, Info, Trophy, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 
 interface LeaderboardViewProps {
   onBack: () => void;
 }
 
-const leaderboardData = [
-  { id: 1, name: '极光闪电', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100&h=100', score: 18450 },
-  { id: 2, name: '城市探险家', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100&h=100', score: 16200 },
-  { id: 3, name: '追光者·星', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100&h=100', score: 14500 },
-  { id: 4, name: '夜行猎手', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100', score: 12100 },
-  { id: 5, name: '风行无阻', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100', score: 11800 },
-  { id: 6, name: '地球狂奔', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100&h=100', score: 9500 },
-  { id: 7, name: '阿兹特克', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100&h=100', score: 8200 },
-  { id: 8, name: '超越极限', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=100&h=100', score: 7100 },
+type EquipmentCategory = 'treadmill' | 'walking-pad';
+
+type LeaderboardUser = {
+  id: number;
+  name: string;
+  avatar: string;
+  unlockedRoutes: number;
+};
+
+const avatars = [
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=160&h=160',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=160&h=160'
+];
+
+const leaderboardData: Record<EquipmentCategory, LeaderboardUser[]> = {
+  treadmill: [
+    { id: 1, name: '极光闪电', avatar: avatars[0], unlockedRoutes: 186 },
+    { id: 2, name: '城市探险家', avatar: avatars[1], unlockedRoutes: 174 },
+    { id: 3, name: '追光者·星', avatar: avatars[2], unlockedRoutes: 168 },
+    { id: 4, name: '夜行猎手', avatar: avatars[3], unlockedRoutes: 151 },
+    { id: 5, name: '风行无阻', avatar: avatars[4], unlockedRoutes: 146 },
+    { id: 6, name: '地球狂奔', avatar: avatars[5], unlockedRoutes: 139 },
+    { id: 7, name: '阿兹特克', avatar: avatars[6], unlockedRoutes: 128 },
+    { id: 8, name: '超越极限', avatar: avatars[7], unlockedRoutes: 116 }
+  ],
+  'walking-pad': [
+    { id: 11, name: '漫步云端', avatar: avatars[4], unlockedRoutes: 172 },
+    { id: 12, name: '日行万步', avatar: avatars[2], unlockedRoutes: 165 },
+    { id: 13, name: '轻盈步履', avatar: avatars[6], unlockedRoutes: 157 },
+    { id: 14, name: '城市慢游者', avatar: avatars[0], unlockedRoutes: 143 },
+    { id: 15, name: '一路向前', avatar: avatars[7], unlockedRoutes: 132 },
+    { id: 16, name: '晨光漫行', avatar: avatars[1], unlockedRoutes: 124 },
+    { id: 17, name: '步履不停', avatar: avatars[5], unlockedRoutes: 118 },
+    { id: 18, name: '万步达人', avatar: avatars[3], unlockedRoutes: 109 }
+  ]
+};
+
+const currentUserByCategory = {
+  treadmill: { rank: 142, unlockedRoutes: 29 },
+  'walking-pad': { rank: 186, unlockedRoutes: 18 }
+};
+
+const equipmentTabs: Array<{ id: EquipmentCategory; label: string; icon: typeof Activity }> = [
+  { id: 'treadmill', label: '跑步机', icon: Activity },
+  { id: 'walking-pad', label: '走步机', icon: Footprints }
 ];
 
 export default function LeaderboardView({ onBack }: LeaderboardViewProps) {
   const [showRules, setShowRules] = useState(false);
+  const [category, setCategory] = useState<EquipmentCategory>('treadmill');
+  const ranking = leaderboardData[category];
+  const currentUser = currentUserByCategory[category];
+  const podiumOrder = [ranking[1], ranking[0], ranking[2]];
 
   return (
-    <div className="w-full h-full bg-[#05070A] overflow-y-auto pb-24 text-slate-100 font-sans hide-scrollbar relative">
-      <div className="sticky top-0 z-20 bg-black/40 backdrop-blur-md pt-safeb flex items-center justify-between px-4 py-4 border-b border-white/10">
-        <button 
-          onClick={onBack} 
-          className="w-8 h-8 flex items-center justify-center bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-        >
-          <ChevronRight className="rotate-180" size={20} />
-        </button>
-        <h1 className="absolute left-1/2 -translate-x-1/2 font-bold tracking-widest text-slate-100">全球点亮榜</h1>
-        <button
-          onClick={() => setShowRules(true)}
-          className="h-8 px-3 flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-400/10 text-xs font-bold text-cyan-100 hover:bg-cyan-400/20 transition-colors"
-        >
-          <Info size={14} />
-          规则
-        </button>
+    <main className={`leaderboard-page leaderboard-page--${category}`} id="main-content">
+      <header className="leaderboard-header">
+        <button type="button" onClick={onBack} aria-label="返回世界页"><ChevronLeft /></button>
+        <div><small>全球路线排名</small><h1>全球跑者榜</h1></div>
+        <button type="button" onClick={() => setShowRules(true)} aria-label="查看排行榜规则"><Info /><span>规则</span></button>
+      </header>
+
+      <div className="leaderboard-tabs" role="tablist" aria-label="设备类型">
+        {equipmentTabs.map(tab => {
+          const Icon = tab.icon;
+          const selected = tab.id === category;
+          return (
+            <button key={tab.id} type="button" role="tab" aria-selected={selected} className={selected ? 'is-active' : ''} onClick={() => setCategory(tab.id)}>
+              <Icon /><span>{tab.label}</span>{selected && <i aria-hidden="true" />}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Top 3 Podium */}
-      <div className="py-10 px-6 flex items-end justify-center gap-4 border-b border-white/5 bg-gradient-to-b from-[#05070A] to-slate-900/40">
-        {/* 2nd Place */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.section
+          className="leaderboard-ranking"
+          key={category}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-col items-center pb-4"
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.2 }}
+          aria-label={`${category === 'treadmill' ? '跑步机' : '走步机'}排行榜`}
         >
-          <div className="relative mb-3">
-             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-400 p-0.5">
-               <img src={leaderboardData[1].avatar} className="w-full h-full rounded-full object-cover" />
-             </div>
-             <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-slate-400 rounded-full flex items-center justify-center text-xs font-bold text-slate-900">2</div>
+          <div className="leaderboard-podium">
+            {podiumOrder.map((user, podiumIndex) => {
+              const rank = podiumIndex === 0 ? 2 : podiumIndex === 1 ? 1 : 3;
+              return (
+                <article className={`leaderboard-podium__item leaderboard-podium__item--${rank}`} key={user.id}>
+                  {rank === 1 && <Trophy className="leaderboard-podium__trophy" aria-hidden="true" />}
+                  <div className="leaderboard-podium__avatar"><img src={user.avatar} alt="" /><b>{rank}</b></div>
+                  <h3>{user.name}</h3>
+                  <p><strong>{user.unlockedRoutes}</strong><span>条路线</span></p>
+                  <i aria-hidden="true" />
+                </article>
+              );
+            })}
           </div>
-          <div className="text-xs font-bold text-slate-200 mb-1">{leaderboardData[1].name}</div>
-          <div className="text-[10px] text-cyan-400 flex items-center"><Zap size={10} className="mr-0.5" />{leaderboardData[1].score.toLocaleString()}</div>
-        </motion.div>
 
-        {/* 1st Place */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center relative z-10"
-        >
-          <div className="absolute -top-6 text-amber-400 animate-bounce">
-            <Trophy size={24} />
+          <div className="leaderboard-list-heading"><span>全球排名</span><span>已解锁路线</span></div>
+          <div className="leaderboard-list">
+            {ranking.slice(3).map((user, index) => (
+              <motion.article key={user.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.035 }}>
+                <b>{String(index + 4).padStart(2, '0')}</b>
+                <img src={user.avatar} alt="" />
+                <div><strong>{user.name}</strong><small>已探索 {Math.ceil(user.unlockedRoutes / 10)} 座城市</small></div>
+                <p><strong>{user.unlockedRoutes}</strong><span>条</span></p>
+              </motion.article>
+            ))}
           </div>
-          <div className="relative mb-3">
-             <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-amber-400 p-0.5 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-               <img src={leaderboardData[0].avatar} className="w-full h-full rounded-full object-cover" />
-             </div>
-             <div className="absolute -bottom-2 -left-2 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center text-sm font-bold text-slate-900 shadow-lg">1</div>
-          </div>
-          <div className="text-sm font-bold text-amber-400 mb-1">{leaderboardData[0].name}</div>
-          <div className="text-xs text-cyan-400 flex items-center font-bold"><Zap size={12} className="mr-0.5" />{leaderboardData[0].score.toLocaleString()}</div>
-        </motion.div>
+        </motion.section>
+      </AnimatePresence>
 
-        {/* 3rd Place */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-col items-center pb-2"
-        >
-          <div className="relative mb-3">
-             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-orange-400 p-0.5">
-               <img src={leaderboardData[2].avatar} className="w-full h-full rounded-full object-cover" />
-             </div>
-             <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-xs font-bold text-slate-900">3</div>
-          </div>
-          <div className="text-xs font-bold text-slate-200 mb-1">{leaderboardData[2].name}</div>
-          <div className="text-[10px] text-cyan-400 flex items-center"><Zap size={10} className="mr-0.5" />{leaderboardData[2].score.toLocaleString()}</div>
-        </motion.div>
-      </div>
-
-      {/* List */}
-      <div className="px-4 py-6 space-y-3">
-        {leaderboardData.slice(3).map((user, index) => (
-           <motion.div 
-             key={user.id}
-             initial={{ opacity: 0, x: -20 }}
-             animate={{ opacity: 1, x: 0 }}
-             transition={{ delay: 0.1 * index }}
-             className="flex items-center justify-between bg-white/5 border border-white/5 p-3 rounded-2xl hover:bg-white/10 transition-colors"
-           >
-              <div className="flex items-center gap-4">
-                 <div className="w-6 text-center text-slate-500 font-bold font-mono">{index + 4}</div>
-                 <img src={user.avatar} className="w-10 h-10 rounded-full object-cover" />
-                 <div className="font-bold text-sm text-slate-200">{user.name}</div>
-              </div>
-              <div className="flex items-center text-cyan-400 font-mono text-xs">
-                 <Zap size={12} className="mr-1" /> {user.score.toLocaleString()}
-              </div>
-           </motion.div>
-        ))}
-      </div>
-
-      {/* Current User */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent pb-safeb pt-12">
-          <div className="flex items-center justify-between bg-cyan-950/40 border border-cyan-500/30 p-4 rounded-2xl backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.1)] mb-4">
-            <div className="flex items-center gap-4">
-               <div className="w-6 text-center text-cyan-500 font-bold font-mono">142</div>
-               <div className="w-10 h-10 rounded-full bg-slate-800 border hover:bg-white/10 flex items-center justify-center border-slate-700">
-                 <span className="text-sm font-bold">ME</span>
-               </div>
-               <div className="font-bold text-sm text-cyan-400">当前排名</div>
-            </div>
-            <div className="flex items-center text-cyan-400 font-mono text-xs font-bold">
-               <Zap size={14} className="mr-1" /> 120
-            </div>
-          </div>
-      </div>
+      <aside className="leaderboard-current" aria-label={`我的排名 ${currentUser.rank}，已解锁 ${currentUser.unlockedRoutes} 条路线`}>
+        <b>{currentUser.rank}</b>
+        <span className="leaderboard-current__avatar">我</span>
+        <div><small>我的排名</small><strong>沐小六</strong></div>
+        <p><strong>{currentUser.unlockedRoutes}</strong><span>条路线</span></p>
+      </aside>
 
       <AnimatePresence>
         {showRules && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 px-4 pb-6 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowRules(false)}
-          >
-            <motion.div
-              className="w-full max-w-sm rounded-[28px] border border-cyan-300/20 bg-[#0A1018] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+          <motion.div className="leaderboard-rules-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRules(false)}>
+            <motion.section
+              className="leaderboard-rules"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="leaderboard-rules-title"
               initial={{ y: 28, scale: 0.98 }}
               animate={{ y: 0, scale: 1 }}
               exit={{ y: 28, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 360, damping: 30 }}
-              onClick={(event) => event.stopPropagation()}
+              onClick={event => event.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold tracking-[0.28em] text-cyan-300/80">活动规则</div>
-                  <h2 className="mt-1 text-xl font-black text-white">规则说明</h2>
-                </div>
-                <button
-                  onClick={() => setShowRules(false)}
-                  className="h-9 w-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm leading-7 text-slate-300">
-                排行榜仅展示最近30天的光迹值。
-              </div>
-            </motion.div>
+              <header><div><small>排名规则</small><h2 id="leaderboard-rules-title">怎样提升排名？</h2></div><button type="button" onClick={() => setShowRules(false)} aria-label="关闭规则"><X /></button></header>
+              <ol>
+                <li><b>01</b><p><strong>解锁路线即计入</strong><span>累计解锁的城市路线越多，排名越高。</span></p></li>
+                <li><b>02</b><p><strong>设备榜单独立计算</strong><span>跑步机与走步机分别统计，不重复累计。</span></p></li>
+                <li><b>03</b><p><strong>同数量按完成时间排序</strong><span>路线数量相同时，较早达成的用户优先。</span></p></li>
+              </ol>
+            </motion.section>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 }

@@ -36,6 +36,33 @@ export const createDemoJourneyState = (): JourneyState => ({
   lastRun: null
 });
 
+export const createPrototypeJourneyState = (cityId: string): JourneyState => {
+  const currentCityId = getJourneyCity(cityId)?.id ?? JOURNEY_SEQUENCE[0];
+  const completedCityIds = JOURNEY_SEQUENCE.filter(item => item !== currentCityId).slice(0, 2);
+  const completedRouteIdsByCity: Record<string, string[]> = Object.fromEntries([
+    ...completedCityIds.map(item => [item, routeIdsFor(item, 10)]),
+    [currentCityId, routeIdsFor(currentCityId, 9)]
+  ]);
+  const discoveredSpotKeys = Object.entries(completedRouteIdsByCity).flatMap(([completedCityId, routeIds]) =>
+    routeIds.flatMap(routeId =>
+      getJourneyRoute(completedCityId, routeId)?.landmarks.map(landmark => `${completedCityId}:${landmark}`) ?? []
+    )
+  );
+
+  return {
+    currentCityId,
+    completedCityIds,
+    completedRouteIdsByCity,
+    revealedRouteIdsByCity: Object.fromEntries(
+      Object.entries(completedRouteIdsByCity).map(([completedCityId, routeIds]) => [completedCityId, [...routeIds]])
+    ),
+    discoveredSpotKeys: unique(discoveredSpotKeys),
+    pendingNextCityId: null,
+    currentPage: 'home',
+    lastRun: null
+  };
+};
+
 export const getCompletedRouteIds = (state: JourneyState, cityId: string) =>
   state.completedRouteIdsByCity[cityId] ?? [];
 
@@ -75,6 +102,20 @@ export const getCandidateCityIds = (state: JourneyState, limit = 4): string[] =>
   return candidates;
 };
 
+export const getHomeJourneyCityIds = (state: JourneyState): string[] => {
+  const currentIndex = JOURNEY_SEQUENCE.indexOf(state.currentCityId as (typeof JOURNEY_SEQUENCE)[number]);
+  if (currentIndex < 0) return [...JOURNEY_SEQUENCE];
+
+  const completed = new Set(state.completedCityIds);
+  const completedBeforeCurrent = state.completedCityIds.filter(cityId => cityId !== state.currentCityId && getJourneyCity(cityId));
+  const futureFromCurrent = [
+    ...JOURNEY_SEQUENCE.slice(currentIndex + 1),
+    ...JOURNEY_SEQUENCE.slice(0, currentIndex)
+  ].filter(cityId => !completed.has(cityId));
+
+  return [...completedBeforeCurrent, state.currentCityId, ...futureFromCurrent];
+};
+
 export const getCityStatus = (state: JourneyState, cityId: string): CityJourneyStatus => {
   if (state.completedCityIds.includes(cityId)) return 'completed';
   if (cityId === state.currentCityId) return 'current';
@@ -96,6 +137,9 @@ const completeCity = (state: JourneyState, cityId: string): JourneyState => {
 
 export const journeyReducer = (state: JourneyState, action: JourneyAction): JourneyState => {
   switch (action.type) {
+    case 'START_JOURNEY':
+      return createPrototypeJourneyState(action.cityId);
+
     case 'NAVIGATE':
       return { ...state, currentPage: action.page, pendingNextCityId: null };
 

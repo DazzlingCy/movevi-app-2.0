@@ -4,18 +4,19 @@ import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
   Clock3, Compass, Flame, Footprints, Globe2, Headphones, HeadphonesIcon, LockKeyhole, Mail, Map, MapPin,
   Medal, MessageSquare, MonitorSmartphone, Navigation, Pause, Play, RotateCcw, Route,
-  Settings, Sparkles, SquarePen, UserRound, Wallet, Wifi, WifiOff, X
+  Settings, Sparkles, SquarePen, Target, Trophy, UserRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
 import { CITIES, type CityData } from '../../data/cities';
 import { getJourneyCity, getJourneyRoute, JOURNEY_SEQUENCE } from '../../journey/data';
 import {
   createDemoJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
-  getCompletedRouteIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
+  getCompletedRouteIds, getHomeJourneyCityIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
 } from '../../journey/state';
 import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../journey/types';
 import { getWeightPlanRewardAmount, type WeightPlanRewardRecord } from '../../lib/weightPlan';
 import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import EventsTab from '../EventsTab';
+import LeaderboardView from '../LeaderboardView';
 import OnlineSupportView from '../OnlineSupportView';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
@@ -62,10 +63,16 @@ const JOURNEY_CITY_IMAGES: Record<string, string> = {
   toronto: 'https://images.unsplash.com/photo-1517935706615-2717063c2225?auto=format&fit=crop&q=80&w=1200'
 };
 
+const JOURNEY_CITY_VIDEOS: Partial<Record<string, string>> = {
+  tokyo: 'https://videos.pexels.com/video-files/11720138/11720138-hd_1280_720_30fps.mp4'
+};
+
 const cityImageFor = (city: JourneyCity) =>
   JOURNEY_CITY_IMAGES[city.id]
   ?? CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
   ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200';
+
+const cityVideoFor = (city: JourneyCity) => JOURNEY_CITY_VIDEOS[city.id];
 
 const toLegacyCity = (city: JourneyCity, state: JourneyState): CityData => {
   const completed = getCompletedRouteIds(state, city.id).length;
@@ -137,10 +144,16 @@ function CityArtwork({ city, compact = false }: { city: JourneyCity; compact?: b
   );
 }
 
-function ProgressSegments({ completed }: { completed: number }) {
+function ProgressSegments({ completed, showRunner = false }: { completed: number; showRunner?: boolean }) {
+  const progress = Math.min(10, Math.max(0, completed)) * 10;
   return (
-    <div className="progress-segments" aria-label={`已完成 ${completed} / 10 条路线`}>
-      {Array.from({ length: 10 }, (_, index) => <span key={index} className={index < completed ? 'is-complete' : ''} />)}
+    <div className={`progress-segments${completed >= 10 ? ' is-finished' : ''}${showRunner ? ' has-runner' : ''}`} aria-label={`已完成 ${completed} / 10 条路线`} style={{ '--completed-progress': `${progress}%` } as CSSProperties}>
+      {showRunner && completed > 0 && <b className="progress-segments__runner" aria-hidden="true"><Footprints /></b>}
+      {Array.from({ length: 10 }, (_, index) => {
+        const complete = index < completed;
+        const latest = complete && index === completed - 1;
+        return <span key={index} className={`${complete ? 'is-complete' : ''}${latest ? ' is-latest' : ''}`} style={{ '--segment-index': index } as CSSProperties} />;
+      })}
     </div>
   );
 }
@@ -158,7 +171,7 @@ interface HomePageProps {
   onLegacyFeature: (feature: LegacyFeature) => void;
 }
 
-type LegacyFeature = 'onlineSupport' | 'weightLossPlan';
+type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard';
 
 type WeightRouteTarget = {
   cityId: string;
@@ -169,6 +182,7 @@ type WeightRouteTarget = {
 
 function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const cityVideoRef = useRef<HTMLVideoElement>(null);
   const hasAlignedCarouselRef = useRef(false);
   const programmaticScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<number | null>(null);
@@ -176,19 +190,16 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const mouseDragRef = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
-  const cityIndex = Math.max(0, JOURNEY_CITY_SEQUENCE.findIndex(item => item.id === city.id));
+  const [videoNeedsTap, setVideoNeedsTap] = useState(false);
+  const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
+  const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
   const nextStationCandidates = getCandidateCityIds(state, 3).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const currentCityCompleted = getCompletedRouteIds(state, state.currentCityId).length >= 10 || state.completedCityIds.includes(state.currentCityId);
   const getProgressCopy = (item: JourneyCity) => {
-    const itemCompleted = getCompletedRouteIds(state, item.id).length;
     const itemStatus = getCityStatus(state, item.id);
-    return itemStatus === 'completed'
+    return itemStatus === 'completed' || itemStatus === 'current'
       ? ''
-      : itemStatus === 'current'
-        ? `还有 ${10 - itemCompleted} 段旅程等待发现`
-        : itemStatus === 'candidate'
-          ? '完成前序旅程后逐步开放'
-          : '完成前序旅程后逐步开放';
+      : '完成前序旅程后逐步开放';
   };
 
   const updateCarouselCardVisuals = useCallback(() => {
@@ -289,7 +300,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     const direction = event.key === 'ArrowRight' ? 1 : -1;
-    const nextCity = JOURNEY_CITY_SEQUENCE[Math.min(JOURNEY_CITY_SEQUENCE.length - 1, Math.max(0, cityIndex + direction))];
+    const nextCity = homeJourneyCities[Math.min(homeJourneyCities.length - 1, Math.max(0, cityIndex + direction))];
     if (nextCity) onBrowseCity(nextCity.id);
   };
 
@@ -363,6 +374,58 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (swipedRef.current || !currentCityCompleted) return;
     onSelectNextCity(cityId);
   };
+  const playCityVideo = useCallback(() => {
+    const video = cityVideoRef.current;
+    if (!video) return;
+    video.muted = true;
+    void video.play()
+      .then(() => setVideoNeedsTap(false))
+      .catch(() => setVideoNeedsTap(true));
+  }, []);
+
+  useEffect(() => {
+    setVideoNeedsTap(false);
+    let cancelled = false;
+
+    const tryPlayback = () => {
+      if (cancelled || document.visibilityState === 'hidden') return;
+      const video = cityVideoRef.current;
+      if (!video || !video.paused) return;
+      video.muted = true;
+      void video.play()
+        .then(() => {
+          if (!cancelled) setVideoNeedsTap(false);
+        })
+        .catch(() => {
+          if (!cancelled) setVideoNeedsTap(true);
+        });
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') tryPlayback();
+    };
+    const handleUserActivation = () => tryPlayback();
+    const initialRetry = window.setTimeout(tryPlayback, 80);
+    const readinessRetry = window.setTimeout(tryPlayback, 650);
+    const fallbackTimer = window.setTimeout(() => {
+      if (!cancelled && cityVideoRef.current?.paused) setVideoNeedsTap(true);
+    }, 1200);
+
+    window.addEventListener('pageshow', tryPlayback);
+    document.addEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('pointerdown', handleUserActivation, { capture: true });
+    document.addEventListener('touchstart', handleUserActivation, { capture: true, passive: true });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(initialRetry);
+      window.clearTimeout(readinessRetry);
+      window.clearTimeout(fallbackTimer);
+      window.removeEventListener('pageshow', tryPlayback);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('pointerdown', handleUserActivation, { capture: true });
+      document.removeEventListener('touchstart', handleUserActivation, { capture: true });
+    };
+  }, [city.id]);
 
   return (
     <main className="page page--home" id="main-content">
@@ -371,9 +434,14 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
           <HeadphonesIcon />
           <span>在线客服</span>
         </button>
-        <button className="utility-chip" type="button" onClick={onDevice} aria-label="查看设备连接状态">
+        <button
+          className={`utility-chip utility-chip--device ${deviceConnected ? 'is-online' : 'is-offline'}`}
+          type="button"
+          onClick={onDevice}
+          aria-label={deviceConnected ? '跑步机已连接，查看设备状态' : '跑步机未连接，查看连接设置'}
+          title={deviceConnected ? '跑步机已连接' : '跑步机未连接'}
+        >
           <TreadmillIcon connected={deviceConnected} />
-          <span>{deviceConnected ? '设备在线' : '未连接'}</span>
         </button>
       </header>
       <section className="home-heading">
@@ -397,9 +465,18 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
           onPointerUp={finishCarouselPointerDrag}
           onPointerCancel={finishCarouselPointerDrag}
         >
-          {JOURNEY_CITY_SEQUENCE.map((item, index) => {
+          {homeJourneyCities.map((item) => {
             const itemStatus = getCityStatus(state, item.id);
-            const itemCompleted = getCompletedRouteIds(state, item.id).length;
+            const itemCompletedRouteIds = getCompletedRouteIds(state, item.id);
+            const itemCompleted = itemCompletedRouteIds.length;
+            const itemCompletedRouteIdSet = new Set(itemCompletedRouteIds);
+            const itemExerciseTotals = item.routes.reduce((summary, route) => {
+              if (!itemCompletedRouteIdSet.has(route.id)) return summary;
+              summary.distance += route.distanceKm;
+              summary.duration += route.durationMinutes;
+              summary.calories += route.calories;
+              return summary;
+            }, { distance: 0, duration: 0, calories: 0 });
             const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
             return (
@@ -407,18 +484,77 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                 <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
                   <div className="destination-card">
                     <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+                    {itemStatus === 'current' && item.id === city.id && cityVideoFor(item) && (
+                      <>
+                        <video
+                          key={cityVideoFor(item)}
+                          ref={cityVideoRef}
+                          className="destination-card__video"
+                          src={cityVideoFor(item)}
+                          poster={cityImageFor(item)}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="auto"
+                          crossOrigin="anonymous"
+                          disablePictureInPicture
+                          tabIndex={-1}
+                          aria-hidden="true"
+                          onLoadedMetadata={event => {
+                            event.currentTarget.muted = true;
+                            void event.currentTarget.play().catch(() => setVideoNeedsTap(true));
+                          }}
+                          onLoadedData={event => {
+                            event.currentTarget.classList.add('is-ready');
+                            event.currentTarget.muted = true;
+                            void event.currentTarget.play().catch(() => setVideoNeedsTap(true));
+                          }}
+                          onCanPlay={event => {
+                            event.currentTarget.classList.add('is-ready');
+                            event.currentTarget.muted = true;
+                            void event.currentTarget.play().catch(() => setVideoNeedsTap(true));
+                          }}
+                          onPlaying={event => {
+                            event.currentTarget.classList.add('is-ready');
+                            setVideoNeedsTap(false);
+                          }}
+                          onError={event => {
+                            event.currentTarget.style.display = 'none';
+                            setVideoNeedsTap(false);
+                          }}
+                        />
+                        <span className="destination-card__motion-badge" aria-hidden="true"><i /> 动态城市</span>
+                        {videoNeedsTap && (
+                          <button
+                            className="destination-card__video-play"
+                            type="button"
+                            onPointerDown={event => event.stopPropagation()}
+                            onClick={event => { event.stopPropagation(); playCityVideo(); }}
+                          >
+                            <Play /> 播放城市动态
+                          </button>
+                        )}
+                      </>
+                    )}
                     <div className="destination-card__overlay" />
                     <div className="destination-card__content">
                       <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p>{item.englishName}</p></div>
                     </div>
                   </div>
-                  <div className="destination-carousel__meta" aria-hidden={item.id !== city.id}><span>{String(index + 1).padStart(2, '0')} / {JOURNEY_CITY_SEQUENCE.length}</span><span>左右滑动切换城市</span></div>
                   <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
                     <div className="journey-progress__topline">
                       <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
                       {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
                     </div>
-                    <ProgressSegments completed={itemCompleted} />
+                    <ProgressSegments completed={itemCompleted} showRunner={itemStatus === 'current'} />
+                    {itemCanOpenRoutes && (
+                      <div className={`city-card-sport-stats city-card-sport-stats--${itemStatus}`} aria-label={`${item.name}累计运动数据`}>
+                        <div><span><Footprints />里程</span><strong>{itemExerciseTotals.distance.toFixed(1)}<small>km</small></strong></div>
+                        <div><span><Clock3 />时长</span><strong>{(itemExerciseTotals.duration / 60).toFixed(1)}<small>h</small></strong></div>
+                        <div><span><Flame />消耗</span><strong>{Math.round(itemExerciseTotals.calories).toLocaleString('zh-CN')}<small>kcal</small></strong></div>
+                      </div>
+                    )}
                     <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }} disabled={!itemCanOpenRoutes}>
                       {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
                     </button>
@@ -440,12 +576,13 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                           onPointerDown={handleCtaPointerDown}
                           onClick={(event) => { event.stopPropagation(); handleNextCitySelect(candidate.id); }}
                           disabled={!currentCityCompleted}
+                          aria-label={currentCityCompleted ? `选择${candidate.name}作为下一站` : `候选目的地 ${candidateIndex + 1}，完成当前城市后解锁`}
+                          data-obscured={!currentCityCompleted ? 'true' : undefined}
                           style={cityStyle(candidate)}
                         >
                           <img src={cityImageFor(candidate)} alt="" aria-hidden="true" />
                           <span>{String(candidateIndex + 1).padStart(2, '0')}</span>
-                          <strong>{candidate.name}</strong>
-                          <small>{candidate.englishName}</small>
+                          {currentCityCompleted && <><strong>{candidate.name}</strong><small>{candidate.englishName}</small></>}
                         </button>
                       ))}
                     </div>
@@ -502,7 +639,7 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
               <span className="city-list-card__number">{String(index + 1).padStart(2, '0')}</span>
               {StatusIcon && <span className="city-list-card__status"><StatusIcon />{statusText[status]}</span>}
               {status === 'completed' && <span className="city-list-card__stamp" aria-hidden="true"><b>已完成</b><small>COMPLETED</small></span>}
-              {status === 'current' && <span className="city-list-card__pin" aria-hidden="true"><MapPin /><b>正在点亮</b></span>}
+              {status === 'current' && <span className="city-list-card__pin" aria-hidden="true"><MapPin /><b>正在探索</b></span>}
               {status === 'locked' && <span className="city-list-card__fog-lock" aria-hidden="true"><LockKeyhole /></span>}
               <strong>{item.name}</strong><small>{item.englishName}</small><i><span style={{ width: `${completed * 10}%` }} /></i>
             </button>
@@ -520,25 +657,67 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
   );
 }
 
-function MapPage({ state, totals, onOpenCity, onCities }: { state: JourneyState; totals: ReturnType<typeof getJourneyTotals>; onOpenCity: (cityId: string) => void; onCities: () => void }) {
-  const current = getJourneyCity(state.currentCityId)!;
+function MapPage({ state, totals, onOpenCity, onCities, onLeaderboard }: { state: JourneyState; totals: ReturnType<typeof getJourneyTotals>; onOpenCity: (cityId: string) => void; onCities: () => void; onLeaderboard: () => void }) {
+  const cityGoal = 20;
+  const routeGoal = 300;
+  const cityProgress = Math.min(100, (totals.completedCities / cityGoal) * 100);
+  const routeProgress = Math.min(100, (totals.completedRoutes / routeGoal) * 100);
+  const exerciseTotals = Object.entries(state.completedRouteIdsByCity).reduce((summary, [cityId, routeIds]) => {
+    routeIds.forEach(routeId => {
+      const route = getJourneyRoute(cityId, routeId);
+      if (!route) return;
+      summary.distance += route.distanceKm;
+      summary.duration += route.durationMinutes;
+      summary.calories += route.calories;
+    });
+    return summary;
+  }, { distance: 0, duration: 0, calories: 0 });
   return (
     <main className="page page--map page--world" id="main-content">
       <header className="world-header">
-        <h1>我的环球旅程</h1>
-        <p>每一次奔跑，都会点亮新的城市记忆</p>
+        <h1>跑遍全球，探索世界</h1>
+        <p>继续跑，用脚步探索更多城市与风景</p>
       </header>
       <section className="world-globe-panel">
         <Suspense fallback={<div className="globe-loading" role="status"><Globe2 /><span>正在加载你的世界</span></div>}>
           <JourneyGlobe state={state} onOpenCity={onOpenCity} />
         </Suspense>
-        <div className="world-globe-panel__status"><i /><span>当前</span><strong>{current.name}</strong></div>
+        <button className="world-leaderboard-entry" type="button" onClick={onLeaderboard} aria-label="查看全球排行榜，我的排名 142">
+          <i aria-hidden="true"><Trophy /></i>
+          <span><small>全球排行榜</small><strong>我的排名 142</strong></span>
+          <ChevronRight aria-hidden="true" />
+        </button>
       </section>
       <div className="world-summary-panel">
-        <section className="journey-totals journey-totals--world" aria-label="我的旅程数字">
-          <div><strong>{totals.completedCities}</strong><span>座城市</span></div>
-          <div><strong>{totals.completedRoutes}</strong><span>条路线</span></div>
-          <div><strong>{totals.discoveredSpots}</strong><span>处景点</span></div>
+        <section className="world-goal-card" aria-label="环球旅程整体进度">
+          <header>
+            <div><Target /><strong>探索进度</strong></div>
+            <span>已发现 {totals.discoveredSpots} 处景点</span>
+          </header>
+          <div className="world-goal-card__items">
+            <div className="world-goal-item">
+              <div className="world-goal-item__topline"><span>城市探索</span><strong>{totals.completedCities}<small>/{cityGoal}</small></strong></div>
+              <i role="progressbar" aria-label="城市探索进度" aria-valuemin={0} aria-valuemax={cityGoal} aria-valuenow={totals.completedCities}><span style={{ width: `${cityProgress}%` }} /></i>
+            </div>
+            <div className="world-goal-item">
+              <div className="world-goal-item__topline"><span>路线完成</span><strong>{totals.completedRoutes}<small>/{routeGoal}</small></strong></div>
+              <i role="progressbar" aria-label="路线完成进度" aria-valuemin={0} aria-valuemax={routeGoal} aria-valuenow={totals.completedRoutes}><span style={{ width: `${routeProgress}%` }} /></i>
+            </div>
+          </div>
+          <div className="world-sport-stats" aria-label="累计运动数据">
+            <div className="world-sport-stat">
+              <i aria-hidden="true"><Footprints /></i>
+              <span><small>累计里程</small><strong>{exerciseTotals.distance.toFixed(1)}<b>km</b></strong></span>
+            </div>
+            <div className="world-sport-stat">
+              <i aria-hidden="true"><Clock3 /></i>
+              <span><small>运动时长</small><strong>{(exerciseTotals.duration / 60).toFixed(1)}<b>h</b></strong></span>
+            </div>
+            <div className="world-sport-stat">
+              <i aria-hidden="true"><Flame /></i>
+              <span><small>累计消耗</small><strong>{Math.round(exerciseTotals.calories).toLocaleString('zh-CN')}<b>kcal</b></strong></span>
+            </div>
+          </div>
         </section>
         <button className="primary-button" type="button" onClick={onCities}>全球城市列表 <Globe2 /></button>
       </div>
@@ -695,14 +874,14 @@ function ProfilePage({
   totals,
   deviceConnected,
   onDevice,
-  onCollection,
+  onCityCards,
   onSettings,
   onFeature
 }: {
   totals: ReturnType<typeof getJourneyTotals>;
   deviceConnected: boolean;
   onDevice: () => void;
-  onCollection: () => void;
+  onCityCards: () => void;
   onSettings: () => void;
   onFeature: (label: string) => void;
 }) {
@@ -741,16 +920,86 @@ function ProfilePage({
           {profileStats.map(item => <div key={item.label}><strong>{item.value}{item.unit && <small>{item.unit}</small>}</strong><span>{item.label}</span></div>)}
         </div>
       </section>
-      <button className="legacy-collection-card" type="button" onClick={onCollection}>
-        <div><span>City collection</span><strong>城市收藏</strong><small>景点勋章 · 城市卡片 · 光迹徽章</small></div>
-        <div aria-hidden="true"><span><Medal /></span><span><Map /></span><span><Sparkles /></span></div>
-      </button>
+      <section className="legacy-collection-actions" aria-label="城市收藏">
+        <button className="legacy-collection-action legacy-collection-action--cards" type="button" onClick={onCityCards}>
+          <span className="legacy-collection-action__icon" aria-hidden="true"><Map /></span>
+          <span className="legacy-collection-action__copy"><strong>城市卡片</strong><b>收藏跑过的城市</b></span>
+          <ChevronRight aria-hidden="true" />
+        </button>
+        <button className="legacy-collection-action legacy-collection-action--medals" type="button" onClick={() => onFeature('景点勋章')}>
+          <span className="legacy-collection-action__icon" aria-hidden="true"><Medal /></span>
+          <span className="legacy-collection-action__copy"><strong>景点勋章</strong><b>记录发现的景点</b></span>
+          <ChevronRight aria-hidden="true" />
+        </button>
+      </section>
       <section className="legacy-menu" aria-label="个人功能">
         {menuItems.map(item => {
           const Icon = item.icon;
           return <button type="button" key={item.label} onClick={item.action}><span className="legacy-menu__icon"><Icon /></span><strong>{item.label}</strong>{item.status && <small>{item.status}</small>}<ChevronRight /></button>;
         })}
       </section>
+    </main>
+  );
+}
+
+function FirstCitySelectionPage({ selectedId, onSelect, onContinue }: { selectedId: string | null; onSelect: (cityId: string | null) => void; onContinue: () => void }) {
+  const batchSize = 6;
+  const batchCount = Math.ceil(JOURNEY_CITY_SEQUENCE.length / batchSize);
+  const [batchIndex, setBatchIndex] = useState(0);
+  const batchStart = batchIndex * batchSize;
+  const starterCities = Array.from({ length: batchSize }, (_, offset) => JOURNEY_CITY_SEQUENCE[(batchStart + offset) % JOURNEY_CITY_SEQUENCE.length]);
+  const selectedCity = selectedId ? getJourneyCity(selectedId) : undefined;
+  const showNextBatch = () => {
+    setBatchIndex(index => (index + 1) % batchCount);
+    onSelect(null);
+  };
+  return (
+    <main className="first-city-page" id="main-content">
+      <header className="first-city-hero">
+        <span><Compass />首次启程</span>
+        <h1>从哪座城市出发？</h1>
+        <p>选择你的第一站，城市路线将从第 1 段开始依次解锁。</p>
+      </header>
+      <section className="first-city-picker" aria-labelledby="first-city-title">
+        <div className="first-city-picker__heading">
+          <div><h2 id="first-city-title">选择第一站</h2><p>之后可在世界页继续探索其他城市</p></div>
+          <div className="first-city-picker__actions">
+            <button type="button" onClick={showNextBatch} aria-label="换一批推荐城市"><RotateCcw />换一批</button>
+          </div>
+        </div>
+        <div className="first-city-grid">
+          {starterCities.map((item, index) => {
+            const selected = item.id === selectedId;
+            const totals = getCityPlanTotals(item.id);
+            return (
+              <button
+                className={`first-city-card${selected ? ' is-selected' : ''}`}
+                type="button"
+                key={item.id}
+                aria-pressed={selected}
+                onClick={() => onSelect(item.id)}
+                style={{ ...cityStyle(item), '--city-choice-index': index } as CSSProperties}
+              >
+                <img src={cityImageFor(item)} alt="" aria-hidden="true" />
+                <span className="first-city-card__shade" aria-hidden="true" />
+                <span className="first-city-card__number">{String(index + 1).padStart(2, '0')}</span>
+                {selected && <span className="first-city-card__check" aria-hidden="true"><Check /></span>}
+                <span className="first-city-card__copy">
+                  <strong>{item.name}</strong>
+                  <small>{item.englishName}</small>
+                  <b><Route />10 段路线 · {totals.distanceKm.toFixed(1)} km</b>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <footer className="first-city-footer">
+        <button className="primary-button" type="button" disabled={!selectedCity} onClick={onContinue}>
+          {selectedCity ? `从${selectedCity.name}出发` : '请选择一座城市'} <ArrowRight />
+        </button>
+        <p>{selectedCity ? `已选择 ${selectedCity.name}，将从首条路线开始` : '选定后即可开启你的环球跑步旅程'}</p>
+      </footer>
     </main>
   );
 }
@@ -791,6 +1040,8 @@ function UtilityPanel({ mode, deviceConnected, manualReducedMotion, onToggleDevi
 export default function JourneyApp() {
   const [state, dispatch] = useReducer(journeyReducer, undefined, createDemoJourneyState);
   const nextStationFocusTimerRef = useRef<number | null>(null);
+  const [isFirstUse, setIsFirstUse] = useState(true);
+  const [firstCityChoiceId, setFirstCityChoiceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PrimaryTab>('home');
   const [homeCityId, setHomeCityId] = useState(state.currentCityId);
   const [cityListOpen, setCityListOpen] = useState(false);
@@ -904,6 +1155,14 @@ export default function JourneyApp() {
   };
   const resetDemo = () => { if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current); nextStationFocusTimerRef.current = null; dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setFocusNextStation(false); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
   const clearNextStationFocus = useCallback(() => setFocusNextStation(false), []);
+  const startFirstJourney = () => {
+    if (!firstCityChoiceId || !getJourneyCity(firstCityChoiceId)) return;
+    dispatch({ type: 'START_JOURNEY', cityId: firstCityChoiceId });
+    setHomeCityId(firstCityChoiceId);
+    setActiveTab('home');
+    setIsFirstUse(false);
+    setNotice(`${getJourneyCity(firstCityChoiceId)?.name ?? '第一站'}，旅程从这里开始`);
+  };
   const selectPrimaryTab = (tab: PrimaryTab) => {
     setActiveTab(tab);
     dispatch({ type: 'NAVIGATE', page: tab === 'world' ? 'map' : 'home' });
@@ -945,8 +1204,10 @@ export default function JourneyApp() {
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
-        {runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
+        {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstCitySelectionPage selectedId={firstCityChoiceId} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} /></motion.div>
+        : runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
         : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
+        : legacyFeature === 'leaderboard' ? <motion.div className="screen-layer" key="leaderboard" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><LeaderboardView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'onlineSupport' ? <motion.div className="screen-layer" key="online-support" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><OnlineSupportView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'weightLossPlan' ? <motion.div className="screen-layer" key="weight-loss-plan" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeightLossPlanView started={weightPlanStarted} completedDays={weightCompletedDays} rewardBoxes={weightRewardBoxes} openedRewardDays={weightOpenedRewardDays} rewardHistory={weightRewardHistory} newbieTasks={{ treadmillActivated: deviceConnected, activationClaimed, completedRoutes: getJourneyTotals(state).completedRoutes, firstRouteClaimed }} onBack={() => setLegacyFeature(null)} onStartPlan={() => setWeightPlanStarted(true)} onOpenReward={openWeightReward} onClaimActivationTask={() => { setActivationClaimed(true); setNotice('首次激活红包已领取'); }} onClaimFirstRouteTask={() => { setFirstRouteClaimed(true); setNotice('首次路线红包已领取'); }} onNavigateToRouteDetail={openWeightRoute} /></motion.div>
         : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
@@ -955,16 +1216,16 @@ export default function JourneyApp() {
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
         : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
         : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
-        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCollection={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
+        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCityCards={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
-        : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} /></motion.div>
+        : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} /></motion.div>
         : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
         {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
       </AnimatePresence>
-      {!runningRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!isFirstUse && !runningRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );
