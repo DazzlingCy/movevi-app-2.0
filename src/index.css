@@ -260,6 +260,10 @@ svg { stroke-width: 1.8; }
   .first-city-picker__actions button svg { transition: none; }
 }
 
+@media (max-width: 600px) and (min-height: 760px) {
+  .first-journey-intro__visual { margin-top: clamp(96px, 17vh, 148px); }
+}
+
 @media (max-height: 720px) {
   .first-journey-intro__visual { flex-basis: 238px; min-height: 220px; margin-top: 6px; margin-bottom: -22px; transform: scale(.9); transform-origin: top center; }
   .first-journey-intro__copy h1 { font-size: 32px; }

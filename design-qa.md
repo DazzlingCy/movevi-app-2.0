@@ -48,6 +48,17 @@ No actionable P0, P1, or P2 findings remain.
 
 final result: passed
 
+## Latest mobile QA: tall-screen whitespace
+
+- Source visual truth: `C:\Users\14629\AppData\Local\Temp\codex-clipboard-e44bc3d1-247e-497a-9cf3-482357b95b67.jpg`
+- Test viewport: 390 x 812 px, matching the usable CSS viewport of the supplied iPhone in-app-browser capture.
+- Change: high-aspect mobile screens now allocate more of their free height above the city stack, moving the visual/copy/features group down and reducing the empty block before the CTA.
+- Browser comparison: passed. The feature row and CTA now have a compact, intentional gap; all copy, imagery, and the complete button remain visible without scrolling.
+- Responsive guard: the adjustment applies only below 600 px width and above 760 px height; short screens retain the existing compact layout.
+- Findings: no actionable P0, P1, or P2 issues.
+
+final result: passed
+
 ## Latest annotation QA: first-journey centering
 
 - Source visual truth: `C:\Users\14629\AppData\Local\Temp\codex-clipboard-1b4c50a4-ddd8-4c21-99c6-3b63bc07d4bd.png`
