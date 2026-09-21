@@ -29,6 +29,13 @@ const checkForNewVersion = async () => {
 
 void checkForNewVersion();
 
+// Mobile Safari and in-app browsers may restore the full React tree from the
+// back-forward cache instead of creating a new first-use session. A real reload
+// guarantees that the prototype always starts from the journey intro screen.
+window.addEventListener('pageshow', event => {
+  if (event.persisted) window.location.reload();
+});
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     void checkForNewVersion();
