@@ -260,15 +260,22 @@ svg { stroke-width: 1.8; }
   .first-city-picker__actions button svg { transition: none; }
 }
 
-@media (max-width: 600px) and (min-height: 760px) {
-  .first-journey-intro__visual { margin-top: clamp(96px, 17vh, 148px); }
+@media (max-width: 600px) and (min-height: 640px) {
+  .first-journey-intro__visual { margin-top: clamp(68px, 13vh, 118px); }
 }
 
-@media (max-height: 720px) {
+@media (min-width: 601px) and (max-height: 720px) {
   .first-journey-intro__visual { flex-basis: 238px; min-height: 220px; margin-top: 6px; margin-bottom: -22px; transform: scale(.9); transform-origin: top center; }
   .first-journey-intro__copy h1 { font-size: 32px; }
   .first-journey-intro__features { margin-top: 12px; }
   .first-journey-intro__footer { padding-top: 14px; }
+}
+
+@media (max-width: 600px) and (max-height: 639px) {
+  .first-journey-intro__visual { flex-basis: 220px; min-height: 205px; margin-top: 6px; margin-bottom: -18px; transform: scale(.88); transform-origin: top center; }
+  .first-journey-intro__copy h1 { font-size: 30px; }
+  .first-journey-intro__features { margin-top: 11px; }
+  .first-journey-intro__footer { padding-top: 12px; }
 }
 
 .topbar, .page-header, .sheet-header, .run-topbar {

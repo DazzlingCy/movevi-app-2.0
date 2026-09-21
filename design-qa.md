@@ -48,6 +48,16 @@ No actionable P0, P1, or P2 findings remain.
 
 final result: passed
 
+## Corrective mobile QA: in-app browser chrome
+
+- Root cause: the supplied phone browser leaves an approximately 390 x 690 px CSS viewport after its top and bottom chrome. That height matched the desktop `max-height: 720px` compact rule, which shrank the hero and preserved the large empty block.
+- Fix: desktop compact styling now requires a viewport wider than 600 px. Mobile viewports from 640 px high use their own balanced spacing rule; genuinely short mobile screens retain a separate compact fallback.
+- Measured 390 x 690 result: feature-row bottom 599 px; CTA top 619 px; CTA bottom 677 px.
+- Effective spacing: 20 px between features and CTA, with 13 px remaining below the CTA. No scrolling or clipping is required.
+- Findings: no actionable P0, P1, or P2 issues.
+
+final result: passed
+
 ## Latest mobile QA: tall-screen whitespace
 
 - Source visual truth: `C:\Users\14629\AppData\Local\Temp\codex-clipboard-e44bc3d1-247e-497a-9cf3-482357b95b67.jpg`
