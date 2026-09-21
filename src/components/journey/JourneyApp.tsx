@@ -16,6 +16,7 @@ import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../j
 import { getWeightPlanRewardAmount, type WeightPlanRewardRecord } from '../../lib/weightPlan';
 import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import EventsTab from '../EventsTab';
+import JourneyLevelView from '../JourneyLevelView';
 import LeaderboardView from '../LeaderboardView';
 import OnlineSupportView from '../OnlineSupportView';
 import RouteDetailView from '../RouteDetailView';
@@ -64,15 +65,19 @@ const JOURNEY_CITY_IMAGES: Record<string, string> = {
 };
 
 const JOURNEY_CITY_VIDEOS: Partial<Record<string, string>> = {
-  tokyo: 'https://videos.pexels.com/video-files/11720138/11720138-hd_1280_720_30fps.mp4'
+  tokyo: 'https://videos.pexels.com/video-files/11720138/11720138-hd_1280_720_30fps.mp4',
+  paris: 'https://videos.pexels.com/video-files/20046743/20046743-hd_1280_720_60fps.mp4',
+  'new-york': 'https://videos.pexels.com/video-files/37898785/16079913_4094_2160_30fps.mp4'
 };
+
+const DEFAULT_JOURNEY_CITY_VIDEO = JOURNEY_CITY_VIDEOS.tokyo!;
 
 const cityImageFor = (city: JourneyCity) =>
   JOURNEY_CITY_IMAGES[city.id]
   ?? CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
   ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200';
 
-const cityVideoFor = (city: JourneyCity) => JOURNEY_CITY_VIDEOS[city.id];
+const cityVideoFor = (city: JourneyCity) => JOURNEY_CITY_VIDEOS[city.id] ?? DEFAULT_JOURNEY_CITY_VIDEO;
 
 const toLegacyCity = (city: JourneyCity, state: JourneyState): CityData => {
   const completed = getCompletedRouteIds(state, city.id).length;
@@ -171,7 +176,7 @@ interface HomePageProps {
   onLegacyFeature: (feature: LegacyFeature) => void;
 }
 
-type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard';
+type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard' | 'level';
 
 type WeightRouteTarget = {
   cityId: string;
@@ -875,6 +880,7 @@ function ProfilePage({
   deviceConnected,
   onDevice,
   onCityCards,
+  onLevel,
   onSettings,
   onFeature
 }: {
@@ -882,6 +888,7 @@ function ProfilePage({
   deviceConnected: boolean;
   onDevice: () => void;
   onCityCards: () => void;
+  onLevel: () => void;
   onSettings: () => void;
   onFeature: (label: string) => void;
 }) {
@@ -914,7 +921,7 @@ function ProfilePage({
           <button type="button" className="legacy-avatar" onClick={() => onFeature('编辑资料')} aria-label="查看或编辑资料">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200" alt="沐小六的头像" />
           </button>
-          <div><h1>沐小六</h1><p><span>LV.3</span><strong>城市漫游者</strong></p></div>
+          <div><h1>沐小六</h1><button className="legacy-profile-level" type="button" onClick={onLevel} aria-label="查看等级"><span>LV.3</span><strong>黄金</strong><ChevronRight /></button></div>
         </div>
         <div className="legacy-profile-stats">
           {profileStats.map(item => <div key={item.label}><strong>{item.value}{item.unit && <small>{item.unit}</small>}</strong><span>{item.label}</span></div>)}
@@ -998,9 +1005,78 @@ function FirstCitySelectionPage({ selectedId, onSelect, onContinue }: { selected
         <button className="primary-button" type="button" disabled={!selectedCity} onClick={onContinue}>
           {selectedCity ? `从${selectedCity.name}出发` : '请选择一座城市'} <ArrowRight />
         </button>
-        <p>{selectedCity ? `已选择 ${selectedCity.name}，将从首条路线开始` : '选定后即可开启你的环球跑步旅程'}</p>
       </footer>
     </main>
+  );
+}
+
+function FirstJourneyIntroPage({ onStart }: { onStart: () => void }) {
+  const previewCities = ['tokyo', 'paris', 'new-york']
+    .map(cityId => getJourneyCity(cityId))
+    .filter((city): city is JourneyCity => Boolean(city));
+
+  return (
+    <main className="first-journey-intro" id="main-content">
+      <div className="first-journey-intro__glow" aria-hidden="true" />
+      <header className="first-journey-intro__header">
+        <span className="first-journey-intro__brand">
+          <span className="first-journey-intro__brand-mark"><i aria-hidden="true" />MV</span>
+          <span className="first-journey-intro__wordmark"><strong>木卫六</strong><small>MOVEVI</small></span>
+        </span>
+        <span className="first-journey-intro__edition"><b>SATURN VI</b><small>环球运动旅程</small></span>
+      </header>
+
+      <section className="first-journey-intro__visual" aria-label="在运动中探索世界城市">
+        <div className="first-journey-intro__orbit" aria-hidden="true">
+          <span /><i /><b><Globe2 /></b>
+        </div>
+        <div className="first-journey-intro__city-stack" aria-hidden="true">
+          {previewCities.map((city, index) => (
+            <figure key={city.id} style={{ '--intro-city-index': index } as CSSProperties}>
+              <img src={cityImageFor(city)} alt="" />
+              <figcaption><MapPin />{city.name}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <span className="first-journey-intro__route-dot first-journey-intro__route-dot--one" aria-hidden="true" />
+        <span className="first-journey-intro__route-dot first-journey-intro__route-dot--two" aria-hidden="true" />
+      </section>
+
+      <section className="first-journey-intro__copy">
+        <p><Sparkles />你的环球运动旅程</p>
+        <h1>木卫六<br />带你跑向全世界！</h1>
+        <span>选择一座城市作为起点，在运动中解锁路线、探索景点，留下属于你的城市足迹。</span>
+      </section>
+
+      <div className="first-journey-intro__features" aria-label="旅程特色">
+        <span><Route /><b>城市路线</b></span>
+        <span><MapPin /><b>沿途景点</b></span>
+        <span><Footprints /><b>运动记录</b></span>
+      </div>
+
+      <footer className="first-journey-intro__footer">
+        <button className="primary-button" type="button" onClick={onStart}>
+          开启运动之旅 <ArrowRight />
+        </button>
+      </footer>
+    </main>
+  );
+}
+
+function FirstJourneyExperience({ selectedId, onSelect, onContinue }: { selectedId: string | null; onSelect: (cityId: string | null) => void; onContinue: () => void }) {
+  const [isChoosingCity, setIsChoosingCity] = useState(false);
+
+  return (
+    <div className="first-journey-stage">
+      <div className={`first-journey-flip${isChoosingCity ? ' is-flipped' : ''}`}>
+        <div className="first-journey-face first-journey-face--front" aria-hidden={isChoosingCity}>
+          <FirstJourneyIntroPage onStart={() => setIsChoosingCity(true)} />
+        </div>
+        <div className="first-journey-face first-journey-face--back" aria-hidden={!isChoosingCity}>
+          <FirstCitySelectionPage selectedId={selectedId} onSelect={onSelect} onContinue={onContinue} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1204,9 +1280,10 @@ export default function JourneyApp() {
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
-        {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstCitySelectionPage selectedId={firstCityChoiceId} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} /></motion.div>
+        {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstJourneyExperience selectedId={firstCityChoiceId} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} /></motion.div>
         : runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
         : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
+        : legacyFeature === 'level' ? <motion.div className="screen-layer" key="journey-level" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><JourneyLevelView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'leaderboard' ? <motion.div className="screen-layer" key="leaderboard" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><LeaderboardView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'onlineSupport' ? <motion.div className="screen-layer" key="online-support" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><OnlineSupportView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'weightLossPlan' ? <motion.div className="screen-layer" key="weight-loss-plan" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeightLossPlanView started={weightPlanStarted} completedDays={weightCompletedDays} rewardBoxes={weightRewardBoxes} openedRewardDays={weightOpenedRewardDays} rewardHistory={weightRewardHistory} newbieTasks={{ treadmillActivated: deviceConnected, activationClaimed, completedRoutes: getJourneyTotals(state).completedRoutes, firstRouteClaimed }} onBack={() => setLegacyFeature(null)} onStartPlan={() => setWeightPlanStarted(true)} onOpenReward={openWeightReward} onClaimActivationTask={() => { setActivationClaimed(true); setNotice('首次激活红包已领取'); }} onClaimFirstRouteTask={() => { setFirstRouteClaimed(true); setNotice('首次路线红包已领取'); }} onNavigateToRouteDetail={openWeightRoute} /></motion.div>
@@ -1216,7 +1293,7 @@ export default function JourneyApp() {
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
         : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
         : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
-        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCityCards={() => selectPrimaryTab('world')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
+        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCityCards={() => selectPrimaryTab('world')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} /></motion.div>
         : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
