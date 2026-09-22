@@ -10,6 +10,7 @@ interface WorldGlobeProps {
   appearance?: 'default' | 'aurora' | 'night';
   focusCityId?: string;
   focusAltitude?: number;
+  highlightedCountryIds?: string[];
   targetFlight?: { fromCityId: string; toCityId: string } | null;
   onCityClick: (city: CityData) => void;
   onFlightComplete?: () => void;
@@ -53,8 +54,11 @@ const GLOBE_BOOTSTRAP_RETRY_MS = 120;
 type CountryPolygon = {
   type: string;
   geometry: unknown;
+  id?: string | number;
   properties?: Record<string, unknown>;
 };
+
+const countryPolygonId = (polygon: CountryPolygon) => String(polygon.id ?? '').padStart(3, '0');
 
 function isFlightMarker(point: GlobeHtmlElement): point is FlightMarker {
   return 'kind' in point && point.kind === 'flight-plane';
@@ -282,7 +286,7 @@ function FlatMapFallback({ cities, appearance, onCityClick }: { cities: CityData
   );
 }
 
-export default function WorldGlobe({ cities, appearance = 'default', focusCityId, focusAltitude = HOME_CAMERA_ALTITUDE, targetFlight, onCityClick, onFlightComplete }: WorldGlobeProps) {
+export default function WorldGlobe({ cities, appearance = 'default', focusCityId, focusAltitude = HOME_CAMERA_ALTITUDE, highlightedCountryIds = [], targetFlight, onCityClick, onFlightComplete }: WorldGlobeProps) {
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const idleTimerRef = useRef<number | null>(null);
   const flightTimersRef = useRef<number[]>([]);
@@ -302,6 +306,14 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
   const [flightArc, setFlightArc] = useState<FlightArc | null>(null);
   const [flightMarker, setFlightMarker] = useState<FlightMarker | null>(null);
   const [countryPolygons, setCountryPolygons] = useState<CountryPolygon[]>([]);
+  const highlightedCountrySet = useMemo(
+    () => new Set(highlightedCountryIds.map(countryId => String(countryId).padStart(3, '0'))),
+    [highlightedCountryIds]
+  );
+  const isHighlightedCountry = useCallback(
+    (polygon: object) => highlightedCountrySet.has(countryPolygonId(polygon as CountryPolygon)),
+    [highlightedCountrySet]
+  );
 
   const cityStatusKey = cities.map(city => `${city.id}:${city.status}:${city.completed}`).join('|');
   const cityPoints = useMemo(() => cities.map(city => ({
@@ -949,10 +961,16 @@ export default function WorldGlobe({ cities, appearance = 'default', focusCityId
         atmosphereAltitude={appearance === 'aurora' ? 0.13 : appearance === 'night' ? 0.085 : 0.16}
         globeCurvatureResolution={5}
         polygonsData={countryPolygons}
-        polygonAltitude={appearance === 'default' ? 0.003 : 0.0015}
-        polygonCapColor={() => appearance === 'default' ? 'rgba(31, 63, 76, 0.72)' : 'rgba(255, 255, 255, 0)'}
-        polygonSideColor={() => appearance === 'aurora' ? 'rgba(34, 70, 86, 0.08)' : appearance === 'night' ? 'rgba(90, 98, 118, 0.045)' : 'rgba(8, 24, 39, 0.12)'}
-        polygonStrokeColor={() => appearance === 'aurora' ? 'rgba(185, 219, 228, 0.15)' : appearance === 'night' ? 'rgba(190, 198, 216, 0.085)' : 'rgba(125, 211, 252, 0.16)'}
+        polygonAltitude={(polygon: object) => isHighlightedCountry(polygon) ? 0.008 : appearance === 'default' ? 0.003 : 0.0015}
+        polygonCapColor={(polygon: object) => isHighlightedCountry(polygon)
+          ? appearance === 'night' ? 'rgba(70, 225, 165, 0.34)' : 'rgba(43, 198, 144, 0.42)'
+          : appearance === 'default' ? 'rgba(31, 63, 76, 0.72)' : 'rgba(255, 255, 255, 0)'}
+        polygonSideColor={(polygon: object) => isHighlightedCountry(polygon)
+          ? 'rgba(46, 196, 143, 0.3)'
+          : appearance === 'aurora' ? 'rgba(34, 70, 86, 0.08)' : appearance === 'night' ? 'rgba(90, 98, 118, 0.045)' : 'rgba(8, 24, 39, 0.12)'}
+        polygonStrokeColor={(polygon: object) => isHighlightedCountry(polygon)
+          ? 'rgba(137, 255, 212, 0.88)'
+          : appearance === 'aurora' ? 'rgba(185, 219, 228, 0.15)' : appearance === 'night' ? 'rgba(190, 198, 216, 0.085)' : 'rgba(125, 211, 252, 0.16)'}
         polygonsTransitionDuration={isReady ? 450 : 0}
         pointsData={[]}
         pointLat="lat"

@@ -1,6 +1,52 @@
 import type { JourneyCity, JourneyRoute } from './types';
 
-type CitySeed = Omit<JourneyCity, 'routes'> & { landmarks: string[] };
+type CitySeed = Omit<JourneyCity, 'routes' | 'countryName' | 'countryCode'> & { landmarks: string[] };
+
+const CITY_COUNTRY_NAMES: Record<string, string> = {
+  hangzhou: '中国',
+  beijing: '中国',
+  shanghai: '中国',
+  xian: '中国',
+  tokyo: '日本',
+  paris: '法国',
+  london: '英国',
+  'new-york': '美国',
+  sydney: '澳大利亚',
+  rio: '巴西',
+  cairo: '埃及',
+  bangkok: '泰国',
+  mumbai: '印度',
+  singapore: '新加坡',
+  moscow: '俄罗斯',
+  'los-angeles': '美国',
+  rome: '意大利',
+  dubai: '阿联酋',
+  berlin: '德国',
+  toronto: '加拿大'
+};
+
+const CITY_COUNTRY_CODES: Record<string, string> = {
+  hangzhou: '156',
+  beijing: '156',
+  shanghai: '156',
+  xian: '156',
+  tokyo: '392',
+  paris: '250',
+  london: '826',
+  'new-york': '840',
+  sydney: '036',
+  rio: '076',
+  cairo: '818',
+  bangkok: '764',
+  mumbai: '356',
+  singapore: '702',
+  moscow: '643',
+  'los-angeles': '840',
+  rome: '380',
+  dubai: '784',
+  berlin: '276',
+  toronto: '124'
+};
 
 const ROUTE_SUFFIXES = [
   '晨光序章', '水岸漫游', '旧城寻迹', '花园呼吸', '建筑巡礼',
@@ -53,6 +99,8 @@ const makeRoutes = (city: CitySeed): JourneyRoute[] => city.landmarks.map((landm
 
 export const JOURNEY_CITIES: JourneyCity[] = citySeeds.map(({ landmarks: _landmarks, ...city }) => ({
   ...city,
+  countryName: CITY_COUNTRY_NAMES[city.id],
+  countryCode: CITY_COUNTRY_CODES[city.id],
   routes: makeRoutes({ ...city, landmarks: _landmarks })
 }));
 

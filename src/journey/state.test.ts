@@ -7,6 +7,7 @@ import {
   getCandidateCityIds,
   getCityStatus,
   getCompletedRouteIds,
+  getCountryLevelProgress,
   getHomeJourneyCityIds,
   getRouteStatus,
   journeyReducer,
@@ -16,20 +17,14 @@ import type { JourneyState, RunResult } from './types';
 
 const result: RunResult = { distanceKm: 5, durationSeconds: 2_100, calories: 320 };
 
-const blankTokyoState = (): JourneyState => ({
-  ...createDemoJourneyState(),
-  completedCityIds: ['beijing', 'shanghai'],
-  completedRouteIdsByCity: {
-    beijing: createDemoJourneyState().completedRouteIdsByCity.beijing,
-    shanghai: createDemoJourneyState().completedRouteIdsByCity.shanghai,
-    tokyo: []
-  },
-  revealedRouteIdsByCity: {
-    beijing: createDemoJourneyState().revealedRouteIdsByCity.beijing,
-    shanghai: createDemoJourneyState().revealedRouteIdsByCity.shanghai,
-    tokyo: []
-  }
-});
+const blankTokyoState = (): JourneyState => {
+  const demo = createDemoJourneyState();
+  return {
+    ...demo,
+    completedRouteIdsByCity: { ...demo.completedRouteIdsByCity, tokyo: [] },
+    revealedRouteIdsByCity: { ...demo.revealedRouteIdsByCity, tokyo: [] }
+  };
+};
 
 const revealAndComplete = (state: JourneyState, order: number) => {
   const routeId = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[order - 1].id;
@@ -37,24 +32,24 @@ const revealAndComplete = (state: JourneyState, order: number) => {
   return journeyReducer(revealed, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId, result });
 };
 
-test('prototype journey starts selected city at 9/10 with two completed cities', () => {
+test('prototype journey starts selected city at 9/10 with five completed cities', () => {
   const state = createPrototypeJourneyState('paris');
   assert.equal(state.currentCityId, 'paris');
-  assert.equal(state.completedCityIds.length, 2);
+  assert.deepEqual(state.completedCityIds, ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore']);
   assert.equal(getCompletedRouteIds(state, 'paris').length, 9);
   state.completedCityIds.forEach(cityId => assert.equal(getCompletedRouteIds(state, cityId).length, 10));
   assert.ok(state.discoveredSpotKeys.length > 0);
   assert.equal(state.currentPage, 'home');
-  assert.equal(getHomeJourneyCityIds(state)[2], 'paris');
+  assert.equal(getHomeJourneyCityIds(state)[5], 'paris');
 });
 
 test('home journey order never places a locked city before the current city', () => {
   const freshShanghai = createPrototypeJourneyState('shanghai');
-  assert.equal(getHomeJourneyCityIds(freshShanghai)[2], 'shanghai');
-  assert.ok(getHomeJourneyCityIds(freshShanghai).slice(0, 2).every(cityId => getCityStatus(freshShanghai, cityId) === 'completed'));
+  assert.equal(getHomeJourneyCityIds(freshShanghai)[4], 'shanghai');
+  assert.ok(getHomeJourneyCityIds(freshShanghai).slice(0, 4).every(cityId => getCityStatus(freshShanghai, cityId) === 'completed'));
 
   const demo = createDemoJourneyState();
-  assert.deepEqual(getHomeJourneyCityIds(demo).slice(0, 3), ['beijing', 'shanghai', 'tokyo']);
+  assert.deepEqual(getHomeJourneyCityIds(demo).slice(0, 6), ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore', 'tokyo']);
 });
 
 test('catalogue contains exactly 20 cities and 200 complete unique routes', () => {
@@ -69,12 +64,33 @@ test('catalogue contains exactly 20 cities and 200 complete unique routes', () =
   });
 });
 
-test('demo state points to Beijing, Shanghai and Tokyo data', () => {
+test('every journey city maps to a three-digit country region code', () => {
+  assert.ok(JOURNEY_CITIES.every(city => /^\d{3}$/.test(city.countryCode)));
+  assert.equal(
+    JOURNEY_CITIES.find(city => city.id === 'beijing')?.countryCode,
+    JOURNEY_CITIES.find(city => city.id === 'shanghai')?.countryCode
+  );
+});
+
+test('demo state completes five cities with Tokyo in progress', () => {
   const state = createDemoJourneyState();
   assert.equal(state.currentCityId, 'tokyo');
-  assert.deepEqual(state.completedCityIds, ['beijing', 'shanghai']);
-  assert.equal(getCompletedRouteIds(state, 'tokyo').length, 8);
+  assert.deepEqual(state.completedCityIds, ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore']);
+  state.completedCityIds.forEach(cityId => assert.equal(getCompletedRouteIds(state, cityId).length, 10));
+  assert.equal(getCompletedRouteIds(state, 'tokyo').length, 9);
   assert.equal(state.discoveredSpotKeys.length, 128);
+});
+
+test('country level de-duplicates completed cities in the same country and caps at 195', () => {
+  const fourCountries = createDemoJourneyState();
+  assert.deepEqual(getCountryLevelProgress(fourCountries), {
+    level: 4,
+    completedCountries: 4,
+    maxLevel: 195
+  });
+
+  const fiveCountries = { ...fourCountries, completedCityIds: [...fourCountries.completedCityIds, 'tokyo'] };
+  assert.equal(getCountryLevelProgress(fiveCountries).level, 5);
 });
 
 test('routes open at 3, 6 and 10 thresholds in arbitrary order', () => {
@@ -109,11 +125,11 @@ test('routes open at 3, 6 and 10 thresholds in arbitrary order', () => {
 
 test('revealing an unknown route exposes it without completing it', () => {
   const state = createDemoJourneyState();
-  const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[8];
+  const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[9];
   assert.equal(getRouteStatus(state, 'tokyo', route.id), 'discoverable');
   const next = journeyReducer(state, { type: 'REVEAL_ROUTE', cityId: 'tokyo', routeId: route.id });
   assert.equal(getRouteStatus(next, 'tokyo', route.id), 'revealed');
-  assert.equal(getCompletedRouteIds(next, 'tokyo').length, 8);
+  assert.equal(getCompletedRouteIds(next, 'tokyo').length, 9);
 });
 
 test('repeated route completion is idempotent', () => {
@@ -121,7 +137,7 @@ test('repeated route completion is idempotent', () => {
   const route = JOURNEY_CITIES.find(city => city.id === 'tokyo')!.routes[0];
   const once = journeyReducer(initial, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId: route.id, result });
   const twice = journeyReducer(once, { type: 'COMPLETE_ROUTE', cityId: 'tokyo', routeId: route.id, result });
-  assert.equal(getCompletedRouteIds(twice, 'tokyo').length, 8);
+  assert.equal(getCompletedRouteIds(twice, 'tokyo').length, 9);
   assert.equal(twice.discoveredSpotKeys.length, initial.discoveredSpotKeys.length);
   assert.equal(twice.lastRun?.isFirstCompletion, false);
 });

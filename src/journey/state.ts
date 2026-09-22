@@ -9,21 +9,29 @@ import type {
 const routeIdsFor = (cityId: string, count: number) =>
   getJourneyCity(cityId)?.routes.slice(0, count).map(route => route.id) ?? [];
 
+const demoCompletedCityIds = ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore'] as const;
+
 const initialCompletedRoutes: Record<string, string[]> = {
   beijing: routeIdsFor('beijing', 10),
   shanghai: routeIdsFor('shanghai', 10),
-  tokyo: routeIdsFor('tokyo', 8)
+  cairo: routeIdsFor('cairo', 10),
+  'los-angeles': routeIdsFor('los-angeles', 10),
+  singapore: routeIdsFor('singapore', 10),
+  tokyo: routeIdsFor('tokyo', 9)
 };
 
 const initialRevealedRoutes: Record<string, string[]> = {
   beijing: [...initialCompletedRoutes.beijing],
   shanghai: [...initialCompletedRoutes.shanghai],
+  cairo: [...initialCompletedRoutes.cairo],
+  'los-angeles': [...initialCompletedRoutes['los-angeles']],
+  singapore: [...initialCompletedRoutes.singapore],
   tokyo: [...initialCompletedRoutes.tokyo]
 };
 
 export const createDemoJourneyState = (): JourneyState => ({
   currentCityId: 'tokyo',
-  completedCityIds: ['beijing', 'shanghai'],
+  completedCityIds: [...demoCompletedCityIds],
   completedRouteIdsByCity: Object.fromEntries(
     Object.entries(initialCompletedRoutes).map(([cityId, routeIds]) => [cityId, [...routeIds]])
   ),
@@ -38,7 +46,7 @@ export const createDemoJourneyState = (): JourneyState => ({
 
 export const createPrototypeJourneyState = (cityId: string): JourneyState => {
   const currentCityId = getJourneyCity(cityId)?.id ?? JOURNEY_SEQUENCE[0];
-  const completedCityIds = JOURNEY_SEQUENCE.filter(item => item !== currentCityId).slice(0, 2);
+  const completedCityIds = demoCompletedCityIds.filter(item => item !== currentCityId);
   const completedRouteIdsByCity: Record<string, string[]> = Object.fromEntries([
     ...completedCityIds.map(item => [item, routeIdsFor(item, 10)]),
     [currentCityId, routeIdsFor(currentCityId, 9)]
@@ -232,6 +240,23 @@ export const getJourneyTotals = (state: JourneyState) => ({
   ),
   discoveredSpots: state.discoveredSpotKeys.length
 });
+
+export const COUNTRY_LEVEL_CAP = 195;
+
+export const getCountryLevelProgress = (state: JourneyState) => {
+  const completedCountryNames = new Set(
+    state.completedCityIds
+      .map(cityId => getJourneyCity(cityId)?.countryName)
+      .filter((countryName): countryName is string => Boolean(countryName))
+  );
+  const completedCountries = Math.min(COUNTRY_LEVEL_CAP, completedCountryNames.size);
+
+  return {
+    level: completedCountries,
+    completedCountries,
+    maxLevel: COUNTRY_LEVEL_CAP
+  };
+};
 
 export const getCityPlanTotals = (cityId: string) => {
   const routes = getJourneyCity(cityId)?.routes ?? [];

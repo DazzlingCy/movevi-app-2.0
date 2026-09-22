@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import WorldGlobe from '../WorldGlobe';
 import type { CityData } from '../../data/cities';
-import { JOURNEY_CITIES } from '../../journey/data';
+import { getJourneyCity, JOURNEY_CITIES } from '../../journey/data';
 import { getCityStatus, getCompletedRouteIds } from '../../journey/state';
 import type { JourneyState } from '../../journey/types';
 
@@ -10,7 +10,22 @@ interface JourneyGlobeProps {
   onOpenCity: (cityId: string) => void;
 }
 
+const COUNTRY_HIGHLIGHT_REGIONS: Record<string, string[]> = {
+  '156': ['158']
+};
+
 export default function JourneyGlobe({ state, onOpenCity }: JourneyGlobeProps) {
+  const highlightedCountryIds = useMemo(() => {
+    const completedCountryIds = state.completedCityIds
+      .map(cityId => getJourneyCity(cityId)?.countryCode)
+      .filter((countryCode): countryCode is string => Boolean(countryCode));
+
+    return [...new Set(completedCountryIds.flatMap(countryCode => [
+      countryCode,
+      ...(COUNTRY_HIGHLIGHT_REGIONS[countryCode] ?? [])
+    ]))];
+  }, [state.completedCityIds]);
+
   const cities = useMemo<CityData[]>(() => JOURNEY_CITIES.map(city => {
     const journeyStatus = getCityStatus(state, city.id);
     const completed = getCompletedRouteIds(state, city.id).length;
@@ -47,6 +62,7 @@ export default function JourneyGlobe({ state, onOpenCity }: JourneyGlobeProps) {
       appearance="night"
       focusCityId={state.currentCityId}
       focusAltitude={2.16}
+      highlightedCountryIds={highlightedCountryIds}
       onCityClick={city => onOpenCity(city.id)}
     />
   );

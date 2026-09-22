@@ -20,6 +20,8 @@ export interface JourneyCity {
   id: string;
   name: string;
   englishName: string;
+  countryName: string;
+  countryCode: string;
   continent: string;
   longitude: number;
   latitude: number;
