@@ -169,9 +169,6 @@ svg { stroke-width: 1.8; }
 .first-journey-intro__wordmark { display: grid; gap: 1px; }
 .first-journey-intro__wordmark strong { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .12em; line-height: 1; }
 .first-journey-intro__wordmark small { color: rgba(255,255,255,.42); font-size: 6px; font-weight: 800; letter-spacing: .22em; }
-.first-journey-intro__edition { display: grid; justify-items: end; gap: 2px; color: rgba(255,255,255,.4); }
-.first-journey-intro__edition b { color: rgba(239,174,110,.68); font-size: 6px; font-weight: 800; letter-spacing: .2em; }
-.first-journey-intro__edition small { font-size: 8px; font-weight: 650; letter-spacing: .06em; }
 .first-journey-intro__visual { position: relative; flex: 0 0 min(38vh, 310px); min-height: 245px; margin: clamp(24px, 6vh, 70px) -8px 0; }
 .first-journey-intro__orbit { position: absolute; width: 224px; height: 224px; top: 20px; left: 50%; transform: translateX(-50%); border: 1px solid rgba(163,169,255,.25); border-radius: 50%; }
 .first-journey-intro__orbit::before, .first-journey-intro__orbit::after { content: ""; position: absolute; inset: 20px -18px; border: 1px solid rgba(163,169,255,.14); border-radius: 50%; transform: rotate(28deg); }

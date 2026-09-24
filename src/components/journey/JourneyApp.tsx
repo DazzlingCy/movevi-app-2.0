@@ -1050,7 +1050,6 @@ function FirstJourneyIntroPage({ onStart }: { onStart: () => void }) {
           <span className="first-journey-intro__brand-mark"><i aria-hidden="true" />MV</span>
           <span className="first-journey-intro__wordmark"><strong>木卫六</strong><small>MOVEVI</small></span>
         </span>
-        <span className="first-journey-intro__edition"><b>SATURN VI</b><small>环球运动旅程</small></span>
       </header>
 
       <section className="first-journey-intro__visual" aria-label="在运动中探索世界城市">
@@ -1071,7 +1070,7 @@ function FirstJourneyIntroPage({ onStart }: { onStart: () => void }) {
 
       <section className="first-journey-intro__copy">
         <p><Sparkles />你的环球运动旅程</p>
-        <h1>木卫六<br />带你跑向全世界！</h1>
+        <h1>让你足不出户<br />跑遍全球</h1>
         <span>选择一座城市作为起点，在运动中解锁路线、探索景点，留下属于你的城市足迹。</span>
       </section>
 
