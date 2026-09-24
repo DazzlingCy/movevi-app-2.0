@@ -687,7 +687,7 @@ function MapPage({ state, totals, onOpenCity, onCities, onLeaderboard, onCountry
     <main className="page page--map page--world" id="main-content">
       <section className="world-hero" aria-labelledby="world-page-title">
         <header className="world-header">
-          <h1 className="world-header__eyebrow" id="world-page-title"><Sparkles aria-hidden="true" />环球运动档案</h1>
+          <h1 className="world-header__eyebrow" id="world-page-title"><Sparkles aria-hidden="true" />跑步版 Google Earth</h1>
         </header>
         <div className="world-globe-panel">
           <Suspense fallback={<div className="globe-loading" role="status"><Globe2 /><span>正在加载你的世界</span></div>}>
