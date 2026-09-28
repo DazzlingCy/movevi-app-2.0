@@ -86,7 +86,6 @@ export default function JourneyLevelView({ state, onBack }: JourneyLevelViewProp
         <section className="level-record-progress" aria-labelledby="level-progress-title">
           <header>
             <div><h2 id="level-progress-title">环球等级</h2><span>LV.{level.level}</span></div>
-            <p><strong>{level.completedCountries}</strong> 当前等级</p>
           </header>
           <div className="level-record-progress__track" role="progressbar" aria-label="环球等级进度" aria-valuemin={0} aria-valuemax={level.maxLevel} aria-valuenow={level.completedCountries}>
             <i style={{ width: `${progress}%` }} />

@@ -163,3 +163,13 @@ test('selecting and arriving changes the unique current city with zero progress'
   assert.equal(getCompletedRouteIds(state, 'paris').length, 0);
   assert.equal(state.currentPage, 'home');
 });
+
+test('next-city selection accepts recommendations from later batches', () => {
+  let state = createDemoJourneyState();
+  state = revealAndComplete(state, 9);
+  state = revealAndComplete(state, 10);
+  assert.ok(!getCandidateCityIds(state).includes('berlin'));
+  state = journeyReducer(state, { type: 'SELECT_NEXT_CITY', cityId: 'berlin' });
+  assert.equal(state.pendingNextCityId, 'berlin');
+  assert.equal(state.currentPage, 'travel');
+});

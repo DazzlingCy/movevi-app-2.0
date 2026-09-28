@@ -209,7 +209,7 @@ export const journeyReducer = (state: JourneyState, action: JourneyAction): Jour
       return completeCity(state, action.cityId);
 
     case 'SELECT_NEXT_CITY': {
-      if (!getCandidateCityIds(state).includes(action.cityId)) return state;
+      if (!getCandidateCityIds(state, JOURNEY_SEQUENCE.length).includes(action.cityId)) return state;
       return { ...state, pendingNextCityId: action.cityId, currentPage: 'travel' };
     }
 

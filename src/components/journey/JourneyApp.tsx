@@ -4,7 +4,7 @@ import {
   ArrowRight, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, CircleHelp, ClipboardList,
   Clock3, Compass, Flame, Footprints, Globe2, Headphones, HeadphonesIcon, LockKeyhole, Mail, Map, MapPin,
   Medal, MessageSquare, MonitorSmartphone, Navigation, Pause, Play, RotateCcw, Route,
-  Settings, Sparkles, SquarePen, Target, Trophy, UserRound, Wallet, Wifi, WifiOff, X
+  Settings, Sparkles, SquarePen, Target, Trophy, UserRound, UsersRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
 import { CITIES, type CityData } from '../../data/cities';
 import { getJourneyCity, getJourneyRoute, JOURNEY_SEQUENCE } from '../../journey/data';
@@ -68,6 +68,29 @@ const JOURNEY_CITY_VIDEOS: Partial<Record<string, string>> = {
   tokyo: 'https://videos.pexels.com/video-files/11720138/11720138-hd_1280_720_30fps.mp4',
   paris: 'https://videos.pexels.com/video-files/20046743/20046743-hd_1280_720_60fps.mp4',
   'new-york': 'https://videos.pexels.com/video-files/37898785/16079913_4094_2160_30fps.mp4'
+};
+
+const CITY_RUNNER_COUNTS: Record<string, number> = {
+  hangzhou: 18642,
+  beijing: 28376,
+  shanghai: 25819,
+  xian: 14208,
+  tokyo: 31486,
+  paris: 27905,
+  london: 24613,
+  'new-york': 29740,
+  sydney: 16386,
+  rio: 12948,
+  cairo: 11672,
+  bangkok: 15931,
+  mumbai: 19284,
+  singapore: 13756,
+  moscow: 10843,
+  'los-angeles': 21567,
+  rome: 17429,
+  dubai: 18906,
+  berlin: 16752,
+  toronto: 14635
 };
 
 const DEFAULT_JOURNEY_CITY_VIDEO = JOURNEY_CITY_VIDEOS.tokyo!;
@@ -196,9 +219,15 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
+  const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
-  const nextStationCandidates = getCandidateCityIds(state, 3).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
+  const nextStationCandidatePool = getCandidateCityIds(state, JOURNEY_CITY_SEQUENCE.length).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
+  const candidateBatchCount = Math.max(1, Math.ceil(nextStationCandidatePool.length / 3));
+  const nextStationCandidates = Array.from(
+    { length: Math.min(3, nextStationCandidatePool.length) },
+    (_, offset) => nextStationCandidatePool[(candidateBatchIndex * 3 + offset) % nextStationCandidatePool.length]
+  ).filter(Boolean);
   const currentCityCompleted = getCompletedRouteIds(state, state.currentCityId).length >= 10 || state.completedCityIds.includes(state.currentCityId);
   const getProgressCopy = (item: JourneyCity) => {
     const itemStatus = getCityStatus(state, item.id);
@@ -379,6 +408,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (swipedRef.current || !currentCityCompleted) return;
     onSelectNextCity(cityId);
   };
+  const showNextCandidateBatch = () => {
+    if (!currentCityCompleted || candidateBatchCount <= 1) return;
+    setCandidateBatchIndex(index => (index + 1) % candidateBatchCount);
+  };
   const playCityVideo = useCallback(() => {
     const video = cityVideoRef.current;
     if (!video) return;
@@ -432,6 +465,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     };
   }, [city.id]);
 
+  useEffect(() => {
+    setCandidateBatchIndex(0);
+  }, [state.currentCityId, state.completedCityIds.length]);
+
   return (
     <main className="page page--home" id="main-content">
       <header className="topbar">
@@ -450,7 +487,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
         </button>
       </header>
       <section className="home-heading">
-        <h1>今天去哪里？</h1>
+        <h1>今天跑哪里？</h1>
         <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('weightLossPlan')} aria-label="打开打卡红包">
           <Flame />
           <span>打卡红包</span>
@@ -544,7 +581,12 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                     )}
                     <div className="destination-card__overlay" />
                     <div className="destination-card__content">
-                      <div><span className="destination-card__kicker"><MapPin /> {itemLabel}</span><h2>{item.name}</h2><p><span>{item.countryName}</span><i aria-hidden="true">·</i>{item.englishName}</p></div>
+                      <div>
+                        <span className="destination-card__kicker"><MapPin /> {itemLabel}</span>
+                        <h2>{item.name}</h2>
+                        <p><span>{item.countryName}</span><i aria-hidden="true">·</i>{item.englishName}</p>
+                      </div>
+                      <span className="destination-card__runners"><UsersRound aria-hidden="true" />{(CITY_RUNNER_COUNTS[item.id] ?? 1000).toLocaleString('zh-CN')} 人跑过</span>
                     </div>
                   </div>
                   <section className="journey-progress" aria-label={`${item.name}旅程进度`}>
@@ -568,7 +610,14 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                 {item.id === state.currentCityId && (
                   <section className={`destination-journey-card destination-next-card${currentCityCompleted ? ' is-ready' : ' is-locked'}`} data-next-station="true" key={`${item.id}-next-station`} aria-label="下一站选择卡片">
                     <div className="next-station-card__hero">
-                      <span className="next-station-card__eyebrow"><Navigation /> 下一站</span>
+                      <div className="next-station-card__topline">
+                        <span className="next-station-card__eyebrow"><Navigation /> 下一站</span>
+                        {currentCityCompleted && candidateBatchCount > 1 && (
+                          <button className="next-station-card__refresh" type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); showNextCandidateBatch(); }} aria-label="换一批推荐城市">
+                            <RotateCcw aria-hidden="true" />换一批
+                          </button>
+                        )}
+                      </div>
                       <h2>{currentCityCompleted ? '选择下一座城市' : '完成当前城市后开启'}</h2>
                       <p>{currentCityCompleted ? '从 3 个推荐目的地中选择你的环球旅程下一站。' : `完成${getJourneyCity(state.currentCityId)?.name ?? '当前城市'}全部 10 段路线，即可解锁下一站选择。`}</p>
                     </div>
@@ -1194,8 +1243,6 @@ export default function JourneyApp() {
   }, []);
 
   const openCity = (cityId: string) => {
-    const status = getCityStatus(state, cityId);
-    if (status !== 'current' && status !== 'completed') return;
     setSelectedRouteId(null); setRouteCityId(cityId);
   };
   const openCityRoutesFromList = (cityId: string) => {
