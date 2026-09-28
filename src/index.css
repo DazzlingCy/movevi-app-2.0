@@ -1272,7 +1272,7 @@ body { background: var(--bg); }
 .leaderboard-page::-webkit-scrollbar { display: none; }
 .leaderboard-header { position: sticky; z-index: 30; top: 0; min-height: 68px; display: grid; grid-template-columns: 42px minmax(0, 1fr) 58px; align-items: center; gap: 8px; margin-inline: -16px; padding: max(10px, env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(7,8,12,.86); backdrop-filter: blur(18px) saturate(140%); }
 .leaderboard-header > div { min-width: 0; text-align: center; }
-.leaderboard-header h1 { margin: 2px 0 0; font-family: var(--font-display); font-size: 19px; font-weight: 650; line-height: 1; letter-spacing: -.025em; }
+.leaderboard-header h1 { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 650; line-height: 1; letter-spacing: -.025em; }
 .leaderboard-header small { color: #666c78; font-size: 7px; letter-spacing: .08em; }
 .leaderboard-header button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.035); color: #b7bbc5; }
 .leaderboard-header button:first-child { width: 38px; border-radius: 50%; }
@@ -1728,7 +1728,7 @@ body { background: var(--bg); }
 .level-record-cities__list { padding: 3px 16px 8px; }
 .level-record-cities__list article { position: relative; min-height: 72px; display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 10px 0; }
 .level-record-cities__list article + article { border-top: 1px solid rgba(255,255,255,.055); }
-.level-record-city__icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(145deg, rgba(184,245,142,.22), rgba(97,221,176,.1)); color: var(--level-lime); }
+.level-record-city__icon { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--city-icon-accent, var(--level-lime)) 26%, transparent); border-radius: 50%; background: linear-gradient(145deg, color-mix(in srgb, var(--city-icon-accent, var(--level-lime)) 24%, transparent), color-mix(in srgb, var(--city-icon-accent, var(--level-lime)) 8%, transparent)); color: var(--city-icon-accent, var(--level-lime)); }
 .level-record-city__icon svg { width: 18px; height: 18px; }
 .level-record-cities__list article > div { min-width: 0; }
 .level-record-cities__list article > div > strong { display: flex; align-items: baseline; gap: 7px; font-size: 12px; font-weight: 650; }

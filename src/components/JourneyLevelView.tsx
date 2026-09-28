@@ -1,13 +1,41 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Check, ChevronLeft, Flag, Globe2, MapPin, Route, Sparkles, X } from 'lucide-react';
+import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  BookOpen, Building2, Castle, Check, ChevronLeft, Church, Clapperboard, Clock3, Columns3,
+  Drama, Factory, Flag, Globe2, Hotel, Landmark, MapPin, Mountain, Palmtree, Pyramid,
+  RadioTower, Route, Snowflake, Sparkles, Telescope, TowerControl, TrainFront, Trees, Waves, X,
+  type LucideIcon
+} from 'lucide-react';
 import { getJourneyCity } from '../journey/data';
 import { getCountryLevelProgress } from '../journey/state';
-import type { JourneyState } from '../journey/types';
+import type { JourneyCity, JourneyState } from '../journey/types';
 
 interface JourneyLevelViewProps {
   state: JourneyState;
   onBack: () => void;
 }
+
+const cityRecordIcons: Record<string, LucideIcon> = {
+  hangzhou: Waves,
+  beijing: Landmark,
+  shanghai: Building2,
+  xian: Castle,
+  tokyo: RadioTower,
+  paris: Church,
+  london: Clock3,
+  'new-york': Hotel,
+  sydney: Drama,
+  rio: Mountain,
+  cairo: Pyramid,
+  bangkok: Palmtree,
+  mumbai: TrainFront,
+  singapore: Trees,
+  moscow: Snowflake,
+  'los-angeles': Clapperboard,
+  rome: Columns3,
+  dubai: TowerControl,
+  berlin: Factory,
+  toronto: Telescope
+};
 
 export default function JourneyLevelView({ state, onBack }: JourneyLevelViewProps) {
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -15,6 +43,12 @@ export default function JourneyLevelView({ state, onBack }: JourneyLevelViewProp
   const completedCities = state.completedCityIds
     .map(cityId => getJourneyCity(cityId))
     .filter((city): city is NonNullable<typeof city> => Boolean(city));
+  const completedCountries = completedCities.reduce<Array<{ countryCode: string; countryName: string; cities: JourneyCity[] }>>((records, city) => {
+    const existing = records.find(record => record.countryCode === city.countryCode);
+    if (existing) existing.cities.push(city);
+    else records.push({ countryCode: city.countryCode, countryName: city.countryName, cities: [city] });
+    return records;
+  }, []);
   const nextLevel = Math.min(level.maxLevel, level.level + 1);
   const isMaxLevel = level.level >= level.maxLevel;
   const progress = Math.min(100, (level.completedCountries / level.maxLevel) * 100);
@@ -66,21 +100,26 @@ export default function JourneyLevelView({ state, onBack }: JourneyLevelViewProp
         <section className="level-record-cities" aria-labelledby="completed-city-records-title">
           <header>
             <span><MapPin aria-hidden="true" /></span>
-            <div><h2 id="completed-city-records-title">已完成城市</h2><p>每一座完成的城市，都会点亮所属国家或地区</p></div>
-            <strong>{completedCities.length}</strong>
+            <div><h2 id="completed-city-records-title">已完成国家和地区</h2><p>同一国家的多个完成城市合并记录</p></div>
+            <strong>{completedCountries.length}</strong>
           </header>
           <div className="level-record-cities__list">
-            {completedCities.map((city, index) => (
-              <article key={city.id}>
-                <span className="level-record-city__icon"><Route aria-hidden="true" /></span>
-                <div>
-                  <strong>{city.name}<small>{city.englishName}</small></strong>
-                  <p><Flag aria-hidden="true" />{city.countryName}<i aria-hidden="true" />10/10 路线</p>
-                </div>
-                <span className="level-record-city__status"><Check aria-hidden="true" />已完成</span>
-                <b>{String(index + 1).padStart(2, '0')}</b>
-              </article>
-            ))}
+            {completedCountries.map((country, index) => {
+              const representativeCity = country.cities[0];
+              const CountryIcon = cityRecordIcons[representativeCity.id] ?? Route;
+              const completedRouteCount = country.cities.reduce((total, city) => total + city.routes.length, 0);
+              return (
+                <article key={country.countryCode}>
+                  <span className="level-record-city__icon" style={{ '--city-icon-accent': representativeCity.accent } as CSSProperties}><CountryIcon aria-hidden="true" /></span>
+                  <div>
+                    <strong>{country.countryName}<small>{country.cities.map(city => city.name).join(' · ')}</small></strong>
+                    <p><Flag aria-hidden="true" />{country.cities.length} 座城市<i aria-hidden="true" />{completedRouteCount}/{completedRouteCount} 路线</p>
+                  </div>
+                  <span className="level-record-city__status"><Check aria-hidden="true" />已点亮</span>
+                  <b>{String(index + 1).padStart(2, '0')}</b>
+                </article>
+              );
+            })}
           </div>
         </section>
 
