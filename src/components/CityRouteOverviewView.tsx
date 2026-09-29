@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   Check,
@@ -108,7 +108,7 @@ export default function CityRouteOverviewView({
       <header className="relative min-h-[272px] overflow-hidden bg-slate-950 text-white">
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,13,.36),rgba(5,8,13,.48)_40%,rgba(5,8,13,.94))]" />
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(16px,env(safe-area-inset-top))]">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(16px,env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={onBack}
@@ -117,7 +117,6 @@ export default function CityRouteOverviewView({
           >
             <ChevronLeft size={26} />
           </button>
-          <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 text-[11px] font-semibold tracking-[.08em] text-white/80 backdrop-blur-md">{city.name} · {overview.routes.length} 段</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-11">
           <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-orange-200"><Route size={14} /> 路线概览</span>
@@ -211,6 +210,9 @@ type CityReportOverview = {
   totals: { distance: number; duration: number; calories: number };
 };
 
+const SHARE_USER_NAME = '沐小六';
+const SHARE_USER_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=240&h=240';
+
 const drawRoundedRect = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
   context.beginPath();
   context.moveTo(x + radius, y);
@@ -221,93 +223,165 @@ const drawRoundedRect = (context: CanvasRenderingContext2D, x: number, y: number
   context.closePath();
 };
 
-const createCityReportPoster = (city: CityData, overview: CityReportOverview) => new Promise<File>((resolve, reject) => {
+const loadPosterBackground = (src: string) => new Promise<HTMLImageElement | null>(resolve => {
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.referrerPolicy = 'no-referrer';
+  image.onload = () => resolve(image);
+  image.onerror = () => resolve(null);
+  image.src = src;
+});
+
+const drawCoverImage = (context: CanvasRenderingContext2D, image: HTMLImageElement, width: number, height: number, x = 0, y = 0) => {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const sourceWidth = width / scale;
+  const sourceHeight = height / scale;
+  const sourceX = (image.naturalWidth - sourceWidth) / 2;
+  const sourceY = (image.naturalHeight - sourceHeight) / 2;
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+};
+
+const createCityReportPoster = async (city: CityData, overview: CityReportOverview) => {
   const canvas = document.createElement('canvas');
   canvas.width = 1080;
-  canvas.height = 1440;
+  canvas.height = 1620;
   const context = canvas.getContext('2d');
   if (!context) {
-    reject(new Error('无法生成城市报告'));
-    return;
+    throw new Error('无法生成城市报告');
   }
 
   const duration = formatDurationMetric(overview.totals.duration);
-  const gradient = context.createLinearGradient(0, 0, 1080, 1440);
-  gradient.addColorStop(0, '#071713');
-  gradient.addColorStop(0.58, '#0d2d24');
-  gradient.addColorStop(1, '#0a1714');
+  const generatedAt = new Date();
+  const padTimePart = (value: number) => String(value).padStart(2, '0');
+  const reportTime = `${generatedAt.getFullYear()}.${padTimePart(generatedAt.getMonth() + 1)}.${padTimePart(generatedAt.getDate())} ${padTimePart(generatedAt.getHours())}:${padTimePart(generatedAt.getMinutes())}`;
+  const [backgroundImage, avatarImage] = await Promise.all([
+    loadPosterBackground(city.image),
+    loadPosterBackground(SHARE_USER_AVATAR)
+  ]);
+  if (backgroundImage) drawCoverImage(context, backgroundImage, canvas.width, canvas.height);
+  const longestRoute = overview.routes.reduce((longest, route) => route.distanceKm > longest.distanceKm ? route : longest, overview.routes[0]);
+  const gradient = context.createLinearGradient(0, 0, 1080, 1620);
+  gradient.addColorStop(0, backgroundImage ? 'rgba(2,18,14,.62)' : '#071713');
+  gradient.addColorStop(0.48, backgroundImage ? 'rgba(4,28,22,.78)' : '#0d2d24');
+  gradient.addColorStop(1, backgroundImage ? 'rgba(3,16,13,.96)' : '#0a1714');
   context.fillStyle = gradient;
-  context.fillRect(0, 0, 1080, 1440);
+  context.fillRect(0, 0, 1080, 1620);
 
-  context.globalAlpha = 0.18;
-  context.strokeStyle = '#6ee7b7';
-  context.lineWidth = 2;
-  for (let radius = 140; radius <= 560; radius += 105) {
-    context.beginPath();
-    context.arc(950, 120, radius, 0, Math.PI * 2);
-    context.stroke();
+  const avatarX = 80;
+  const avatarY = 62;
+  const avatarSize = 88;
+  context.save();
+  context.beginPath();
+  context.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+  context.clip();
+  context.fillStyle = '#17352c';
+  context.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+  if (avatarImage) {
+    drawCoverImage(context, avatarImage, avatarSize, avatarSize, avatarX, avatarY);
+  } else {
+    context.fillStyle = '#d1fae5';
+    context.font = '900 40px "Microsoft YaHei", sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('沐', avatarX + avatarSize / 2, avatarY + avatarSize / 2);
+    context.textAlign = 'start';
+    context.textBaseline = 'alphabetic';
   }
-  context.globalAlpha = 1;
+  context.restore();
+  context.strokeStyle = 'rgba(110,231,183,.72)';
+  context.lineWidth = 4;
+  context.beginPath();
+  context.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+  context.stroke();
+
+  context.fillStyle = '#ffffff';
+  context.font = '900 32px "Microsoft YaHei", sans-serif';
+  context.fillText(SHARE_USER_NAME, 192, 104);
+  context.fillStyle = 'rgba(255,255,255,.58)';
+  context.font = '500 21px "Microsoft YaHei", sans-serif';
+  context.fillText(reportTime, 192, 142);
 
   context.fillStyle = '#6ee7b7';
   context.font = '700 30px "Microsoft YaHei", sans-serif';
-  context.fillText('MOVEVI 城市完赛报告', 80, 100);
-  context.fillStyle = '#ffffff';
-  context.font = '900 86px "Microsoft YaHei", sans-serif';
-  context.fillText('我跑遍了', 80, 245);
-  context.font = '900 150px "Microsoft YaHei", sans-serif';
-  context.fillText(city.name, 76, 410);
-  context.fillStyle = 'rgba(255,255,255,.62)';
-  context.font = '500 30px "Microsoft YaHei", sans-serif';
-  context.fillText('每一步都有风景，每一段都是城市记忆。', 82, 472);
+  context.fillText('城市报告', 80, 225);
 
-  drawRoundedRect(context, 70, 550, 940, 490, 48);
+  const headlinePrefix = '我跑遍了';
+  let headlineSize = city.name.length > 4 ? 78 : 96;
+  context.font = `900 ${headlineSize}px "Microsoft YaHei", sans-serif`;
+  while (context.measureText(`${headlinePrefix}${city.name}`).width > 920 && headlineSize > 62) {
+    headlineSize -= 2;
+    context.font = `900 ${headlineSize}px "Microsoft YaHei", sans-serif`;
+  }
+  context.fillStyle = '#ffffff';
+  context.fillText(headlinePrefix, 80, 390);
+  const prefixWidth = context.measureText(headlinePrefix).width;
+  context.fillStyle = '#6ee7b7';
+  context.fillText(city.name, 80 + prefixWidth, 390);
+
+  drawRoundedRect(context, 70, 530, 940, 350, 48);
   context.fillStyle = '#f7faf8';
   context.fill();
   context.fillStyle = '#0b1f19';
-  context.font = '900 54px "Microsoft YaHei", sans-serif';
-  context.fillText('全城路线 · 100% 完成', 120, 640);
+  context.font = '900 50px "Microsoft YaHei", sans-serif';
+  context.fillText('城市完成度 100%', 120, 615);
   context.fillStyle = '#059669';
-  drawRoundedRect(context, 120, 688, 840, 18, 9);
+  drawRoundedRect(context, 120, 655, 840, 18, 9);
   context.fill();
 
   const metrics = [
     [`${overview.completedCount}`, '条路线'],
+    [`${overview.uniqueSpotCount}`, '处景点'],
     [overview.totals.distance.toFixed(1), '公里'],
-    [`${duration.value}${duration.unit}`, '运动时长'],
-    [`${Math.round(overview.totals.calories)}`, '千卡消耗']
+    [`${duration.value}${duration.unit}`, '运动时长']
   ];
   metrics.forEach(([value, label], index) => {
-    const column = index % 2;
-    const row = Math.floor(index / 2);
-    const x = 120 + column * 435;
-    const y = 800 + row * 125;
+    const x = 120 + index * 215;
+    const y = 770;
     context.fillStyle = '#0b1f19';
-    context.font = '900 48px "Microsoft YaHei", sans-serif';
+    context.font = '900 38px "Microsoft YaHei", sans-serif';
     context.fillText(value, x, y);
     context.fillStyle = '#718078';
-    context.font = '600 24px "Microsoft YaHei", sans-serif';
-    context.fillText(label, x, y + 38);
+    context.font = '600 21px "Microsoft YaHei", sans-serif';
+    context.fillText(label, x, y + 34);
   });
 
+  drawRoundedRect(context, 70, 920, 940, 420, 48);
+  context.fillStyle = '#0d1714';
+  context.fill();
   context.fillStyle = '#6ee7b7';
-  context.font = '700 26px "Microsoft YaHei", sans-serif';
-  context.fillText(`途经 ${overview.uniqueSpotCount} 处景点`, 82, 1155);
+  context.font = '700 25px "Microsoft YaHei", sans-serif';
+  context.fillText('旅程亮点', 120, 1000);
   context.fillStyle = '#ffffff';
-  context.font = '900 58px "Microsoft YaHei", sans-serif';
-  context.fillText('下一座城市，继续跑。', 80, 1235);
-  context.fillStyle = 'rgba(255,255,255,.48)';
-  context.font = '500 24px "Microsoft YaHei", sans-serif';
-  context.fillText('我的环球旅程 · MOVEVI', 82, 1335);
+  context.font = '900 44px "Microsoft YaHei", sans-serif';
+  context.fillText('你跑过的城市足迹', 120, 1065);
 
-  canvas.toBlob(blob => {
-    if (!blob) {
-      reject(new Error('无法生成城市报告'));
-      return;
-    }
-    resolve(new File([blob], `${city.name}-城市完赛报告.png`, { type: 'image/png' }));
-  }, 'image/png', 0.95);
-});
+  const highlights = [
+    ['最长路线', longestRoute.title.length > 12 ? `${longestRoute.title.slice(0, 12)}…` : longestRoute.title],
+    ['途经景点', `${overview.uniqueSpotCount} 处`],
+    ['累计消耗', `${Math.round(overview.totals.calories)} 千卡`],
+    ['累计运动', `${duration.value}${duration.unit}`]
+  ];
+  highlights.forEach(([label, value], index) => {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const x = 120 + column * 445;
+    const y = 1140 + row * 105;
+    context.fillStyle = 'rgba(255,255,255,.48)';
+    context.font = '600 21px "Microsoft YaHei", sans-serif';
+    context.fillText(label, x, y);
+    context.fillStyle = '#ffffff';
+    context.font = '900 30px "Microsoft YaHei", sans-serif';
+    context.fillText(value, x, y + 42);
+  });
+
+  context.fillStyle = 'rgba(255,255,255,.42)';
+  context.font = '600 22px "Microsoft YaHei", sans-serif';
+  context.fillText('MOVEVI · 我的环球旅程', 82, 1535);
+
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+  if (!blob) throw new Error('无法生成城市报告');
+  return new File([blob], `${city.name}-城市完赛报告.png`, { type: 'image/png' });
+};
 
 function CityReportView({ city, overview, onBack }: { city: CityData; overview: CityReportOverview; onBack: () => void }) {
   const longestRoute = overview.routes.reduce((longest, route) => route.distanceKm > longest.distanceKm ? route : longest, overview.routes[0]);
@@ -318,6 +392,16 @@ function CityReportView({ city, overview, onBack }: { city: CityData; overview: 
   const [posterUrl, setPosterUrl] = useState('');
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [posterGenerating, setPosterGenerating] = useState(false);
+
+  useEffect(() => {
+    if (!shareSheetOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      closeShareSheet();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [shareSheetOpen]);
 
   const downloadPoster = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -381,16 +465,14 @@ function CityReportView({ city, overview, onBack }: { city: CityData; overview: 
       <header className="relative min-h-[320px] overflow-hidden bg-emerald-950 text-white">
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,20,16,.34),rgba(2,20,16,.52)_42%,rgba(2,20,16,.96))]" />
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[max(16px,env(safe-area-inset-top))]">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(16px,env(safe-area-inset-top))]">
           <button type="button" onClick={onBack} aria-label="返回路线概览" className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <ChevronLeft size={26} />
           </button>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-950/35 px-3 py-2 text-[10px] font-bold text-emerald-100 backdrop-blur-md"><Check size={13} /> 全城完成</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-12">
           <span className="mb-2 flex items-center gap-1.5 text-xs font-bold text-emerald-300"><Trophy size={15} /> 城市报告</span>
           <h1 className="text-[34px] font-black leading-none tracking-[-.045em]">我跑遍了{city.name}</h1>
-          <p className="mt-3 text-[12px] leading-5 text-white/72">每一段路线都已留下足迹，这座城市已被你完整跑遍。</p>
         </div>
       </header>
 
@@ -429,24 +511,31 @@ function CityReportView({ city, overview, onBack }: { city: CityData; overview: 
       </div>
 
       {shareSheetOpen && (
-        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
-          <button type="button" className="absolute inset-0" onClick={closeShareSheet} aria-label="关闭分享面板" />
-          <section className="relative z-10 w-full max-w-[430px] rounded-t-[28px] bg-white px-4 pb-[max(18px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_50px_rgba(2,20,16,.24)]">
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200" />
-            <div className="flex items-start justify-between gap-4">
-              <div><span className="text-[10px] font-bold tracking-[.12em] text-emerald-600">分享完赛时刻</span><h2 id="share-sheet-title" className="mt-1 text-xl font-black tracking-[-.03em]">选择分享渠道</h2></div>
-              <button type="button" onClick={closeShareSheet} aria-label="关闭" className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500"><X size={18} /></button>
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/72 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
+          <button type="button" className="absolute inset-0" onClick={closeShareSheet} aria-label="关闭分享弹窗" />
+          <section className="relative z-10 flex max-h-[calc(100dvh-16px)] w-full max-w-[430px] flex-col rounded-t-[28px] bg-[#0b1210] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 text-white shadow-[0_-18px_50px_rgba(0,0,0,.36)]">
+            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/18" />
+            <header className="mb-3 flex shrink-0 items-center justify-between">
+              <h2 id="share-sheet-title" className="text-base font-black tracking-[-.02em]">分享城市报告</h2>
+              <button type="button" onClick={closeShareSheet} aria-label="关闭" className="grid h-9 w-9 place-items-center rounded-full bg-white/[.07] text-white/65 transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><X size={18} /></button>
+            </header>
+
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[20px] bg-black/20 p-2">
+              {posterUrl ? (
+                <img src={posterUrl} alt={`${city.name}城市报告分享图片`} className="block max-h-[calc(100dvh-190px)] max-w-full rounded-[15px] object-contain shadow-[0_16px_38px_rgba(0,0,0,.3)]" />
+              ) : (
+                <div className="grid aspect-[2/3] max-h-[calc(100dvh-190px)] w-full place-items-center rounded-[15px] bg-white/[.05] text-emerald-300">
+                  <div className="text-center"><span className="mx-auto block h-7 w-7 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" aria-hidden="true" /><p className="mt-3 text-[10px] font-semibold text-white/55">{posterGenerating ? '正在生成城市报告…' : '准备分享图片…'}</p></div>
+                </div>
+              )}
             </div>
-            <div className="mt-4 flex min-h-32 items-center gap-3 rounded-2xl bg-[#f2f7f4] p-3">
-              {posterUrl ? <img src={posterUrl} alt={`${city.name}城市完赛报告预览`} className="h-28 w-20 shrink-0 rounded-xl object-cover shadow-md" /> : <div className="grid h-28 w-20 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-600"><span className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" aria-hidden="true" /></div>}
-              <div className="min-w-0"><strong className="block text-sm font-black text-slate-800">我跑遍了{city.name}</strong><p className="mt-1 text-[10px] leading-4 text-slate-500">{posterGenerating ? '正在生成专属分享图片…' : '分享图片已生成，可直接分享或保存到手机。'}</p><span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-bold text-emerald-700">PNG 长图</span></div>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
+
+            <div className="mt-3 grid shrink-0 grid-cols-3 gap-2" aria-label="分享渠道">
               <ShareAction icon={<MessageCircle size={18} />} label="微信好友" active={sharing === 'wechat'} disabled={!posterFile} tone="emerald" onClick={() => handleShare('wechat')} />
-              <ShareAction icon={<Download size={18} />} label="保存本地" active={sharing === 'save'} disabled={!posterFile} tone="dark" onClick={() => handleShare('save')} />
               <ShareAction icon={<Images size={18} />} label="朋友圈" active={sharing === 'moments'} disabled={!posterFile} tone="warm" onClick={() => handleShare('moments')} />
+              <ShareAction icon={<Download size={18} />} label="保存图片" active={sharing === 'save'} disabled={!posterFile} tone="dark" onClick={() => handleShare('save')} />
             </div>
-            {shareNotice && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-center text-[10px] font-semibold text-slate-600" role="status">{shareNotice}</p>}
+            {shareNotice && <p className="mt-2 shrink-0 rounded-xl bg-white/[.06] px-3 py-2 text-center text-[10px] font-semibold text-white/68" role="status">{shareNotice}</p>}
           </section>
         </div>
       )}
@@ -458,8 +547,8 @@ function ShareAction({ icon, label, active, disabled = false, tone, onClick }: {
   const toneClass = tone === 'emerald'
     ? 'bg-emerald-500 !text-white shadow-[0_7px_16px_rgba(16,185,129,.18)]'
     : tone === 'warm'
-      ? 'bg-orange-50 !text-orange-700 ring-1 ring-orange-100'
-      : 'bg-slate-900 !text-white shadow-[0_7px_16px_rgba(15,23,42,.14)]';
+      ? 'bg-[#183a2f] !text-emerald-100 ring-1 ring-emerald-300/10'
+      : 'bg-white/[.08] !text-white ring-1 ring-white/10';
   return (
     <button type="button" onClick={onClick} disabled={active || disabled} className={`flex min-h-[70px] flex-col items-center justify-center gap-2 rounded-2xl px-2 text-[10px] font-bold transition active:scale-[.97] disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${toneClass}`}>
       {icon}
