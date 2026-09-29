@@ -952,7 +952,6 @@ function TravelPage({ from, to, reduceMotion }: { from: JourneyCity; to: Journey
 function ProfilePage({
   totals,
   countryLevel,
-  deviceConnected,
   onDevice,
   onCityCards,
   onLevel,
@@ -961,7 +960,6 @@ function ProfilePage({
 }: {
   totals: ReturnType<typeof getJourneyTotals>;
   countryLevel: ReturnType<typeof getCountryLevelProgress>;
-  deviceConnected: boolean;
   onDevice: () => void;
   onCityCards: () => void;
   onLevel: () => void;
@@ -976,7 +974,7 @@ function ProfilePage({
   ];
   const menuItems = [
     { icon: ClipboardList, label: '运动记录', action: () => onFeature('运动记录') },
-    { icon: MonitorSmartphone, label: '我的设备', action: onDevice, status: deviceConnected ? '已连接' : '未连接' },
+    { icon: MonitorSmartphone, label: '我的设备', action: onDevice },
     { icon: Wallet, label: '我的钱包', action: () => onFeature('我的钱包') },
     { icon: MessageSquare, label: '问题反馈', action: () => onFeature('问题反馈') },
     { icon: Headphones, label: '添加企微', action: () => onFeature('添加企微') },
@@ -986,7 +984,6 @@ function ProfilePage({
   return (
     <main className="page profile-page profile-page--legacy" id="main-content">
       <header className="legacy-profile-actions">
-        <p className="movevi-wordmark"><span>MV</span><strong>MOVEVI</strong></p>
         <div>
           <button type="button" onClick={() => onFeature('消息')} aria-label="消息"><Mail /></button>
           <button type="button" onClick={() => onFeature('编辑资料')} aria-label="编辑资料"><SquarePen /></button>
@@ -1018,7 +1015,7 @@ function ProfilePage({
       <section className="legacy-menu" aria-label="个人功能">
         {menuItems.map(item => {
           const Icon = item.icon;
-          return <button type="button" key={item.label} onClick={item.action}><span className="legacy-menu__icon"><Icon /></span><strong>{item.label}</strong>{item.status && <small>{item.status}</small>}<ChevronRight /></button>;
+          return <button type="button" key={item.label} onClick={item.action}><span className="legacy-menu__icon"><Icon /></span><strong>{item.label}</strong><ChevronRight /></button>;
         })}
       </section>
     </main>
@@ -1367,7 +1364,7 @@ export default function JourneyApp() {
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
         : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
         : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
-        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} countryLevel={countryLevel} deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onCityCards={() => selectPrimaryTab('world')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
+        : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} countryLevel={countryLevel} onDevice={() => setUtilityMode('device')} onCityCards={() => selectPrimaryTab('world')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} onCountryLevel={() => openLegacyFeature('level')} /></motion.div>
         : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}

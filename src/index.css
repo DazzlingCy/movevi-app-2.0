@@ -1426,8 +1426,7 @@ body { background: var(--bg); }
 /* Legacy profile information architecture, restyled for the current shell. */
 .profile-page--legacy { overflow-y: auto; scrollbar-width: none; }
 .profile-page--legacy::-webkit-scrollbar { display: none; }
-.legacy-profile-actions { min-height: 38px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-.legacy-profile-actions .movevi-wordmark { margin: 0; }
+.legacy-profile-actions { min-height: 38px; display: flex; align-items: center; justify-content: flex-end; margin-bottom: 22px; }
 .legacy-profile-actions > div { display: flex; gap: 8px; }
 .legacy-profile-actions button { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 11px; background: #101116; color: #979ba5; }
 .legacy-profile-actions button:active { background: #181a20; transform: scale(.97); }
@@ -1471,13 +1470,12 @@ body { background: var(--bg); }
 .legacy-collection-action--medals:active > svg { color: #70d9a7; }
 
 .legacy-menu { overflow: hidden; margin-top: 18px; border: 1px solid var(--line); border-radius: 17px; background: #0f1014; }
-.legacy-menu button { width: 100%; min-height: 59px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 15px; align-items: center; gap: 10px; padding: 0 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: inherit; text-align: left; }
+.legacy-menu button { width: 100%; min-height: 59px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 15px; align-items: center; gap: 10px; padding: 0 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: inherit; text-align: left; }
 .legacy-menu button:last-child { border-bottom: 0; }
 .legacy-menu button:active { background: #15161b; }
 .legacy-menu__icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; background: #191a20; color: #8d929c; }
 .legacy-menu__icon svg { width: 15px; height: 15px; stroke-width: 1.8; }
 .legacy-menu button > strong { font-family: var(--font-body); font-size: 11px; font-weight: 500; letter-spacing: 0; }
-.legacy-menu button > small { color: var(--success); font-size: 8px; }
 .legacy-menu button > svg { width: 14px; height: 14px; color: #4f535c; }
 
 .journey-level-page {
