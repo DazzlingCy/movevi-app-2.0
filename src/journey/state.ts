@@ -1,4 +1,4 @@
-import { getJourneyCity, getJourneyRoute, JOURNEY_CITIES, JOURNEY_SEQUENCE } from './data';
+import { getJourneyCity, getJourneyRoute, hasPublishedCityRoutes, JOURNEY_CITIES, JOURNEY_SEQUENCE } from './data';
 import type {
   CityJourneyStatus,
   JourneyAction,
@@ -105,7 +105,7 @@ export const getCandidateCityIds = (state: JourneyState, limit = 4): string[] =>
   const candidates: string[] = [];
   for (let offset = 1; offset < JOURNEY_SEQUENCE.length && candidates.length < limit; offset += 1) {
     const cityId = JOURNEY_SEQUENCE[(startIndex + offset) % JOURNEY_SEQUENCE.length];
-    if (cityId !== state.currentCityId && !completed.has(cityId)) candidates.push(cityId);
+    if (cityId !== state.currentCityId && !completed.has(cityId) && hasPublishedCityRoutes(cityId)) candidates.push(cityId);
   }
   return candidates;
 };
@@ -121,7 +121,10 @@ export const getHomeJourneyCityIds = (state: JourneyState): string[] => {
     ...JOURNEY_SEQUENCE.slice(0, currentIndex)
   ].filter(cityId => !completed.has(cityId));
 
-  return [...completedBeforeCurrent, state.currentCityId, ...futureFromCurrent];
+  const publishedFutureCities = futureFromCurrent.filter(hasPublishedCityRoutes);
+  const upcomingFutureCities = futureFromCurrent.filter(cityId => !hasPublishedCityRoutes(cityId));
+
+  return [...completedBeforeCurrent, state.currentCityId, ...publishedFutureCities, ...upcomingFutureCities];
 };
 
 export const getCityStatus = (state: JourneyState, cityId: string): CityJourneyStatus => {

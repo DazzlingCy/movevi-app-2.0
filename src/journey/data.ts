@@ -110,6 +110,16 @@ export const JOURNEY_SEQUENCE = [
   'los-angeles', 'toronto', 'rio', 'hangzhou', 'xian'
 ] as const;
 
+export const CITY_ROUTE_RELEASE_SCHEDULE: Readonly<Record<string, string>> = {
+  toronto: '2026年12月',
+  hangzhou: '2027年1月',
+  xian: '2027年3月'
+};
+
+export const hasPublishedCityRoutes = (cityId: string) => !(cityId in CITY_ROUTE_RELEASE_SCHEDULE);
+
+export const getCityRouteReleaseDate = (cityId: string) => CITY_ROUTE_RELEASE_SCHEDULE[cityId];
+
 export const CITY_BY_ID = new Map(JOURNEY_CITIES.map(city => [city.id, city]));
 
 export const getJourneyCity = (cityId: string) => CITY_BY_ID.get(cityId);

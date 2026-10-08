@@ -7,7 +7,7 @@ import {
   Settings, Sparkles, SquarePen, Target, Trophy, UserRound, UsersRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
 import { CITIES, type CityData } from '../../data/cities';
-import { getJourneyCity, getJourneyRoute, JOURNEY_SEQUENCE } from '../../journey/data';
+import { getCityRouteReleaseDate, getJourneyCity, getJourneyRoute, hasPublishedCityRoutes, JOURNEY_SEQUENCE } from '../../journey/data';
 import {
   createDemoJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
   getCompletedRouteIds, getCountryLevelProgress, getHomeJourneyCityIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
@@ -233,7 +233,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     const itemStatus = getCityStatus(state, item.id);
     return itemStatus === 'completed' || itemStatus === 'current'
       ? ''
-      : '完成前序旅程后逐步开放';
+      : '完成前序旅程后解锁';
   };
 
   const updateCarouselCardVisuals = useCallback(() => {
@@ -509,6 +509,27 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
         >
           {homeJourneyCities.map((item) => {
             const itemStatus = getCityStatus(state, item.id);
+            const releaseDate = getCityRouteReleaseDate(item.id);
+            if (!hasPublishedCityRoutes(item.id) && releaseDate) {
+              return (
+                <section
+                  className={`destination-journey-card destination-upcoming-card${item.id === city.id ? ' is-active' : ' is-side'}`}
+                  data-city-id={item.id}
+                  key={item.id}
+                  style={cityStyle(item)}
+                  aria-label={`${item.name}，尚未开放，预计${releaseDate}开放`}
+                >
+                  <img className="destination-upcoming-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
+                  <span className="destination-upcoming-card__shade" aria-hidden="true" />
+                  <span className="destination-upcoming-card__status"><Clock3 />尚未开放</span>
+                  <div className="destination-upcoming-card__copy">
+                    <h2>{item.name}</h2>
+                    <p>{item.englishName}</p>
+                    <span><CalendarDays />预计 {releaseDate} 开放</span>
+                  </div>
+                </section>
+              );
+            }
             const itemCompletedRouteIds = getCompletedRouteIds(state, item.id);
             const itemCompleted = itemCompletedRouteIds.length;
             const itemCompletedRouteIdSet = new Set(itemCompletedRouteIds);
@@ -603,7 +624,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                       </div>
                     )}
                     <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }} disabled={!itemCanOpenRoutes}>
-                      {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未开放`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+                      {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未解锁`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
                     </button>
                   </section>
                 </section>
@@ -1023,11 +1044,12 @@ function ProfilePage({
 }
 
 function FirstCitySelectionPage({ selectedId, onSelect, onContinue }: { selectedId: string | null; onSelect: (cityId: string | null) => void; onContinue: () => void }) {
+  const selectableCities = JOURNEY_CITY_SEQUENCE.filter(city => hasPublishedCityRoutes(city.id));
   const batchSize = 6;
-  const batchCount = Math.ceil(JOURNEY_CITY_SEQUENCE.length / batchSize);
+  const batchCount = Math.ceil(selectableCities.length / batchSize);
   const [batchIndex, setBatchIndex] = useState(0);
   const batchStart = batchIndex * batchSize;
-  const starterCities = Array.from({ length: batchSize }, (_, offset) => JOURNEY_CITY_SEQUENCE[(batchStart + offset) % JOURNEY_CITY_SEQUENCE.length]);
+  const starterCities = Array.from({ length: Math.min(batchSize, selectableCities.length) }, (_, offset) => selectableCities[(batchStart + offset) % selectableCities.length]);
   const selectedCity = selectedId ? getJourneyCity(selectedId) : undefined;
   const showNextBatch = () => {
     setBatchIndex(index => (index + 1) % batchCount);
@@ -1135,19 +1157,92 @@ function FirstJourneyIntroPage({ onStart }: { onStart: () => void }) {
   );
 }
 
-function FirstJourneyExperience({ selectedId, onSelect, onContinue }: { selectedId: string | null; onSelect: (cityId: string | null) => void; onContinue: () => void }) {
-  const [isChoosingCity, setIsChoosingCity] = useState(false);
+function CurrentJourneyDialog({ city, completedRoutes, onContinue, onReselect }: { city: JourneyCity; completedRoutes: number; onContinue: () => void; onReselect: () => void }) {
+  const progress = Math.min(10, Math.max(0, completedRoutes));
+
+  return (
+    <motion.div
+      className="current-journey-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="current-journey-title"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.section
+        className="current-journey-dialog__panel"
+        initial={{ opacity: 0, y: 28, scale: .97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 18, scale: .98 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+      >
+        <header className="current-journey-dialog__header">
+          <span><Navigation />继续旅程</span>
+          <h2 id="current-journey-title">你有一座城市正在探索</h2>
+          <p>已为你选中上次的运动城市，可以从当前进度继续。</p>
+        </header>
+
+        <div className="current-journey-card is-selected" style={cityStyle(city)}>
+          <img src={cityImageFor(city)} alt="" aria-hidden="true" />
+          <span className="current-journey-card__shade" aria-hidden="true" />
+          <span className="current-journey-card__selected"><Check />已选择</span>
+          <div className="current-journey-card__copy">
+            <span>正在探索</span>
+            <strong>{city.name}</strong>
+            <small>{city.countryName} · {city.englishName}</small>
+          </div>
+          <div className="current-journey-card__progress">
+            <span><b>{progress}</b>/10 路线</span>
+            <i aria-hidden="true"><b style={{ width: `${progress * 10}%` }} /></i>
+          </div>
+        </div>
+
+        <div className="current-journey-dialog__actions">
+          <button className="primary-button" type="button" onClick={onContinue} autoFocus>
+            继续当前城市 <ArrowRight />
+          </button>
+          <button className="current-journey-dialog__reselect" type="button" onClick={onReselect}>
+            <RotateCcw />重新选择城市
+          </button>
+        </div>
+      </motion.section>
+    </motion.div>
+  );
+}
+
+function FirstJourneyExperience({ selectedId, currentCity, currentCityCompletedRoutes, hasExistingJourney, onSelect, onContinue, onResume }: {
+  selectedId: string | null;
+  currentCity: JourneyCity;
+  currentCityCompletedRoutes: number;
+  hasExistingJourney: boolean;
+  onSelect: (cityId: string | null) => void;
+  onContinue: () => void;
+  onResume: () => void;
+}) {
+  const [stage, setStage] = useState<'intro' | 'resume' | 'choose'>('intro');
+  const isChoosingCity = stage === 'choose';
+  const startJourney = () => setStage(hasExistingJourney ? 'resume' : 'choose');
+  const reselectCity = () => {
+    onSelect(null);
+    setStage('choose');
+  };
 
   return (
     <div className="first-journey-stage">
       <div className={`first-journey-flip${isChoosingCity ? ' is-flipped' : ''}`}>
-        <div className="first-journey-face first-journey-face--front" aria-hidden={isChoosingCity}>
-          <FirstJourneyIntroPage onStart={() => setIsChoosingCity(true)} />
+        <div className="first-journey-face first-journey-face--front" aria-hidden={stage !== 'intro'}>
+          <FirstJourneyIntroPage onStart={startJourney} />
         </div>
         <div className="first-journey-face first-journey-face--back" aria-hidden={!isChoosingCity}>
           <FirstCitySelectionPage selectedId={selectedId} onSelect={onSelect} onContinue={onContinue} />
         </div>
       </div>
+      <AnimatePresence>
+        {stage === 'resume' && (
+          <CurrentJourneyDialog city={currentCity} completedRoutes={currentCityCompletedRoutes} onContinue={onResume} onReselect={reselectCity} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1215,6 +1310,8 @@ export default function JourneyApp() {
   const systemReducedMotion = useReducedMotion();
   const reduceMotion = Boolean(systemReducedMotion || manualReducedMotion);
   const currentCity = getJourneyCity(state.currentCityId)!;
+  const currentCityCompletedRoutes = getCompletedRouteIds(state, state.currentCityId).length;
+  const hasExistingJourney = currentCityCompletedRoutes > 0 || state.completedCityIds.length > 0;
   const homeCity = getJourneyCity(homeCityId) ?? currentCity;
   const totals = getJourneyTotals(state);
   const countryLevel = getCountryLevelProgress(state);
@@ -1310,6 +1407,13 @@ export default function JourneyApp() {
     setIsFirstUse(false);
     setNotice(`${getJourneyCity(firstCityChoiceId)?.name ?? '第一站'}，旅程从这里开始`);
   };
+  const resumeCurrentJourney = () => {
+    setHomeCityId(state.currentCityId);
+    setActiveTab('home');
+    dispatch({ type: 'NAVIGATE', page: 'home' });
+    setIsFirstUse(false);
+    setNotice(`继续${currentCity.name}旅程`);
+  };
   const selectPrimaryTab = (tab: PrimaryTab) => {
     setActiveTab(tab);
     dispatch({ type: 'NAVIGATE', page: tab === 'world' ? 'map' : 'home' });
@@ -1351,7 +1455,7 @@ export default function JourneyApp() {
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
-        {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstJourneyExperience selectedId={firstCityChoiceId} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} /></motion.div>
+        {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstJourneyExperience selectedId={firstCityChoiceId} currentCity={currentCity} currentCityCompletedRoutes={currentCityCompletedRoutes} hasExistingJourney={hasExistingJourney} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} onResume={resumeCurrentJourney} /></motion.div>
         : runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
         : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
         : legacyFeature === 'level' ? <motion.div className="screen-layer" key="journey-level" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><JourneyLevelView state={state} onBack={() => setLegacyFeature(null)} /></motion.div>

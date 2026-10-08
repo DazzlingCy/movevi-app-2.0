@@ -98,6 +98,7 @@ svg { stroke-width: 1.8; }
 .page::-webkit-scrollbar { display: none; }
 
 .first-journey-stage {
+  position: relative;
   width: 100%;
   height: 100%;
   perspective: 1500px;
@@ -201,6 +202,108 @@ svg { stroke-width: 1.8; }
 .first-journey-intro__footer .primary-button svg { width: 18px; height: 18px; transition: transform .2s var(--ease); }
 .first-journey-intro__footer .primary-button:hover svg { transform: translateX(3px); }
 
+.current-journey-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  padding: 18px;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  background: rgba(3,4,8,.72);
+  backdrop-filter: blur(10px);
+  color: #f7f7fa;
+}
+.current-journey-dialog__panel {
+  width: 100%;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(126,134,243,.15), transparent 34%),
+    linear-gradient(160deg, #171923 0%, #0e1016 72%);
+  box-shadow: 0 30px 80px rgba(0,0,0,.62);
+}
+.current-journey-dialog__header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: #9ea5ff;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.current-journey-dialog__header > span svg { width: 13px; height: 13px; }
+.current-journey-dialog__header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -.04em;
+}
+.current-journey-dialog__header p { margin: 8px 0 0; color: #838894; font-size: 11px; line-height: 1.55; }
+.current-journey-card {
+  position: relative;
+  height: min(32vh, 228px);
+  min-height: 180px;
+  overflow: hidden;
+  margin-top: 17px;
+  border: 1px solid color-mix(in srgb, var(--city-accent) 72%, white 12%);
+  border-radius: 22px;
+  background: #171923;
+  box-shadow: 0 16px 38px rgba(0,0,0,.34), 0 0 0 2px color-mix(in srgb, var(--city-accent) 18%, transparent);
+}
+.current-journey-card > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.85) brightness(.66); }
+.current-journey-card__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,5,9,.07) 16%, rgba(4,5,9,.92) 100%); }
+.current-journey-card__selected {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  background: rgba(8,10,14,.58);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+.current-journey-card__selected svg { width: 11px; height: 11px; color: #79e2b8; stroke-width: 2.5; }
+.current-journey-card__copy { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 49px; display: grid; }
+.current-journey-card__copy > span { margin-bottom: 4px; color: #80e2bb; font-size: 9px; font-weight: 750; letter-spacing: .08em; }
+.current-journey-card__copy strong { font-family: var(--font-display); font-size: 34px; font-weight: 650; line-height: 1; letter-spacing: -.05em; }
+.current-journey-card__copy small { margin-top: 6px; color: rgba(255,255,255,.58); font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.current-journey-card__progress { position: absolute; z-index: 2; inset: auto 16px 14px; display: flex; align-items: center; gap: 10px; }
+.current-journey-card__progress > span { flex: 0 0 auto; color: rgba(255,255,255,.68); font-size: 9px; }
+.current-journey-card__progress > span b { color: #fff; font-size: 12px; }
+.current-journey-card__progress > i { flex: 1; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.17); }
+.current-journey-card__progress > i > b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #75e0b5, #9ea5ff); box-shadow: 0 0 12px rgba(117,224,181,.45); }
+.current-journey-dialog__actions { display: grid; gap: 8px; margin-top: 16px; }
+.current-journey-dialog__actions .primary-button { min-height: 54px; background: linear-gradient(135deg, #858dff, #626ddd); box-shadow: 0 14px 30px rgba(75,87,220,.24); }
+.current-journey-dialog__actions .primary-button svg { width: 17px; height: 17px; transition: transform .2s var(--ease); }
+.current-journey-dialog__actions .primary-button:hover svg { transform: translateX(3px); }
+.current-journey-dialog__reselect {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: #9a9fab;
+  font-size: 11px;
+  font-weight: 650;
+}
+.current-journey-dialog__reselect svg { width: 14px; height: 14px; }
+.current-journey-dialog__reselect:active { background: rgba(255,255,255,.045); color: #fff; }
+
 .first-city-page {
   position: relative;
   height: 100%;
@@ -255,6 +358,7 @@ svg { stroke-width: 1.8; }
   .first-journey-flip.is-flipped .first-journey-face--back { opacity: 1; }
   .first-city-card { animation: none; }
   .first-city-picker__actions button svg { transition: none; }
+  .current-journey-dialog, .current-journey-dialog__panel { transition: none !important; }
 }
 
 @media (max-width: 600px) and (min-height: 640px) {
@@ -273,6 +377,13 @@ svg { stroke-width: 1.8; }
   .first-journey-intro__copy h1 { font-size: 30px; }
   .first-journey-intro__features { margin-top: 11px; }
   .first-journey-intro__footer { padding-top: 12px; }
+  .current-journey-dialog { padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .current-journey-dialog__panel { padding: 16px; border-radius: 24px; }
+  .current-journey-dialog__header h2 { font-size: 22px; }
+  .current-journey-card { min-height: 164px; margin-top: 12px; }
+  .current-journey-dialog__actions { margin-top: 11px; }
+  .current-journey-dialog__actions .primary-button { min-height: 48px; }
+  .current-journey-dialog__reselect { min-height: 38px; }
 }
 
 .topbar, .page-header, .sheet-header, .run-topbar {
@@ -915,6 +1026,75 @@ body { background: var(--bg); }
 .destination-card p { color: rgba(255,255,255,.55); }
 .destination-card__runners { flex: 0 0 auto; width: max-content; min-height: 24px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 2px; padding: 0 9px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; background: rgba(5,7,12,.42); color: rgba(255,255,255,.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 10px; font-weight: 650; letter-spacing: .02em; }
 .destination-card__runners svg { width: 13px; height: 13px; color: #65ddb1; }
+.destination-upcoming-card {
+  position: relative;
+  height: 569px;
+  isolation: isolate;
+  border-color: rgba(255,255,255,.075);
+  background: #0b0c10;
+}
+.destination-upcoming-card__photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(.2) saturate(.5) brightness(.48);
+  transform: scale(1.02);
+}
+.destination-upcoming-card__shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(4,5,8,.28) 0%, rgba(4,5,8,.16) 32%, rgba(4,5,8,.94) 88%),
+    linear-gradient(105deg, rgba(7,8,12,.32), transparent 58%);
+}
+.destination-upcoming-card__status {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  background: rgba(7,8,12,.58);
+  color: rgba(242,244,250,.78);
+  font-size: 10px;
+  font-weight: 650;
+  backdrop-filter: blur(10px);
+}
+.destination-upcoming-card__status svg { width: 13px; height: 13px; color: #aeb4c1; }
+.destination-upcoming-card__copy { position: absolute; inset: auto 22px 24px; }
+.destination-upcoming-card__copy h2 {
+  margin: 0;
+  color: #f5f6fa;
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -.065em;
+}
+.destination-upcoming-card__copy p { margin: 8px 0 19px; color: rgba(255,255,255,.46); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; }
+.destination-upcoming-card__copy > span {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  color: rgba(239,241,247,.72);
+  font-size: 11px;
+  font-weight: 600;
+}
+.destination-upcoming-card__copy > span svg { width: 14px; height: 14px; color: #aeb4ff; }
 .destination-next-card {
   min-height: 569px;
   display: grid;

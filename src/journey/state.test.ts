@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { JOURNEY_CITIES } from './data';
+import { CITY_ROUTE_RELEASE_SCHEDULE, hasPublishedCityRoutes, JOURNEY_CITIES } from './data';
 import {
   createDemoJourneyState,
   createPrototypeJourneyState,
@@ -50,6 +50,16 @@ test('home journey order never places a locked city before the current city', ()
 
   const demo = createDemoJourneyState();
   assert.deepEqual(getHomeJourneyCityIds(demo).slice(0, 6), ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore', 'tokyo']);
+});
+
+test('unpublished cities follow every route-ready city and never enter next-city candidates', () => {
+  const demo = createDemoJourneyState();
+  const homeCities = getHomeJourneyCityIds(demo);
+  const unpublishedCityIds = Object.keys(CITY_ROUTE_RELEASE_SCHEDULE);
+
+  assert.deepEqual(homeCities.slice(-unpublishedCityIds.length), ['toronto', 'hangzhou', 'xian']);
+  assert.ok(homeCities.slice(0, -unpublishedCityIds.length).every(hasPublishedCityRoutes));
+  assert.ok(getCandidateCityIds(demo, JOURNEY_CITIES.length).every(hasPublishedCityRoutes));
 });
 
 test('catalogue contains exactly 20 cities and 200 complete unique routes', () => {
