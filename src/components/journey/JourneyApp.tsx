@@ -18,10 +18,13 @@ import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import EventsTab from '../EventsTab';
 import JourneyLevelView from '../JourneyLevelView';
 import LeaderboardView from '../LeaderboardView';
+import MedalLotteryView from '../MedalLotteryView';
 import OnlineSupportView from '../OnlineSupportView';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
+import TeamRelayView, { type TeamRelayMember, type TeamRelayTask } from '../TeamRelayView';
 import WeightLossPlanView from '../WeightLossPlanView';
+import WeekendMedleyView from '../WeekendMedleyView';
 import Modal from './Modal';
 
 const JourneyGlobe = lazy(() => import('./JourneyGlobe'));
@@ -199,13 +202,26 @@ interface HomePageProps {
   onLegacyFeature: (feature: LegacyFeature) => void;
 }
 
-type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard' | 'level';
+type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard' | 'level' | 'medalLottery' | 'weekendMedley' | 'teamRelay';
 
 type WeightRouteTarget = {
   cityId: string;
   routeIndex: number;
   image: string;
   day: number;
+};
+
+type ActivityRouteTarget = {
+  source: 'medley';
+  cityId: string;
+  routeIndex: number;
+  image: string;
+} | {
+  source: 'teamRelay';
+  cityId: string;
+  routeIndex: number;
+  image: string;
+  taskId: string;
 };
 
 function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature }: HomePageProps) {
@@ -1296,6 +1312,25 @@ export default function JourneyApp() {
   const [focusNextStation, setFocusNextStation] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [legacyFeature, setLegacyFeature] = useState<LegacyFeature | null>(null);
+  const [medalLotteryTickets, setMedalLotteryTickets] = useState(0);
+  const [activityRoute, setActivityRoute] = useState<ActivityRouteTarget | null>(null);
+  const [runningActivityRoute, setRunningActivityRoute] = useState<ActivityRouteTarget | null>(null);
+  const [medleySelectedRouteIds, setMedleySelectedRouteIds] = useState<string[]>([]);
+  const [medleyCompletedRouteIds, setMedleyCompletedRouteIds] = useState<string[]>([]);
+  const [medleyLotteryChances, setMedleyLotteryChances] = useState(5);
+  const [medleyDrawHistory, setMedleyDrawHistory] = useState<number[]>([]);
+  const [medleyShareBonusClaimed, setMedleyShareBonusClaimed] = useState(false);
+  const [medleyActivityStarted, setMedleyActivityStarted] = useState(false);
+  const [medleyCompletionRewardClaimed, setMedleyCompletionRewardClaimed] = useState(false);
+  const [teamRelayStarted, setTeamRelayStarted] = useState(false);
+  const [teamRelayMembers, setTeamRelayMembers] = useState<TeamRelayMember[]>([]);
+  const [teamRelayTasks, setTeamRelayTasks] = useState<TeamRelayTask[]>([]);
+  const [teamRelayCompletedTaskIds, setTeamRelayCompletedTaskIds] = useState<string[]>([]);
+  const [teamRelayLotteryChances, setTeamRelayLotteryChances] = useState(0);
+  const [teamRelayDrawHistory, setTeamRelayDrawHistory] = useState<number[]>([]);
+  const [teamRelayShareBonusClaimed, setTeamRelayShareBonusClaimed] = useState(false);
+  const [teamRelayCityId, setTeamRelayCityId] = useState<string | null>(null);
+  const [teamRelayPuzzleAwarded, setTeamRelayPuzzleAwarded] = useState(false);
   const [weightRoute, setWeightRoute] = useState<WeightRouteTarget | null>(null);
   const [runningWeightRoute, setRunningWeightRoute] = useState<WeightRouteTarget | null>(null);
   const [weightPlanStarted, setWeightPlanStarted] = useState(false);
@@ -1421,6 +1456,48 @@ export default function JourneyApp() {
     setRouteCityId(null);
     setSelectedRouteId(null);
   };
+  const drawMedalLottery = () => {
+    if (medalLotteryTickets <= 0) {
+      return { success: false, message: '暂无勋章盲盒券，请先兑换抽奖机会' };
+    }
+    const prizePool = ['2.66 元', '1.66 元', '6 分', '2.66 元', '1.66 元', '6 分'];
+    const amount = prizePool[Math.floor(Math.random() * prizePool.length)];
+    setMedalLotteryTickets(count => Math.max(0, count - 1));
+    return { success: true, message: `抽中 ${amount}`, amount };
+  };
+  const openMedleyRoute = (cityId: string, routeIndex: number, image: string) => {
+    setActivityRoute({ source: 'medley', cityId, routeIndex, image });
+  };
+  const openTeamRelayRoute = (cityId: string, routeIndex: number, image: string, taskId: string) => {
+    setActivityRoute({ source: 'teamRelay', cityId, routeIndex, image, taskId });
+  };
+  const completeActivityRoute = (target: ActivityRouteTarget) => {
+    setRunningActivityRoute(null);
+    if (target.source === 'medley') {
+      const routeId = `${target.cityId}-${target.routeIndex}`;
+      setMedleyCompletedRouteIds(completed => {
+        if (completed.includes(routeId)) return completed;
+        const next = [...completed, routeId];
+        if (next.length === 3 && !medleyCompletionRewardClaimed) {
+          setMedleyLotteryChances(chances => chances + 5);
+          setMedleyCompletionRewardClaimed(true);
+        }
+        return next;
+      });
+      setLegacyFeature('weekendMedley');
+      return;
+    }
+    setTeamRelayCompletedTaskIds(completed => {
+      if (completed.includes(target.taskId)) return completed;
+      const next = [...completed, target.taskId];
+      if (teamRelayTasks.length > 0 && next.length === teamRelayTasks.length && !teamRelayPuzzleAwarded) {
+        setTeamRelayLotteryChances(chances => chances + 1);
+        setTeamRelayPuzzleAwarded(true);
+      }
+      return next;
+    });
+    setLegacyFeature('teamRelay');
+  };
   const openWeightRoute = (cityId: string, routeIndex: number, image: string, day: number) => {
     setWeightRoute({ cityId, routeIndex, image, day });
   };
@@ -1454,11 +1531,16 @@ export default function JourneyApp() {
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
         {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstJourneyExperience selectedId={firstCityChoiceId} currentCity={currentCity} currentCityCompletedRoutes={currentCityCompletedRoutes} hasExistingJourney={hasExistingJourney} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} onResume={resumeCurrentJourney} /></motion.div>
+        : runningActivityRoute ? <motion.div className="screen-layer" key="running-activity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningActivityRoute.cityId} routeIndex={runningActivityRoute.routeIndex} image={runningActivityRoute.image} onExit={() => { setActivityRoute(runningActivityRoute); setRunningActivityRoute(null); }} onComplete={() => completeActivityRoute(runningActivityRoute)} /></motion.div>
+        : activityRoute ? <motion.div className="screen-layer" key="activity-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={activityRoute.cityId} routeIndex={activityRoute.routeIndex} image={activityRoute.image} onBack={() => setActivityRoute(null)} onStart={() => { setRunningActivityRoute(activityRoute); setActivityRoute(null); }} /></motion.div>
         : runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={() => completeWeightRoute(runningWeightRoute)} /></motion.div>
         : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
         : legacyFeature === 'level' ? <motion.div className="screen-layer" key="journey-level" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><JourneyLevelView state={state} onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'leaderboard' ? <motion.div className="screen-layer" key="leaderboard" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><LeaderboardView currentLevel={countryLevel.level} onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'onlineSupport' ? <motion.div className="screen-layer" key="online-support" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><OnlineSupportView onBack={() => setLegacyFeature(null)} /></motion.div>
+        : legacyFeature === 'medalLottery' ? <motion.div className="screen-layer" key="medal-lottery" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MedalLotteryView tickets={medalLotteryTickets} onBack={() => setLegacyFeature(null)} onGoRun={() => { setLegacyFeature(null); setActiveTab('home'); }} onDraw={drawMedalLottery} /></motion.div>
+        : legacyFeature === 'weekendMedley' ? <motion.div className="screen-layer" key="weekend-medley" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeekendMedleyView onBack={() => setLegacyFeature(null)} selectedRouteIds={medleySelectedRouteIds} completedRouteIds={medleyCompletedRouteIds} lotteryChances={medleyLotteryChances} drawHistory={medleyDrawHistory} shareBonusClaimed={medleyShareBonusClaimed} activityStarted={medleyActivityStarted} onUpdateState={(next) => { if (next.selectedRouteIds !== undefined) setMedleySelectedRouteIds(next.selectedRouteIds); if (next.completedRouteIds !== undefined) setMedleyCompletedRouteIds(next.completedRouteIds); if (next.lotteryChances !== undefined) setMedleyLotteryChances(next.lotteryChances); if (next.drawHistory !== undefined) setMedleyDrawHistory(next.drawHistory); if (next.shareBonusClaimed !== undefined) setMedleyShareBonusClaimed(next.shareBonusClaimed); if (next.activityStarted !== undefined) setMedleyActivityStarted(next.activityStarted); }} onNavigateToRouteDetail={openMedleyRoute} /></motion.div>
+        : legacyFeature === 'teamRelay' ? <motion.div className="screen-layer" key="team-relay" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><TeamRelayView onBack={() => setLegacyFeature(null)} started={teamRelayStarted} members={teamRelayMembers} tasks={teamRelayTasks} completedTaskIds={teamRelayCompletedTaskIds} lotteryChances={teamRelayLotteryChances} drawHistory={teamRelayDrawHistory} shareBonusClaimed={teamRelayShareBonusClaimed} cityId={teamRelayCityId} puzzleAwarded={teamRelayPuzzleAwarded} onUpdateState={(next) => { if (next.started !== undefined) setTeamRelayStarted(next.started); if (next.members !== undefined) setTeamRelayMembers(next.members); if (next.tasks !== undefined) setTeamRelayTasks(next.tasks); if (next.completedTaskIds !== undefined) setTeamRelayCompletedTaskIds(next.completedTaskIds); if (next.lotteryChances !== undefined) setTeamRelayLotteryChances(next.lotteryChances); if (next.drawHistory !== undefined) setTeamRelayDrawHistory(next.drawHistory); if (next.shareBonusClaimed !== undefined) setTeamRelayShareBonusClaimed(next.shareBonusClaimed); if (next.cityId !== undefined) setTeamRelayCityId(next.cityId); if (next.puzzleAwarded !== undefined) setTeamRelayPuzzleAwarded(next.puzzleAwarded); }} onNavigateToRouteDetail={openTeamRelayRoute} /></motion.div>
         : legacyFeature === 'weightLossPlan' ? <motion.div className="screen-layer" key="weight-loss-plan" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeightLossPlanView started={weightPlanStarted} completedDays={weightCompletedDays} rewardBoxes={weightRewardBoxes} openedRewardDays={weightOpenedRewardDays} rewardHistory={weightRewardHistory} newbieTasks={{ treadmillActivated: deviceConnected, activationClaimed, completedRoutes: getJourneyTotals(state).completedRoutes, firstRouteClaimed }} onBack={() => setLegacyFeature(null)} onStartPlan={() => setWeightPlanStarted(true)} onOpenReward={openWeightReward} onClaimActivationTask={() => { setActivationClaimed(true); setNotice('首次激活红包已领取'); }} onClaimFirstRouteTask={() => { setFirstRouteClaimed(true); setNotice('首次路线红包已领取'); }} onNavigateToRouteDetail={openWeightRoute} /></motion.div>
         : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
         : state.currentPage === 'routeComplete' && state.lastRun && lastRunCity && lastRunRoute ? <motion.div className="screen-layer" key="route-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><RouteCompletePage city={lastRunCity} route={lastRunRoute} completed={getCompletedRouteIds(state, lastRunCity.id).length} result={state.lastRun} firstCompletion={state.lastRun.isFirstCompletion} onNext={() => { setActiveTab('home'); dispatch({ type: 'NAVIGATE', page: 'home' }); window.setTimeout(() => openCity(state.currentCityId), 0); }} onMap={() => selectPrimaryTab('world')} /></motion.div>
@@ -1467,7 +1549,7 @@ export default function JourneyApp() {
         : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
         : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} countryLevel={countryLevel} onDevice={() => setUtilityMode('device')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
-        : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => setNotice('勋章盲盒抽奖 · 演示入口')} onSelectMedley={() => setNotice('周末城市记忆串烧 · 演示入口')} /></motion.div>
+        : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => openLegacyFeature('medalLottery')} onSelectMedley={() => openLegacyFeature('weekendMedley')} onSelectWeightLossPlan={() => openLegacyFeature('weightLossPlan')} onSelectTeamRelay={() => openLegacyFeature('teamRelay')} onSelectHundredCities={() => setNotice('百人百城计划 · 筹备中')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} onCountryLevel={() => openLegacyFeature('level')} /></motion.div>
         : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
       </AnimatePresence>
@@ -1475,7 +1557,7 @@ export default function JourneyApp() {
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
         {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
       </AnimatePresence>
-      {!isFirstUse && !runningRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!isFirstUse && !runningRoute && !runningActivityRoute && !activityRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );

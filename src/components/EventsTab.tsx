@@ -1,18 +1,20 @@
 import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
-import { Calendar, ChevronRight, Gift, Globe2, MessageSquare, Sparkles } from 'lucide-react';
+import { Calendar, ChevronRight, Flame, Gift, Globe2, MessageSquare, Sparkles, Users } from 'lucide-react';
 
 interface EventsTabProps {
   onSelectMedley?: () => void;
   onSelectMedalLottery?: () => void;
   onSelectWeightLossPlan?: () => void;
+  onSelectTeamRelay?: () => void;
+  onSelectHundredCities?: () => void;
 }
 
 type EventCardProps = {
   title: string;
   description: string;
   image: string;
-  accent: 'amber' | 'emerald' | 'purple' | 'cyan';
+  accent: 'amber' | 'emerald' | 'purple' | 'cyan' | 'rose';
   icon: ReactNode;
   tag: ReactNode;
   onClick?: () => void;
@@ -69,6 +71,18 @@ const accentStyles = {
     copy: 'text-cyan-200/60',
     action: 'bg-cyan-500/20 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-200',
     arrow: 'bg-cyan-500/10 border-cyan-500/30 group-hover:bg-cyan-500/30 text-cyan-200'
+  },
+  rose: {
+    border: 'border-rose-400/30',
+    overlay: 'from-black via-black/70 to-rose-950/20',
+    glow: 'from-orange-400/20 via-transparent to-rose-500/10',
+    badge: 'bg-rose-400/20 text-rose-100 border-rose-300/40',
+    iconBox: 'bg-orange-400/20 border-orange-300/30',
+    iconText: 'text-orange-300 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]',
+    title: 'text-orange-50',
+    copy: 'text-orange-100/65',
+    action: 'bg-orange-400/20 border-orange-300/30 text-orange-100',
+    arrow: 'bg-orange-400/10 border-orange-300/30 group-hover:bg-orange-400/25 text-orange-100'
   }
 };
 
@@ -87,13 +101,15 @@ function EventCard({
   const styles = accentStyles[accent];
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
       whileTap={{ scale: 0.98 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       onClick={onClick}
-      className={`relative w-full ${taller ? 'h-[200px]' : 'h-[170px]'} rounded-2xl overflow-hidden shadow-2xl cursor-pointer group border ${styles.border} ${className}`}
+      aria-label={`查看${title}`}
+      className={`relative w-full text-left ${taller ? 'h-[200px]' : 'h-[170px]'} rounded-2xl overflow-hidden shadow-2xl cursor-pointer group border ${styles.border} ${className}`}
     >
       <img
         src={image}
@@ -115,25 +131,30 @@ function EventCard({
         <div className="flex items-center justify-between gap-3">
           <p className={`max-w-[66%] text-[11px] leading-relaxed line-clamp-2 ${styles.copy}`}>{description}</p>
           <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={(event) => event.stopPropagation()}
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold shadow-lg transition-colors active:scale-95 cursor-default ${styles.action}`}
+            <span
+              aria-hidden="true"
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold shadow-lg ${styles.action}`}
             >
               <MessageSquare size={11} />
               讨论
-            </button>
+            </span>
             <div className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur transition-colors ${styles.arrow}`}>
               <ChevronRight size={14} />
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
 
-export default function EventsTab({ onSelectMedley, onSelectMedalLottery }: EventsTabProps) {
+export default function EventsTab({
+  onSelectMedley,
+  onSelectMedalLottery,
+  onSelectWeightLossPlan,
+  onSelectTeamRelay,
+  onSelectHundredCities
+}: EventsTabProps) {
   return (
     <div className="relative h-full w-full overflow-y-auto bg-[#05070A] pb-24 font-sans text-slate-100 hide-scrollbar">
       <div className="sticky top-0 z-20 flex items-center justify-center border-b border-white/10 bg-black/40 p-3.5 pt-safeb backdrop-blur-md">
@@ -162,6 +183,17 @@ export default function EventsTab({ onSelectMedley, onSelectMedalLottery }: Even
         />
 
         <EventCard
+          title="30天燃脂计划"
+          description="每天推荐 1 条燃脂路线，完成关键节点即可开启现金红包盲盒。"
+          image="https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&q=80&w=600&h=400"
+          accent="rose"
+          icon={<Flame size={16} />}
+          tag={<span className="flex items-center gap-1"><Calendar size={10} />30天计划</span>}
+          onClick={onSelectWeightLossPlan}
+          delay={0.05}
+        />
+
+        <EventCard
           title="百人百城计划"
           description="集结全球跑者，共同解锁全球 100 个标志性城市赛道，抽免费旅行。"
           image="https://images.unsplash.com/photo-1506501139174-099022df5260?auto=format&fit=crop&q=80&w=600&h=500"
@@ -170,8 +202,19 @@ export default function EventsTab({ onSelectMedley, onSelectMedalLottery }: Even
           tag="抽免费旅行"
           taller
           delay={0.1}
+          onClick={onSelectHundredCities}
         />
 
+        <EventCard
+          title="城市拼图小队"
+          description="创建或加入 2 人小队，完成随机城市路线拼图，点亮全城后瓜分现金奖励。"
+          image="https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&q=80&w=600&h=400"
+          accent="cyan"
+          icon={<Users size={16} />}
+          tag={<span className="flex items-center gap-1"><Users size={10} />2人小队</span>}
+          onClick={onSelectTeamRelay}
+          delay={0.15}
+        />
       </div>
     </div>
   );
