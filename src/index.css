@@ -474,20 +474,18 @@ h1, h2, h3, p { margin-top: 0; }
 .destination-carousel::-webkit-scrollbar { display: none; }
 .destination-carousel:focus-visible { border-radius: var(--radius-lg); outline-offset: 4px; }
 .destination-carousel::before,
-.destination-carousel::after { content: ""; flex: 0 0 calc(8% - 8px); }
-.destination-carousel .destination-journey-card { flex: 0 0 84%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
+.destination-carousel::after { content: ""; flex: 0 0 calc(6% - 8px); }
+.destination-carousel .destination-journey-card { flex: 0 0 88%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
 .destination-carousel.is-browsing .destination-journey-card {
   --journey-card-x: var(--journey-card-browse-x, 0px);
   --journey-card-y: 2px !important;
-  --journey-card-scale: .92;
+  --journey-card-scale: .88;
   --journey-card-opacity: .9 !important;
-  --journey-card-saturate: .92 !important;
-  --journey-card-brightness: .9 !important;
   z-index: 1;
   border-color: rgba(255,255,255,.16);
-  transition: transform .1s linear, opacity .12s ease, filter .12s ease, border-color .12s ease;
+  transition: transform .1s linear, opacity .12s ease, border-color .12s ease;
 }
-.destination-carousel.is-dragging .destination-journey-card { transition-duration: .045s, .08s, .08s, .08s; }
+.destination-carousel.is-dragging .destination-journey-card { transition-duration: .016s, .06s, .06s; }
 .destination-carousel.is-browsing .destination-journey-card.is-active { box-shadow: none; }
 .destination-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 19, 25, .02) 20%, rgba(4, 19, 25, .75) 100%); }
 .destination-card__content { position: absolute; inset: auto 19px 18px; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
@@ -1057,8 +1055,6 @@ body { background: var(--bg); }
   --journey-card-y: 8px;
   --journey-card-scale: 1;
   --journey-card-opacity: .62;
-  --journey-card-saturate: .78;
-  --journey-card-brightness: .68;
   height: calc(100% - 18px);
   align-self: center;
   display: grid;
@@ -1070,9 +1066,8 @@ body { background: var(--bg); }
   box-shadow: 0 22px 58px rgba(0,0,0,.26);
   transform: translate3d(var(--journey-card-x), var(--journey-card-y), 0) scale(var(--journey-card-scale));
   opacity: var(--journey-card-opacity);
-  filter: saturate(var(--journey-card-saturate)) brightness(var(--journey-card-brightness));
   transform-origin: center center;
-  transition: transform .28s cubic-bezier(.18,.82,.22,1), opacity .22s ease, filter .22s ease, border-color .22s ease, box-shadow .22s ease;
+  transition: transform .28s cubic-bezier(.18,.82,.22,1), opacity .22s ease, border-color .22s ease, box-shadow .22s ease;
   will-change: transform, opacity;
 }
 .destination-carousel.is-browsing .destination-card__motion-badge { opacity: .28; }
@@ -1081,8 +1076,6 @@ body { background: var(--bg); }
   --journey-card-y: 0px;
   --journey-card-scale: 1.027;
   --journey-card-opacity: 1;
-  --journey-card-saturate: 1;
-  --journey-card-brightness: 1;
   z-index: 2;
 }
 .destination-carousel .destination-journey-card.is-active {

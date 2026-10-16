@@ -236,7 +236,6 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const swipedRef = useRef(false);
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
   const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
-  const [isCarouselBrowsing, setIsCarouselBrowsing] = useState(false);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
   const nextStationCandidatePool = getCandidateCityIds(state, JOURNEY_CITY_SEQUENCE.length).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
@@ -262,19 +261,22 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     const influenceDistance = Math.max(1, carousel.clientWidth * 0.58);
     const isBrowsing = carousel.classList.contains('is-browsing');
 
-    cards.forEach(card => {
+    const measurements = cards.map(card => {
       const cardCenter = card.offsetLeft + card.clientWidth / 2;
       const signedDistance = cardCenter - viewportCenter;
       const distanceRatio = Math.min(1, Math.abs(signedDistance) / influenceDistance);
       const closeness = 1 - distanceRatio;
       const eased = closeness * closeness * (3 - 2 * closeness);
-      const browseShift = signedDistance === 0 ? 0 : -Math.sign(signedDistance) * 44 * distanceRatio;
+      return { card, signedDistance, distanceRatio, eased };
+    });
+
+    measurements.forEach(({ card, signedDistance, distanceRatio, eased }) => {
+      if (Math.abs(signedDistance) > carousel.clientWidth * 1.6) return;
+      const browseShift = signedDistance === 0 ? 0 : -Math.sign(signedDistance) * 52 * distanceRatio;
       card.style.setProperty('--journey-card-browse-x', `${browseShift.toFixed(2)}px`);
       if (isBrowsing) return;
       card.style.setProperty('--journey-card-y', `${(8 - eased * 8).toFixed(2)}px`);
       card.style.setProperty('--journey-card-opacity', (0.72 + eased * 0.28).toFixed(3));
-      card.style.setProperty('--journey-card-saturate', (0.85 + eased * 0.15).toFixed(3));
-      card.style.setProperty('--journey-card-brightness', (0.78 + eased * 0.22).toFixed(3));
     });
   }, []);
 
@@ -286,9 +288,12 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     });
   }, [updateCarouselCardVisuals]);
 
-  useEffect(() => {
+  const setCarouselBrowsing = useCallback((browsing: boolean) => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    carousel.classList.toggle('is-browsing', browsing);
     requestCarouselVisualUpdate();
-  }, [isCarouselBrowsing, requestCarouselVisualUpdate]);
+  }, [requestCarouselVisualUpdate]);
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -296,11 +301,11 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (!carousel || !target) return;
     const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
     if (Math.abs(carousel.scrollLeft - targetLeft) < 3) {
-      setIsCarouselBrowsing(false);
+      setCarouselBrowsing(false);
       requestCarouselVisualUpdate();
       return;
     }
-    setIsCarouselBrowsing(true);
+    setCarouselBrowsing(true);
     programmaticScrollRef.current = true;
     carousel.scrollTo({
       left: targetLeft,
@@ -309,7 +314,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     hasAlignedCarouselRef.current = true;
     const releaseProgrammaticScroll = window.setTimeout(() => {
       programmaticScrollRef.current = false;
-      setIsCarouselBrowsing(false);
+      setCarouselBrowsing(false);
       requestCarouselVisualUpdate();
     }, 420);
     return () => {
@@ -317,7 +322,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
       if (scrollAnimationFrameRef.current) window.cancelAnimationFrame(scrollAnimationFrameRef.current);
     };
-  }, [city.id, requestCarouselVisualUpdate]);
+  }, [city.id, requestCarouselVisualUpdate, setCarouselBrowsing]);
 
   useEffect(() => {
     if (!focusNextStation) return;
@@ -326,19 +331,19 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (!carousel || !target) return;
 
     const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
-    setIsCarouselBrowsing(true);
+    setCarouselBrowsing(true);
     programmaticScrollRef.current = true;
     carousel.scrollTo({ left: targetLeft, behavior: 'smooth' });
     hasAlignedCarouselRef.current = true;
 
     const releaseNextStationFocus = window.setTimeout(() => {
       programmaticScrollRef.current = false;
-      setIsCarouselBrowsing(false);
+      setCarouselBrowsing(false);
       requestCarouselVisualUpdate();
       onNextStationFocused();
     }, 460);
     return () => window.clearTimeout(releaseNextStationFocus);
-  }, [focusNextStation, onNextStationFocused, requestCarouselVisualUpdate]);
+  }, [focusNextStation, onNextStationFocused, requestCarouselVisualUpdate, setCarouselBrowsing]);
 
   const selectNearestCity = () => {
     if (programmaticScrollRef.current) return;
@@ -357,11 +362,11 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const scheduleNearestCitySelection = () => {
     requestCarouselVisualUpdate();
     if (programmaticScrollRef.current) return;
-    setIsCarouselBrowsing(true);
+    setCarouselBrowsing(true);
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
     scrollSettleTimerRef.current = window.setTimeout(() => {
       selectNearestCity();
-      setIsCarouselBrowsing(false);
+      setCarouselBrowsing(false);
     }, 180);
   };
 
@@ -374,8 +379,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   };
 
   const handleCarouselPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    setIsCarouselBrowsing(true);
-    requestCarouselVisualUpdate();
+    setCarouselBrowsing(true);
     event.currentTarget.classList.add('is-dragging');
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
     mouseDragRef.current = {
@@ -408,7 +412,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       const start = swipeStartRef.current;
       const moved = start ? Math.abs(event.clientX - start.x) > 8 : false;
       if (moved) scheduleNearestCitySelection();
-      else setIsCarouselBrowsing(false);
+      else setCarouselBrowsing(false);
       return;
     }
 
@@ -422,7 +426,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       window.setTimeout(() => { swipedRef.current = false; }, 180);
       scheduleNearestCitySelection();
     } else {
-      setIsCarouselBrowsing(false);
+      setCarouselBrowsing(false);
     }
   };
 
@@ -543,7 +547,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       </header>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
         <div
-          className={`destination-carousel${isCarouselBrowsing ? ' is-browsing' : ''}`}
+          className="destination-carousel"
           ref={carouselRef}
           role="region"
           tabIndex={0}
