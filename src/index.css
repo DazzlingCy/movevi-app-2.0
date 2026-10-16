@@ -451,25 +451,44 @@ h1, h2, h3, p { margin-top: 0; }
   box-shadow: 0 18px 42px color-mix(in srgb, var(--city-accent) 28%, transparent);
 }
 .destination-carousel {
+  height: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
-  align-items: center;
-  gap: 2px;
-  width: calc(100% + 40px);
-  margin-inline: -20px;
-  padding-inline: 20px;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  margin-inline: 0;
+  padding: 0 0 4px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 20px;
+  scroll-padding-inline: 0;
   scrollbar-width: none;
   touch-action: pan-x pan-y;
   cursor: grab;
 }
-.destination-carousel.is-dragging { cursor: grabbing; }
+.destination-carousel.is-browsing { scroll-snap-type: x proximity; }
+.destination-carousel.is-dragging { cursor: grabbing; scroll-behavior: auto; scroll-snap-type: none; }
 .destination-carousel::-webkit-scrollbar { display: none; }
 .destination-carousel:focus-visible { border-radius: var(--radius-lg); outline-offset: 4px; }
-.destination-carousel .destination-journey-card { flex: 0 0 88%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
+.destination-carousel::before,
+.destination-carousel::after { content: ""; flex: 0 0 calc(8% - 8px); }
+.destination-carousel .destination-journey-card { flex: 0 0 84%; scroll-snap-align: center; scroll-snap-stop: normal; box-shadow: none; }
+.destination-carousel.is-browsing .destination-journey-card {
+  --journey-card-x: var(--journey-card-browse-x, 0px);
+  --journey-card-y: 2px !important;
+  --journey-card-scale: .92;
+  --journey-card-opacity: .9 !important;
+  --journey-card-saturate: .92 !important;
+  --journey-card-brightness: .9 !important;
+  z-index: 1;
+  border-color: rgba(255,255,255,.16);
+  transition: transform .1s linear, opacity .12s ease, filter .12s ease, border-color .12s ease;
+}
+.destination-carousel.is-dragging .destination-journey-card { transition-duration: .045s, .08s, .08s, .08s; }
+.destination-carousel.is-browsing .destination-journey-card.is-active { box-shadow: none; }
 .destination-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4, 19, 25, .02) 20%, rgba(4, 19, 25, .75) 100%); }
 .destination-card__content { position: absolute; inset: auto 19px 18px; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .destination-card__content > div { min-width: 0; }
@@ -938,31 +957,87 @@ body { background: var(--bg); }
 .icon-button, .avatar-button { border-color: var(--line); background: #111216; }
 .icon-button--paper { background: #16171c; }
 
-.page--home { padding-top: max(16px, env(safe-area-inset-top)); }
-.home-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 18px; }
-.home-heading h1 {
+.page--home {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: max(12px, env(safe-area-inset-top)) 0 calc(84px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 4%, rgba(126,134,243,.11), transparent 25%),
+    #07080b;
+}
+.home-commandbar {
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px 10px;
+}
+.home-commandbar h1 {
+  min-width: 0;
+  margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(34px, 8.8vw, 42px);
+  font-size: clamp(26px, 7vw, 32px);
+  line-height: 1;
   font-weight: 600;
   letter-spacing: -.065em;
+  white-space: nowrap;
 }
-.home-heading .eyebrow { color: #757a84; font-size: 10px; font-weight: 500; }
+.home-quick-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+.home-quick-action,
 .home-reward-chip {
-  min-height: 36px;
+  min-height: 38px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 12px;
-  border: 1px solid rgba(255,149,79,.22);
-  border-radius: 99px;
-  background: rgba(255,149,79,.12);
-  color: #f4f0ee;
-  font-size: 10px;
-  font-weight: 600;
+  justify-content: center;
+  border-radius: 14px;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease, opacity .18s ease, transform .18s ease;
 }
-.home-reward-chip svg { width: 15px; height: 15px; color: #ffb36d; }
-.home-city-swipe-zone { position: relative; touch-action: pan-x pan-y; user-select: none; }
+.home-quick-action {
+  position: relative;
+  width: 38px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.085);
+  background: rgba(20,22,28,.62);
+  color: #858a96;
+}
+.home-quick-action:hover,
+.home-quick-action:focus-visible,
+.home-reward-chip:hover,
+.home-reward-chip:focus-visible { opacity: 1; transform: translateY(-1px); }
+.home-quick-action svg { width: 16px; height: 16px; }
+.home-quick-action--support svg { color: #aeb4ff; }
+.home-quick-action--device .treadmill-icon { width: 19px; height: 19px; }
+.home-quick-action--device.is-online { border-color: rgba(69,185,130,.2); background: rgba(30,95,70,.1); color: #47d69a; }
+.home-quick-action--device.is-offline { color: #626772; }
+.home-quick-action--device::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 4px;
+  height: 4px;
+  border: 1px solid #101218;
+  border-radius: 50%;
+  background: #626772;
+}
+.home-quick-action--device.is-online::after { background: #54dba3; box-shadow: 0 0 8px rgba(84,219,163,.55); }
+.home-reward-chip {
+  gap: 5px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,149,79,.14);
+  border-radius: 99px;
+  background: rgba(255,149,79,.065);
+  color: rgba(244,240,238,.62);
+  font-size: 9px;
+  font-weight: 550;
+  opacity: .76;
+}
+.home-reward-chip svg { width: 13px; height: 13px; color: rgba(255,179,109,.72); }
+.home-city-swipe-zone { position: relative; min-width: 0; min-height: 0; overflow: hidden; touch-action: pan-x pan-y; user-select: none; }
 .home-city-swipe-zone::before,
 .home-city-swipe-zone::after {
   content: "";
@@ -970,37 +1045,58 @@ body { background: var(--bg); }
   top: 18px;
   bottom: 14px;
   z-index: 2;
-  width: 22px;
+  width: 12px;
+  opacity: .42;
   pointer-events: none;
 }
-.home-city-swipe-zone::before { left: -20px; background: linear-gradient(90deg, var(--paper), transparent); }
-.home-city-swipe-zone::after { right: -20px; background: linear-gradient(270deg, var(--paper), transparent); }
+.home-city-swipe-zone::before { left: 0; background: linear-gradient(90deg, #07080b, transparent); }
+.home-city-swipe-zone::after { right: 0; background: linear-gradient(270deg, #07080b, transparent); }
 .destination-journey-card {
-  --journey-card-scale: .92;
+  --journey-card-x: 0px;
+  --journey-card-browse-x: 0px;
   --journey-card-y: 8px;
+  --journey-card-scale: 1;
   --journey-card-opacity: .62;
   --journey-card-saturate: .78;
   --journey-card-brightness: .68;
+  height: calc(100% - 18px);
+  align-self: center;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.095);
   border-radius: 24px;
   background: #0f1014;
   box-shadow: 0 22px 58px rgba(0,0,0,.26);
-  transform: scale(var(--journey-card-scale)) translateY(var(--journey-card-y));
+  transform: translate3d(var(--journey-card-x), var(--journey-card-y), 0) scale(var(--journey-card-scale));
   opacity: var(--journey-card-opacity);
   filter: saturate(var(--journey-card-saturate)) brightness(var(--journey-card-brightness));
   transform-origin: center center;
-  transition: transform .12s linear, opacity .12s linear, filter .12s linear;
+  transition: transform .28s cubic-bezier(.18,.82,.22,1), opacity .22s ease, filter .22s ease, border-color .22s ease, box-shadow .22s ease;
   will-change: transform, opacity;
 }
+.destination-carousel.is-browsing .destination-card__motion-badge { opacity: .28; }
+.destination-carousel.is-browsing .destination-card__video { filter: saturate(.86) brightness(.58) contrast(1.02); }
 .destination-journey-card.is-active {
-  --journey-card-scale: 1;
   --journey-card-y: 0px;
+  --journey-card-scale: 1.027;
   --journey-card-opacity: 1;
   --journey-card-saturate: 1;
   --journey-card-brightness: 1;
+  z-index: 2;
 }
-.destination-card { height: 392px; border: 0; border-radius: 23px 23px 0 0; background: #111216; box-shadow: none; }
+.destination-carousel .destination-journey-card.is-active {
+  border-color: rgba(255,255,255,.15);
+  box-shadow: 0 20px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.025);
+}
+@media (prefers-reduced-motion: reduce) {
+  .destination-journey-card { transition-duration: .01ms; }
+  .destination-carousel.is-browsing .destination-journey-card {
+    --journey-card-x: 0px;
+    --journey-card-scale: 1;
+  }
+}
+.destination-card { height: auto; min-height: 0; border: 0; border-radius: 23px 23px 0 0; background: #111216; box-shadow: none; }
 .destination-card__photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.86) brightness(.64) contrast(1); transform: scale(1.015); }
 .destination-card__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 52%; opacity: 1; filter: saturate(.92) brightness(.64) contrast(1.04); transform: scale(1.025); transition: opacity .28s ease; }
 .destination-card__video.is-ready { opacity: 1; animation: destinationVideoReveal .42s ease both; }
@@ -1028,7 +1124,7 @@ body { background: var(--bg); }
 .destination-card__runners svg { width: 13px; height: 13px; color: #65ddb1; }
 .destination-upcoming-card {
   position: relative;
-  height: 569px;
+  height: calc(100% - 18px);
   isolation: isolate;
   border-color: rgba(255,255,255,.075);
   background: #0b0c10;
@@ -1096,7 +1192,7 @@ body { background: var(--bg); }
 }
 .destination-upcoming-card__copy > span svg { width: 14px; height: 14px; color: #aeb4ff; }
 .destination-next-card {
-  min-height: 569px;
+  min-height: 0;
   display: grid;
   grid-template-rows: 1fr auto auto;
   padding: 20px;
@@ -1281,7 +1377,7 @@ body { background: var(--bg); }
 .passport-stamp { color: #b8beff; border-color: rgba(184,190,255,.72); }
 
 .journey-progress { margin-top: 11px; padding: 20px 17px 22px; border-color: var(--line); border-radius: 18px; background: #0f1014; }
-.destination-journey-card .journey-progress { margin-top: 0; padding: 19px 18px 25px; border: 0; border-radius: 0; background: linear-gradient(180deg, #111216, #0f1014); }
+.destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-radius: 0; background: linear-gradient(180deg, #111216, #0f1014); }
 .journey-progress__topline span { color: var(--muted); font-weight: 400; }
 .journey-progress__topline strong { font-family: var(--font-display); font-weight: 600; }
 .journey-progress__topline p { color: var(--muted); }
@@ -1370,6 +1466,20 @@ body { background: var(--bg); }
 .bottom-nav small { font-size: 9px; font-weight: 500; }
 .bottom-nav button.is-active { color: #f2f3f7; }
 .bottom-nav button.is-active > span { background: #262938; color: #c0c5ff; transform: translateY(-1px); }
+.bottom-nav--home {
+  left: 18px;
+  right: 18px;
+  height: 64px;
+  padding: 5px 8px;
+  border-color: rgba(255,255,255,.095);
+  border-radius: 22px;
+  background: rgba(15,16,21,.76);
+  box-shadow: 0 14px 34px rgba(0,0,0,.28);
+}
+.bottom-nav--home button { min-width: 0; gap: 1px; border-radius: 15px; }
+.bottom-nav--home button > span { width: 32px; height: 27px; }
+.bottom-nav--home svg { width: 18px; height: 18px; }
+.bottom-nav--home small { font-size: 8px; }
 
 .page--world {
   --world-violet: #a8aeff;
@@ -1441,6 +1551,12 @@ body { background: var(--bg); }
 .world-globe-action > svg { width: 12px; height: 12px; color: #747a87; }
 .world-level-entry { border-color: rgba(232,183,93,.24); }
 .world-level-entry > i { border-color: rgba(232,183,93,.22); background: rgba(232,183,93,.1); color: var(--world-gold); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 18px rgba(232,183,93,.08); }
+.world-leaderboard-entry { min-height: 46px; grid-template-columns: 28px minmax(0, 1fr); gap: 6px; padding: 6px 8px; }
+.world-leaderboard-entry > i { width: 28px; height: 28px; border-radius: 9px; }
+.world-leaderboard-entry > span { display: flex; align-items: baseline; gap: 5px; }
+.world-leaderboard-entry small { color: #a1a6b3; font-size: 8px; font-weight: 600; }
+.world-leaderboard-entry strong { color: #f3f4f8; font-size: 12px; font-variant-numeric: tabular-nums; }
+.world-leaderboard-entry strong b { margin-left: 1px; color: #858b98; font-size: 7px; }
 .leaderboard-page {
   --rank-accent: #8f96ff;
   --rank-accent-rgb: 143, 150, 255;
@@ -1999,16 +2115,17 @@ body { background: var(--bg); }
 
 @media (max-height: 780px) {
   .page { padding-bottom: calc(98px + env(safe-area-inset-bottom)); }
-  .page--home { padding-top: max(12px, env(safe-area-inset-top)); }
-  .home-heading { margin: 10px 0 10px; }
-  .destination-card { height: 286px; }
-  .destination-next-card { min-height: 465px; }
+  .page--home { padding: max(8px, env(safe-area-inset-top)) 0 calc(80px + env(safe-area-inset-bottom)); }
+  .home-commandbar { min-height: 50px; padding-bottom: 7px; }
+  .home-commandbar h1 { font-size: clamp(24px, 6.8vw, 29px); }
+  .destination-card { height: auto; min-height: 0; }
+  .destination-next-card { min-height: 0; }
   .next-station-card__hero { min-height: 150px; padding-bottom: 12px; }
   .next-station-card__hero h2 { font-size: 29px; }
   .next-station-card__hero p { margin-top: 8px; font-size: 11px; }
   .next-station-option { min-height: 70px; border-radius: 15px; }
   .journey-progress { padding-block: 15px 16px; }
-  .destination-journey-card .journey-progress { padding-block: 13px 16px; }
+  .destination-journey-card .journey-progress { padding-block: 10px 12px; }
   .city-card-sport-stats { margin-bottom: 12px; padding-block: 10px; }
   .city-card-sport-stats > div { padding-inline: 8px; }
   .city-card-sport-stats > div:first-child { padding-left: 2px; }
@@ -2031,6 +2148,12 @@ body { background: var(--bg); }
 }
 
 @media (max-width: 360px) {
+  .home-commandbar { gap: 8px; padding-inline: 12px; }
+  .home-commandbar h1 { font-size: 25px; }
+  .home-quick-actions { gap: 5px; }
+  .home-quick-action,
+  .home-reward-chip { width: 36px; min-height: 36px; padding: 0; }
+  .home-reward-chip span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .world-header { right: 18px; left: 18px; padding-inline: 0; }
   .world-journey-content { padding-inline: 14px; }
   .world-goal-card { padding: 9px; }

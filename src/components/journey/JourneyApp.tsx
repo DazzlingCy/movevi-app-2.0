@@ -236,6 +236,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const swipedRef = useRef(false);
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
   const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
+  const [isCarouselBrowsing, setIsCarouselBrowsing] = useState(false);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
   const nextStationCandidatePool = getCandidateCityIds(state, JOURNEY_CITY_SEQUENCE.length).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
@@ -259,17 +260,21 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
     const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
     const influenceDistance = Math.max(1, carousel.clientWidth * 0.58);
+    const isBrowsing = carousel.classList.contains('is-browsing');
 
     cards.forEach(card => {
       const cardCenter = card.offsetLeft + card.clientWidth / 2;
-      const distanceRatio = Math.min(1, Math.abs(cardCenter - viewportCenter) / influenceDistance);
+      const signedDistance = cardCenter - viewportCenter;
+      const distanceRatio = Math.min(1, Math.abs(signedDistance) / influenceDistance);
       const closeness = 1 - distanceRatio;
       const eased = closeness * closeness * (3 - 2 * closeness);
-      card.style.setProperty('--journey-card-scale', (0.92 + eased * 0.08).toFixed(3));
+      const browseShift = signedDistance === 0 ? 0 : -Math.sign(signedDistance) * 44 * distanceRatio;
+      card.style.setProperty('--journey-card-browse-x', `${browseShift.toFixed(2)}px`);
+      if (isBrowsing) return;
       card.style.setProperty('--journey-card-y', `${(8 - eased * 8).toFixed(2)}px`);
-      card.style.setProperty('--journey-card-opacity', (0.62 + eased * 0.38).toFixed(3));
-      card.style.setProperty('--journey-card-saturate', (0.78 + eased * 0.22).toFixed(3));
-      card.style.setProperty('--journey-card-brightness', (0.68 + eased * 0.32).toFixed(3));
+      card.style.setProperty('--journey-card-opacity', (0.72 + eased * 0.28).toFixed(3));
+      card.style.setProperty('--journey-card-saturate', (0.85 + eased * 0.15).toFixed(3));
+      card.style.setProperty('--journey-card-brightness', (0.78 + eased * 0.22).toFixed(3));
     });
   }, []);
 
@@ -282,14 +287,20 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   }, [updateCarouselCardVisuals]);
 
   useEffect(() => {
+    requestCarouselVisualUpdate();
+  }, [isCarouselBrowsing, requestCarouselVisualUpdate]);
+
+  useEffect(() => {
     const carousel = carouselRef.current;
     const target = carousel?.querySelector<HTMLElement>(`[data-city-id="${city.id}"]`);
     if (!carousel || !target) return;
     const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
     if (Math.abs(carousel.scrollLeft - targetLeft) < 3) {
+      setIsCarouselBrowsing(false);
       requestCarouselVisualUpdate();
       return;
     }
+    setIsCarouselBrowsing(true);
     programmaticScrollRef.current = true;
     carousel.scrollTo({
       left: targetLeft,
@@ -298,6 +309,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     hasAlignedCarouselRef.current = true;
     const releaseProgrammaticScroll = window.setTimeout(() => {
       programmaticScrollRef.current = false;
+      setIsCarouselBrowsing(false);
+      requestCarouselVisualUpdate();
     }, 420);
     return () => {
       window.clearTimeout(releaseProgrammaticScroll);
@@ -313,12 +326,14 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (!carousel || !target) return;
 
     const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
+    setIsCarouselBrowsing(true);
     programmaticScrollRef.current = true;
     carousel.scrollTo({ left: targetLeft, behavior: 'smooth' });
     hasAlignedCarouselRef.current = true;
 
     const releaseNextStationFocus = window.setTimeout(() => {
       programmaticScrollRef.current = false;
+      setIsCarouselBrowsing(false);
       requestCarouselVisualUpdate();
       onNextStationFocused();
     }, 460);
@@ -342,8 +357,12 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const scheduleNearestCitySelection = () => {
     requestCarouselVisualUpdate();
     if (programmaticScrollRef.current) return;
+    setIsCarouselBrowsing(true);
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
-    scrollSettleTimerRef.current = window.setTimeout(selectNearestCity, 100);
+    scrollSettleTimerRef.current = window.setTimeout(() => {
+      selectNearestCity();
+      setIsCarouselBrowsing(false);
+    }, 180);
   };
 
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -355,6 +374,9 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   };
 
   const handleCarouselPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    setIsCarouselBrowsing(true);
+    requestCarouselVisualUpdate();
+    event.currentTarget.classList.add('is-dragging');
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
     mouseDragRef.current = {
       pointerId: event.pointerId,
@@ -363,7 +385,6 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       dragged: false
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-    event.currentTarget.classList.add('is-dragging');
   };
 
   const handleCarouselPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -381,19 +402,27 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   };
 
   const finishCarouselPointerDrag = (event: PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.classList.remove('is-dragging');
     const drag = mouseDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      const start = swipeStartRef.current;
+      const moved = start ? Math.abs(event.clientX - start.x) > 8 : false;
+      if (moved) scheduleNearestCitySelection();
+      else setIsCarouselBrowsing(false);
+      return;
+    }
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    event.currentTarget.classList.remove('is-dragging');
     mouseDragRef.current = null;
 
     if (drag.dragged) {
       swipedRef.current = true;
       window.setTimeout(() => { swipedRef.current = false; }, 180);
       scheduleNearestCitySelection();
+    } else {
+      setIsCarouselBrowsing(false);
     }
   };
 
@@ -413,6 +442,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const handleRoutesClick = (cityId: string) => {
     if (swipedRef.current) return;
     onRoutes(cityId);
+  };
+  const handleCityCardClick = (cityId: string) => {
+    if (swipedRef.current || cityId === city.id) return;
+    onBrowseCity(cityId);
   };
   const handleCtaPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -487,31 +520,30 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
 
   return (
     <main className="page page--home" id="main-content">
-      <header className="topbar">
-        <button className="utility-chip utility-chip--support" type="button" onClick={() => onLegacyFeature('onlineSupport')} aria-label="打开在线客服">
-          <HeadphonesIcon />
-          <span>在线客服</span>
-        </button>
-        <button
-          className={`utility-chip utility-chip--device ${deviceConnected ? 'is-online' : 'is-offline'}`}
-          type="button"
-          onClick={onDevice}
-          aria-label={deviceConnected ? '跑步机已连接，查看设备状态' : '跑步机未连接，查看连接设置'}
-          title={deviceConnected ? '跑步机已连接' : '跑步机未连接'}
-        >
-          <TreadmillIcon connected={deviceConnected} />
-        </button>
-      </header>
-      <section className="home-heading">
+      <header className="home-commandbar">
         <h1>今天跑哪里？</h1>
-        <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('weightLossPlan')} aria-label="打开打卡红包">
-          <Flame />
-          <span>打卡红包</span>
-        </button>
-      </section>
+        <nav className="home-quick-actions" aria-label="首页快捷入口">
+          <button className="home-quick-action home-quick-action--support" type="button" onClick={() => onLegacyFeature('onlineSupport')} aria-label="打开在线客服" title="在线客服">
+            <HeadphonesIcon />
+          </button>
+          <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('weightLossPlan')} aria-label="打开打卡红包">
+            <Flame />
+            <span>打卡</span>
+          </button>
+          <button
+            className={`home-quick-action home-quick-action--device ${deviceConnected ? 'is-online' : 'is-offline'}`}
+            type="button"
+            onClick={onDevice}
+            aria-label={deviceConnected ? '跑步机已连接，查看设备状态' : '跑步机未连接，查看连接设置'}
+            title={deviceConnected ? '跑步机已连接' : '跑步机未连接'}
+          >
+            <TreadmillIcon connected={deviceConnected} />
+          </button>
+        </nav>
+      </header>
       <section className="home-city-swipe-zone" aria-label="城市与旅程进度，可左右滑动切换城市" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd} onPointerCancel={() => { swipeStartRef.current = null; }}>
         <div
-          className="destination-carousel"
+          className={`destination-carousel${isCarouselBrowsing ? ' is-browsing' : ''}`}
           ref={carouselRef}
           role="region"
           tabIndex={0}
@@ -534,6 +566,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                   key={item.id}
                   style={cityStyle(item)}
                   aria-label={`${item.name}，尚未开放，预计${releaseDate}开放`}
+                  onClick={() => handleCityCardClick(item.id)}
                 >
                   <img className="destination-upcoming-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
                   <span className="destination-upcoming-card__shade" aria-hidden="true" />
@@ -560,7 +593,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
             return (
               <Fragment key={item.id}>
-                <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`}>
+                <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`} onClick={() => handleCityCardClick(item.id)}>
                   <div className="destination-card">
                     <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
                     {itemStatus === 'current' && item.id === city.id && cityVideoFor(item) && (
@@ -787,8 +820,7 @@ function MapPage({ state, totals, onOpenCity, onCities, onLeaderboard, onCountry
             </button>
             <button className="world-globe-action world-leaderboard-entry" type="button" onClick={onLeaderboard} aria-label="查看全球排行榜，我的排名 142">
               <i aria-hidden="true"><Trophy /></i>
-              <span><small>全球排行榜</small><strong>我的排名 142</strong></span>
-              <ChevronRight aria-hidden="true" />
+              <span><small>全球榜</small><strong>142<b>名</b></strong></span>
             </button>
           </div>
         </div>
@@ -1271,7 +1303,7 @@ function BottomNavigation({ active, onChange }: { active: PrimaryTab; onChange: 
     { id: 'profile' as const, label: '我的', icon: UserRound }
   ];
   return (
-    <nav className="bottom-nav" aria-label="主要导航">
+    <nav className={`bottom-nav${active === 'home' ? ' bottom-nav--home' : ''}`} aria-label="主要导航">
       {items.map(item => {
         const Icon = item.icon;
         const selected = active === item.id;
