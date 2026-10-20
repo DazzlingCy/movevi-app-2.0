@@ -509,7 +509,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     window.setTimeout(() => { swipedRef.current = false; }, 180);
   };
   const handleRoutesClick = (cityId: string) => {
-    if (swipedRef.current) return;
+    if (swipedRef.current || !hasPublishedCityRoutes(cityId)) return;
     onRoutes(cityId);
   };
   const handleCityCardClick = (cityId: string) => {
@@ -658,7 +658,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
               summary.calories += route.calories;
               return summary;
             }, { distance: 0, duration: 0, calories: 0 });
-            const itemCanOpenRoutes = itemStatus === 'current' || itemStatus === 'completed';
+            const itemHasJourneyProgress = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
             return (
               <Fragment key={item.id}>
@@ -734,15 +734,15 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
                       {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
                     </div>
                     <ProgressSegments completed={itemCompleted} showRunner={itemStatus === 'current'} />
-                    {itemCanOpenRoutes && (
+                    {itemHasJourneyProgress && (
                       <div className={`city-card-sport-stats city-card-sport-stats--${itemStatus}`} aria-label={`${item.name}累计运动数据`}>
                         <div><span><Footprints />里程</span><strong>{itemExerciseTotals.distance.toFixed(1)}<small>km</small></strong></div>
                         <div><span><Clock3 />时长</span><strong>{(itemExerciseTotals.duration / 60).toFixed(1)}<small>h</small></strong></div>
                         <div><span><Flame />消耗</span><strong>{Math.round(itemExerciseTotals.calories).toLocaleString('zh-CN')}<small>kcal</small></strong></div>
                       </div>
                     )}
-                    <button className={`${itemCanOpenRoutes ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }} disabled={!itemCanOpenRoutes}>
-                      {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未解锁`} {itemCanOpenRoutes ? <ArrowRight /> : <LockKeyhole />}
+                    <button className={`${itemHasJourneyProgress ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }}>
+                      {itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}旅程` : `${item.name} · 尚未解锁`} {itemHasJourneyProgress ? <ArrowRight /> : <LockKeyhole />}
                     </button>
                   </section>
                 </section>
