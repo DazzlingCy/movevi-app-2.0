@@ -231,7 +231,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const programmaticScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<number | null>(null);
   const scrollAnimationFrameRef = useRef<number | null>(null);
-  const mouseDragRef = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean } | null>(null);
+  const cardMeasurementsRef = useRef<{ card: HTMLElement; center: number }[]>([]);
+  const settleCarouselRef = useRef<() => void>(() => {});
+  const afterScrollRef = useRef<(() => void) | null>(null);
+  const mouseDragRef = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean; lastX: number; lastTime: number; velocity: number } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
@@ -256,27 +259,27 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     const carousel = carouselRef.current;
     if (!carousel) return;
 
-    const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
     const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
     const influenceDistance = Math.max(1, carousel.clientWidth * 0.58);
-    const isBrowsing = carousel.classList.contains('is-browsing');
+    const viewportWidth = carousel.clientWidth;
 
-    const measurements = cards.map(card => {
-      const cardCenter = card.offsetLeft + card.clientWidth / 2;
-      const signedDistance = cardCenter - viewportCenter;
+    const measurements = cardMeasurementsRef.current.map(({ card, center }) => {
+      const signedDistance = center - viewportCenter;
       const distanceRatio = Math.min(1, Math.abs(signedDistance) / influenceDistance);
       const closeness = 1 - distanceRatio;
       const eased = closeness * closeness * (3 - 2 * closeness);
       return { card, signedDistance, distanceRatio, eased };
     });
 
-    measurements.forEach(({ card, signedDistance, distanceRatio, eased }) => {
-      if (Math.abs(signedDistance) > carousel.clientWidth * 1.6) return;
-      const browseShift = signedDistance === 0 ? 0 : -Math.sign(signedDistance) * 52 * distanceRatio;
+    measurements.forEach(({ card, signedDistance, eased }) => {
+      const nearby = Math.abs(signedDistance) <= viewportWidth * 2;
+      const willChange = nearby ? 'transform, translate, opacity' : 'auto';
+      if (card.style.willChange !== willChange) card.style.willChange = willChange;
+      if (!nearby) return;
+      // Compress the visual spacing together with the cards, without changing snap geometry.
+      const browseShift = -signedDistance * .26;
       card.style.setProperty('--journey-card-browse-x', `${browseShift.toFixed(2)}px`);
-      if (isBrowsing) return;
-      card.style.setProperty('--journey-card-y', `${(8 - eased * 8).toFixed(2)}px`);
-      card.style.setProperty('--journey-card-opacity', (0.72 + eased * 0.28).toFixed(3));
+      card.style.setProperty('--journey-card-browse-opacity', (.7 + eased * .28).toFixed(3));
     });
   }, []);
 
@@ -295,12 +298,52 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     requestCarouselVisualUpdate();
   }, [requestCarouselVisualUpdate]);
 
+  const armCarouselSettle = useCallback(() => {
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    // Keep the 70% overview visible for 900ms after scrolling stops.
+    // Further scrolling restarts this delay, including native inertia.
+    scrollSettleTimerRef.current = window.setTimeout(() => {
+      scrollSettleTimerRef.current = null;
+      if (mouseDragRef.current?.dragged) return;
+      programmaticScrollRef.current = false;
+      carouselRef.current?.classList.remove('is-settling');
+      settleCarouselRef.current();
+      afterScrollRef.current?.();
+      afterScrollRef.current = null;
+    }, 900);
+  }, []);
+
+  const carouselCityOrder = homeJourneyCities.map(item => item.id).join(',');
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const measureCards = () => {
+      cardMeasurementsRef.current = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')]
+        .map(card => ({ card, center: card.offsetLeft + card.clientWidth / 2 }));
+      requestCarouselVisualUpdate();
+    };
+    measureCards();
+    const observer = new ResizeObserver(measureCards);
+    observer.observe(carousel);
+    return () => observer.disconnect();
+  }, [carouselCityOrder, currentCityCompleted, requestCarouselVisualUpdate]);
+
+  useEffect(() => () => {
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    if (scrollAnimationFrameRef.current) {
+      window.cancelAnimationFrame(scrollAnimationFrameRef.current);
+      scrollAnimationFrameRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     const carousel = carouselRef.current;
     const target = carousel?.querySelector<HTMLElement>(`[data-city-id="${city.id}"]`);
     if (!carousel || !target) return;
     const targetLeft = target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2;
     if (Math.abs(carousel.scrollLeft - targetLeft) < 3) {
+      programmaticScrollRef.current = false;
+      hasAlignedCarouselRef.current = true;
       setCarouselBrowsing(false);
       requestCarouselVisualUpdate();
       return;
@@ -312,17 +355,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
       behavior: hasAlignedCarouselRef.current ? 'smooth' : 'auto'
     });
     hasAlignedCarouselRef.current = true;
-    const releaseProgrammaticScroll = window.setTimeout(() => {
-      programmaticScrollRef.current = false;
-      setCarouselBrowsing(false);
-      requestCarouselVisualUpdate();
-    }, 420);
-    return () => {
-      window.clearTimeout(releaseProgrammaticScroll);
-      if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
-      if (scrollAnimationFrameRef.current) window.cancelAnimationFrame(scrollAnimationFrameRef.current);
-    };
-  }, [city.id, requestCarouselVisualUpdate, setCarouselBrowsing]);
+    armCarouselSettle();
+  }, [city.id, armCarouselSettle, requestCarouselVisualUpdate, setCarouselBrowsing]);
 
   useEffect(() => {
     if (!focusNextStation) return;
@@ -336,38 +370,38 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     carousel.scrollTo({ left: targetLeft, behavior: 'smooth' });
     hasAlignedCarouselRef.current = true;
 
-    const releaseNextStationFocus = window.setTimeout(() => {
-      programmaticScrollRef.current = false;
-      setCarouselBrowsing(false);
-      requestCarouselVisualUpdate();
-      onNextStationFocused();
-    }, 460);
-    return () => window.clearTimeout(releaseNextStationFocus);
-  }, [focusNextStation, onNextStationFocused, requestCarouselVisualUpdate, setCarouselBrowsing]);
+    afterScrollRef.current = onNextStationFocused;
+    armCarouselSettle();
+  }, [focusNextStation, onNextStationFocused, armCarouselSettle, setCarouselBrowsing]);
 
   const selectNearestCity = () => {
-    if (programmaticScrollRef.current) return;
+    if (programmaticScrollRef.current) return false;
     const carousel = carouselRef.current;
-    if (!carousel) return;
+    if (!carousel) return false;
     const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
     const firstCard = cards[0];
-    if (!firstCard) return;
+    if (!firstCard) return false;
     const viewportCenter = carousel.scrollLeft + carousel.clientWidth / 2;
     const next = cards.reduce((nearest, card) => (
       Math.abs(card.offsetLeft + card.clientWidth / 2 - viewportCenter) < Math.abs(nearest.offsetLeft + nearest.clientWidth / 2 - viewportCenter) ? card : nearest
     ), firstCard);
-    if (next.dataset.cityId && next.dataset.cityId !== city.id) onBrowseCity(next.dataset.cityId);
+    if (next.dataset.cityId && next.dataset.cityId !== city.id) {
+      onBrowseCity(next.dataset.cityId);
+      return true;
+    }
+    return false;
   };
 
+  useEffect(() => {
+    settleCarouselRef.current = () => {
+      const cityChanged = selectNearestCity();
+      if (!cityChanged) setCarouselBrowsing(false);
+    };
+  });
+
   const scheduleNearestCitySelection = () => {
-    requestCarouselVisualUpdate();
-    if (programmaticScrollRef.current) return;
     setCarouselBrowsing(true);
-    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
-    scrollSettleTimerRef.current = window.setTimeout(() => {
-      selectNearestCity();
-      setCarouselBrowsing(false);
-    }, 180);
+    armCarouselSettle();
   };
 
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -379,16 +413,17 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   };
 
   const handleCarouselPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    setCarouselBrowsing(true);
-    event.currentTarget.classList.add('is-dragging');
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
     mouseDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       scrollLeft: event.currentTarget.scrollLeft,
-      dragged: false
+      dragged: false,
+      lastX: event.clientX,
+      lastTime: performance.now(),
+      velocity: 0
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handleCarouselPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -396,10 +431,23 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (!drag || drag.pointerId !== event.pointerId) return;
 
     const deltaX = event.clientX - drag.startX;
-    if (Math.abs(deltaX) > 3) drag.dragged = true;
+    if (!drag.dragged && Math.abs(deltaX) > 5) {
+      drag.dragged = true;
+      programmaticScrollRef.current = false;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.classList.remove('is-settling');
+      event.currentTarget.classList.add('is-dragging');
+      setCarouselBrowsing(true);
+    }
     if (!drag.dragged) return;
 
     event.preventDefault();
+    const now = performance.now();
+    const elapsed = Math.max(8, now - drag.lastTime);
+    const instantaneousVelocity = (drag.lastX - event.clientX) / elapsed;
+    drag.velocity = drag.velocity * .68 + instantaneousVelocity * .32;
+    drag.lastX = event.clientX;
+    drag.lastTime = now;
     event.currentTarget.scrollLeft = drag.scrollLeft - deltaX;
     requestCarouselVisualUpdate();
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
@@ -411,7 +459,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (!drag || drag.pointerId !== event.pointerId) {
       const start = swipeStartRef.current;
       const moved = start ? Math.abs(event.clientX - start.x) > 8 : false;
-      if (moved) scheduleNearestCitySelection();
+      // Touch scrolling hands control to the browser through pointercancel.
+      if (moved || event.type === 'pointercancel') scheduleNearestCitySelection();
       else setCarouselBrowsing(false);
       return;
     }
@@ -424,6 +473,22 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
     if (drag.dragged) {
       swipedRef.current = true;
       window.setTimeout(() => { swipedRef.current = false; }, 180);
+      const carousel = event.currentTarget;
+      // Keep native snap disabled until this single momentum animation finishes.
+      carousel.classList.add('is-settling');
+      const cards = [...carousel.querySelectorAll<HTMLElement>('[data-city-id], [data-next-station]')];
+      if (cards.length > 0) {
+        const velocity = performance.now() - drag.lastTime < 100 ? drag.velocity : 0;
+        const momentum = Math.max(-carousel.clientWidth * .52, Math.min(carousel.clientWidth * .52, velocity * 170));
+        const projectedCenter = carousel.scrollLeft + momentum + carousel.clientWidth / 2;
+        const target = cards.reduce((nearest, card) => (
+          Math.abs(card.offsetLeft + card.clientWidth / 2 - projectedCenter) < Math.abs(nearest.offsetLeft + nearest.clientWidth / 2 - projectedCenter) ? card : nearest
+        ), cards[0]);
+        carousel.scrollTo({
+          left: target.offsetLeft - (carousel.clientWidth - target.clientWidth) / 2,
+          behavior: 'smooth'
+        });
+      }
       scheduleNearestCitySelection();
     } else {
       setCarouselBrowsing(false);
@@ -728,10 +793,14 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
 
 function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: JourneyState; selectedCityId: string; onSelect: (cityId: string) => void; onClose: () => void }) {
   const [activeContinent, setActiveContinent] = useState<CityContinentFilter>('全部');
-  const statusText = { current: '正在探索', locked: '未解锁' } as const;
-  const visibleCities = JOURNEY_CITY_SEQUENCE
+  const statusText = { current: '正在探索', locked: '未解锁', upcoming: '尚未开放' } as const;
+  const filteredCities = JOURNEY_CITY_SEQUENCE
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => activeContinent === '全部' || item.continent === activeContinent);
+  const visibleCities = [
+    ...filteredCities.filter(({ item }) => hasPublishedCityRoutes(item.id)),
+    ...filteredCities.filter(({ item }) => !hasPublishedCityRoutes(item.id))
+  ];
 
   return (
     <Modal labelId="city-list-title" onClose={onClose} className="city-list-sheet">
@@ -758,20 +827,25 @@ function CityListSheet({ state, selectedCityId, onSelect, onClose }: { state: Jo
       <div className="city-list-grid">
         {visibleCities.map(({ item, index }) => {
           const journeyStatus = getCityStatus(state, item.id);
-          const status = journeyStatus === 'completed' || journeyStatus === 'current' ? journeyStatus : 'locked';
+          const releaseDate = getCityRouteReleaseDate(item.id);
+          const status = !hasPublishedCityRoutes(item.id)
+            ? 'upcoming'
+            : journeyStatus === 'completed' || journeyStatus === 'current' ? journeyStatus : 'locked';
           const completed = getCompletedRouteIds(state, item.id).length;
-          const StatusIcon = status === 'current' ? MapPin : status === 'locked' ? LockKeyhole : null;
+          const StatusIcon = status === 'current' ? MapPin : status === 'locked' ? LockKeyhole : status === 'upcoming' ? Clock3 : null;
           const statusLabel = status === 'completed' ? '已完成' : statusText[status];
-          const isSelected = status !== 'locked' && selectedCityId === item.id;
+          const isSelected = status !== 'locked' && status !== 'upcoming' && selectedCityId === item.id;
           return (
-            <button className={`city-list-card city-list-card--${status}${isSelected ? ' is-selected' : ''}`} type="button" key={item.id} onClick={() => { onSelect(item.id); onClose(); }} aria-label={`${String(index + 1).padStart(2, '0')} ${item.name} ${item.englishName}，${statusLabel}，查看城市路线`} aria-pressed={isSelected} style={cityStyle(item)}>
+            <button className={`city-list-card city-list-card--${status}${isSelected ? ' is-selected' : ''}`} type="button" key={item.id} onClick={() => { onSelect(item.id); onClose(); }} aria-label={`${String(index + 1).padStart(2, '0')} ${item.name} ${item.englishName}，${statusLabel}${releaseDate ? `，预计${releaseDate}开放` : '，查看城市路线'}`} aria-pressed={isSelected} disabled={status === 'upcoming'} style={cityStyle(item)}>
               <img className="city-list-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
               <span className="city-list-card__veil" aria-hidden="true" />
               <span className="city-list-card__number">{String(index + 1).padStart(2, '0')}</span>
               {StatusIcon && <span className="city-list-card__status"><StatusIcon />{statusText[status]}</span>}
               {status === 'completed' && <span className="city-list-card__stamp" aria-hidden="true"><b>已完成</b><small>COMPLETED</small></span>}
               {status === 'locked' && <span className="city-list-card__fog-lock" aria-hidden="true"><LockKeyhole /></span>}
-              <strong>{item.name}</strong><small>{item.englishName}</small><i><span style={{ width: `${completed * 10}%` }} /></i>
+              <strong>{item.name}</strong><small>{item.englishName}</small>
+              {status === 'upcoming' && releaseDate && <span className="city-list-card__release"><CalendarDays />预计 {releaseDate}</span>}
+              {status !== 'upcoming' && <i><span style={{ width: `${completed * 10}%` }} /></i>}
             </button>
           );
         })}
