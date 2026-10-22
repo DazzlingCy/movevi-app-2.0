@@ -22,6 +22,7 @@ import MedalLotteryView from '../MedalLotteryView';
 import OnlineSupportView from '../OnlineSupportView';
 import MyDevicesView from '../MyDevicesView';
 import DeviceConnectedPrompt from '../DeviceConnectedPrompt';
+import { resolveLocalImage } from '../../lib/localImages';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
 import TeamRelayView, { type TeamRelayMember, type TeamRelayTask } from '../TeamRelayView';
@@ -100,10 +101,10 @@ const CITY_RUNNER_COUNTS: Record<string, number> = {
 
 const DEFAULT_JOURNEY_CITY_VIDEO = JOURNEY_CITY_VIDEOS.tokyo!;
 
-const cityImageFor = (city: JourneyCity) =>
+const cityImageFor = (city: JourneyCity) => resolveLocalImage(
   JOURNEY_CITY_IMAGES[city.id]
   ?? CITIES.find(item => item.name === city.name || item.englishName === city.englishName)?.image
-  ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200';
+  ?? 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1200')!;
 
 const cityVideoFor = (city: JourneyCity) => JOURNEY_CITY_VIDEOS[city.id] ?? DEFAULT_JOURNEY_CITY_VIDEO;
 

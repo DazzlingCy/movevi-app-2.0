@@ -135,7 +135,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
               onClick={() => onRouteClick(routeId)}
             >
               <span className={styles.thumbnail}>
-                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={routeId === 1 ? 'eager' : 'lazy'} />
+                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={Math.abs(routeId - 1 - routeCardIndex) <= 1 ? 'eager' : 'lazy'} fetchPriority={routeId - 1 === routeCardIndex ? 'high' : 'auto'} />
                 <span className={styles.imageShade} />
                 <span className={styles.routeIdentity}>
                   <span className={styles.routeNumber}>{String(routeId).padStart(2, '0')}</span>

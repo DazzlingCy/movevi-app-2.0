@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { HTMLAttributeReferrerPolicy } from 'react';
 import { Landmark } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { resolveLocalImage } from '../lib/localImages';
 
 interface CityImageProps {
   src?: string;
@@ -40,7 +41,7 @@ export default function CityImage({ src, alt, className, fallbackLabel, referrer
   if (src && !failed) {
     return (
       <img
-        src={src}
+        src={resolveLocalImage(src)}
         alt={alt}
         className={className}
         loading={loading}
