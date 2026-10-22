@@ -1,0 +1,57 @@
+.page:global(.modal-sheet) {
+  --devices-bg: #0a1225;
+  --devices-surface: #1a293e;
+  --devices-text: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--devices-bg);
+  color: var(--devices-text);
+  box-shadow: none;
+}
+.page:global(.modal-sheet)::before { display: none; }
+.header {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  background: var(--devices-surface);
+  border-bottom: 1px solid #ffffff12;
+}
+.header h1 { margin: 0; text-align: center; font-size: 18px; font-weight: 650; line-height: 1.4; }
+.iconButton { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: var(--devices-text); cursor: pointer; }
+.devices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 16px; padding: 16px 16px max(24px, env(safe-area-inset-bottom)); }
+.addDevice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 116px;
+  aspect-ratio: 1.5;
+  padding: 20px 12px;
+  border: 1px solid #ffffff0e;
+  border-top-color: #ffffff1c;
+  border-radius: 24px;
+  background: var(--devices-surface);
+  color: var(--devices-text);
+  box-shadow: inset 0 1px 1px #ffffff05;
+  cursor: pointer;
+}
+.addDevice span { font-size: 15px; line-height: 1.4; color: #d4dce7; }
+.connectedDevice { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 116px; padding: 20px 14px 16px; border: 1px solid #ffffff0e; border-top-color: #ffffff1c; border-radius: 24px; background: #2c405d; text-align: left; }
+.connectedDevice h2 { margin: 0; font-size: 14px; font-weight: 500; letter-spacing: .025em; overflow-wrap: anywhere; }
+.deviceArtwork { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.treadmill { display: block; width: 78px; height: auto; max-width: calc(100% - 32px); }
+.bluetooth { display: grid; place-items: center; flex: 0 0 24px; height: 24px; margin-bottom: 2px; border-radius: 50%; background: #479dff; color: #fff; }
+.page button:focus-visible { outline: 2px solid #b8d9ff; outline-offset: 3px; }
+.page button:active { background: #263a54; }
+@media (hover: hover) { .page button:hover { background: #22354d; } }

@@ -1024,8 +1024,9 @@ body { background: var(--bg); }
 .home-quick-action svg { width: 16px; height: 16px; }
 .home-quick-action--support svg { color: #aeb4ff; }
 .home-quick-action--device .treadmill-icon { width: 19px; height: 19px; }
-.home-quick-action--device.is-online { border-color: rgba(69,185,130,.2); background: rgba(30,95,70,.1); color: #47d69a; }
-.home-quick-action--device.is-offline { color: #626772; }
+.home-quick-action--device { background: rgba(20,25,32,.94); border-color: rgba(255,255,255,.2); }
+.home-quick-action--device.is-online { border-color: rgba(84,219,163,.4); background: rgba(14,40,32,.94); color: #63e6b0; }
+.home-quick-action--device.is-offline { color: #a7afbd; }
 .home-quick-action--device::after {
   content: "";
   position: absolute;
@@ -1041,15 +1042,15 @@ body { background: var(--bg); }
 .home-reward-chip {
   gap: 5px;
   padding: 0 11px;
-  border: 1px solid rgba(255,149,79,.14);
+  border: 1px solid rgba(255,179,109,.38);
   border-radius: 99px;
-  background: rgba(255,149,79,.065);
-  color: rgba(244,240,238,.62);
+  background: rgba(49,32,24,.94);
+  color: #fff1e6;
   font-size: 9px;
   font-weight: 550;
-  opacity: .76;
+  opacity: 1;
 }
-.home-reward-chip svg { width: 13px; height: 13px; color: rgba(255,179,109,.72); }
+.home-reward-chip svg { width: 13px; height: 13px; color: #ffbd83; }
 .home-city-swipe-zone { position: relative; min-width: 0; min-height: 0; overflow: hidden; touch-action: pan-x pan-y; user-select: none; }
 .home-city-swipe-zone::before,
 .home-city-swipe-zone::after {

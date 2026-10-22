@@ -1,0 +1,92 @@
+.page {
+  --route-bg: #0b0d12;
+  --route-surface: #14171e;
+  --route-text: #f2f3f8;
+  --route-muted: #a2a8b8;
+  --route-accent: #b4b6ff;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  position: relative;
+  background: var(--route-bg);
+  color: var(--route-text);
+  padding-bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
+  scrollbar-width: none;
+}
+.page button { font: inherit; }
+.page > .hero { flex: 0 0 auto; }
+.page button:focus-visible { outline: 2px solid var(--route-accent); outline-offset: 3px; }
+.hero { min-height: clamp(270px, 34svh, 340px); display: flex; flex-direction: column; position: relative; isolation: isolate; margin: 0; overflow: hidden; background: var(--route-bg); }
+.heroImage, .heroShade { position: absolute; inset: 0; width: 100%; height: 100%; }
+.heroImage { object-fit: cover; object-position: center 42%; z-index: -2; }
+.heroShade { background: linear-gradient(180deg, rgba(8,12,20,.3), rgba(8,12,20,.03) 30%, rgba(11,13,18,.55) 62%, rgba(11,13,18,.9) 86%, var(--route-bg) 100%); z-index: -1; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+.journeyIcon { width: 28px; height: 28px; flex-shrink: 0; color: #fff; filter: drop-shadow(0 1px 4px #0006); }
+.back { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid #ffffff26; background: #0b0d1266; color: #fff; cursor: pointer; }
+.heroContent { margin-top: auto; padding: 36px 22px 24px; }
+.englishName { margin: 0 0 4px; color: #e2e6ef; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; overflow-wrap: anywhere; }
+.heroContent h1 { margin: 0; font-size: clamp(2.375rem, 11vw, 3.25rem); line-height: 1.15; font-weight: 750; letter-spacing: -.04em; color: #fff; overflow-wrap: anywhere; }
+.heroBottom { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; margin-top: 12px; flex-wrap: wrap; }
+.heroBottom p { margin: 0; font-size: 12px; color: #d3d7e1; font-variant-numeric: tabular-nums; }
+.heroBottom p > span { margin: 0 7px; color: #9299aa; }
+.overview { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-left: auto; padding: 0 12px; border-radius: 12px; border: 1px solid #ffffff36; background: #0b0d12b3; color: #f2f3f8; font-size: 12px !important; cursor: pointer; }
+.overview > svg:first-child { color: var(--route-accent); }
+.routeList { position: relative; display: flex; flex-direction: column; flex: 1 0 auto; margin: -8px 12px 0; padding: 12px 8px 0; background: transparent; }
+.railContainer { display: flex; flex: 1; min-width: 0; }
+.listHeading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; padding: 0 16px 12px; gap: 4px 12px; }
+.listHeading h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.listHeading p { margin: 0; font-size: 11px; color: var(--route-muted); }
+.routeCard { position: relative; display: flex; flex-direction: column; width: 100%; min-height: clamp(380px, calc(66svh - 120px), 560px); text-align: left; margin: 0 0 20px; padding: 0; overflow: hidden; border: 1px solid #ffffff14; border-radius: 20px; background: var(--route-surface); color: var(--route-text); cursor: pointer; touch-action: manipulation; transition: border-color .18s ease, background .18s ease, transform .14s ease; }
+.routeCard:not(.lockedRoute):active { transform: scale(.99); border-color: var(--route-accent); background: #212438; }
+.nextRoute { border-color: #a4a7ffb3; background: #1c1d31; }
+.completedRoute { border-color: #74d8b66b; background: #111f1d; }
+.lockedRoute { border-color: #ffffff1c; background: #101218; }
+.lockedRoute .routeTitle { color: #d3d7e1; }
+.thumbnail { position: relative; display: block; flex: 1 0 220px; width: 100%; min-height: 220px; overflow: hidden; background: #222833; }
+.routeImage { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
+.lockedRoute .routeImage { filter: grayscale(.7) brightness(.65); }
+.imageShade { position: absolute; inset: 0; background: linear-gradient(180deg, #080c183d, transparent 35%, transparent 55%, #080c18d9); pointer-events: none; }
+.imageMeta { position: absolute; inset: auto 14px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.routeRating { display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; padding: 4px 7px; border-radius: 7px; background: #0b0d12b3; color: #f6ce83; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.routeRating b { font-size: 13px; font-weight: 650; }
+.routeRating > span { font-size: 10px; color: #e4e7ed; }
+.routeIdentity { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px; }
+.routeNumber { display: grid; place-items: center; min-width: 32px; height: 28px; padding: 0 7px; border: 1px solid #ffffff24; border-radius: 8px; background: #0b0d12e6; color: #fff; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.routeContent { flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 16px 18px; }
+.routeStatus { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 5px 10px; border: 1px solid #ffffff38; border-radius: 9px; background: #252a33; font-size: 12px; font-weight: 650; color: #e0e3ea; }
+.nextRoute .routeStatus { color: #19162f; background: #b4b6ff; border-color: #d1d2ff; }
+.completedRoute .routeStatus { color: #0c3024; background: #74d8b6; border-color: #a0e8ce; }
+.routeTitle { font-size: 1.0625rem; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.categoryTag { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 3px 8px; border: 1px solid #ffffff24; border-radius: 8px; background: #0b0d12e6; color: #edf0f6; font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+.landmarks { font-size: .75rem; line-height: 1.6; color: var(--route-muted); overflow-wrap: anywhere; }
+.routeMetrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; padding-top: 12px; margin-top: 6px; width: 100%; border-top: 1px solid #ffffff0d; font-variant-numeric: tabular-nums; }
+.routeMetrics b { display: inline-flex; align-items: baseline; gap: 3px; font-size: 20px; font-weight: 650; line-height: 1; white-space: nowrap; }
+.routeMetrics small { font-size: .75rem; color: var(--route-muted); font-weight: 400; }
+.routeMetrics > span { display: inline-flex; gap: 5px; align-items: center; font-size: .75rem; line-height: 1; color: #bdc3d0; white-space: nowrap; }
+.routeMetrics > span > svg { flex-shrink: 0; }
+.cardAction { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 42px; margin-top: 9px; padding: 10px 12px; border: 1px solid #ffffff12; border-radius: 11px; color: #b6bdca; background: #ffffff04; font-size: 12px; font-weight: 600; }
+.cardAction > span { flex: 1; }
+.nextRoute .cardAction { background: #a4a7ff; border-color: #b4b6ff; color: #17152e; }
+.completedRoute .cardAction { background: #74d8b610; border-color: #74d8b640; color: #8ae3c4; }
+.empty { padding: 32px 16px; text-align: center; color: var(--route-muted); }
+.empty > svg { margin: 0 auto 16px; }
+.empty h3 { font-size: 16px; color: var(--route-text); margin: 0 0 8px; }
+.empty p { font-size: 12px; margin-bottom: 20px; }
+@media (hover: hover) {
+  .nextRoute:hover { border-color: #c8caff; background: #24263a; }
+  .completedRoute:hover { border-color: #74d8b6; background: #172c27; }
+  .overview:hover, .back:hover { background: #ffffff20; }
+}
+@media (max-width: 360px) {
+  .heroContent { padding-inline: 20px; }
+  .routeList { margin-inline: 8px; }
+  .routeContent { padding: 14px; }
+  .routeTitle { font-size: 1rem; }
+  .routeMetrics { gap: 6px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page button { transition: none; }
+  .routeCard:not(.lockedRoute):active { transform: none; }
+}

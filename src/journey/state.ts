@@ -10,6 +10,7 @@ const routeIdsFor = (cityId: string, count: number) =>
   getJourneyCity(cityId)?.routes.slice(0, count).map(route => route.id) ?? [];
 
 const demoCompletedCityIds = ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore'] as const;
+const PREVIEW_COMPLETED_ROUTE_COUNT = 8;
 
 const initialCompletedRoutes: Record<string, string[]> = {
   beijing: routeIdsFor('beijing', 10),
@@ -17,7 +18,7 @@ const initialCompletedRoutes: Record<string, string[]> = {
   cairo: routeIdsFor('cairo', 10),
   'los-angeles': routeIdsFor('los-angeles', 10),
   singapore: routeIdsFor('singapore', 10),
-  tokyo: routeIdsFor('tokyo', 9)
+  tokyo: routeIdsFor('tokyo', PREVIEW_COMPLETED_ROUTE_COUNT)
 };
 
 const initialRevealedRoutes: Record<string, string[]> = {
@@ -49,7 +50,7 @@ export const createPrototypeJourneyState = (cityId: string): JourneyState => {
   const completedCityIds = demoCompletedCityIds.filter(item => item !== currentCityId);
   const completedRouteIdsByCity: Record<string, string[]> = Object.fromEntries([
     ...completedCityIds.map(item => [item, routeIdsFor(item, 10)]),
-    [currentCityId, routeIdsFor(currentCityId, 9)]
+    [currentCityId, routeIdsFor(currentCityId, PREVIEW_COMPLETED_ROUTE_COUNT)]
   ]);
   const discoveredSpotKeys = Object.entries(completedRouteIdsByCity).flatMap(([completedCityId, routeIds]) =>
     routeIds.flatMap(routeId =>
@@ -78,9 +79,7 @@ export const getRevealedRouteIds = (state: JourneyState, cityId: string) =>
   state.revealedRouteIdsByCity[cityId] ?? [];
 
 export const getOpenRouteCount = (completedCount: number) => {
-  if (completedCount < 3) return 3;
-  if (completedCount < 6) return 6;
-  return Math.min(10, completedCount + 1);
+  return Math.min(10, Math.max(0, completedCount) + 1);
 };
 
 export const getRouteStatus = (
@@ -91,8 +90,10 @@ export const getRouteStatus = (
   if (getCompletedRouteIds(state, cityId).includes(routeId)) return 'completed';
   const city = getJourneyCity(cityId);
   const routeIndex = city?.routes.findIndex(route => route.id === routeId) ?? -1;
-  if (routeIndex < 0) return 'locked';
-  if (routeIndex >= getOpenRouteCount(getCompletedRouteIds(state, cityId).length)) return 'locked';
+  if (!city || routeIndex < 0) return 'locked';
+  // Only the first unfinished route is available, even for old out-of-order progress.
+  const completed = new Set(getCompletedRouteIds(state, cityId));
+  if (!city.routes.slice(0, routeIndex).every(route => completed.has(route.id))) return 'locked';
   if (getRevealedRouteIds(state, cityId).includes(routeId)) return 'revealed';
   return 'discoverable';
 };

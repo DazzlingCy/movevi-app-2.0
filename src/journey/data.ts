@@ -81,6 +81,7 @@ const citySeeds: CitySeed[] = [
 
 const makeRoutes = (city: CitySeed): JourneyRoute[] => city.landmarks.map((landmark, index) => {
   const nextLandmark = city.landmarks[(index + 1) % city.landmarks.length];
+  const thirdLandmark = city.landmarks[(index + 2) % city.landmarks.length];
   const distanceKm = DISTANCES[index];
   const durationMinutes = Math.round(distanceKm * PACE_MINUTES_PER_KM[index]);
 
@@ -89,11 +90,11 @@ const makeRoutes = (city: CitySeed): JourneyRoute[] => city.landmarks.map((landm
     cityId: city.id,
     order: index + 1,
     name: `${landmark}·${ROUTE_SUFFIXES[index]}`,
-    landmarks: [landmark, nextLandmark],
+    landmarks: [landmark, nextLandmark, thirdLandmark],
     distanceKm,
     durationMinutes,
     calories: Math.round(distanceKm * 64),
-    description: `从${landmark}出发，途经${nextLandmark}，用一段轻快奔跑感受${city.name}的城市纹理。`
+    description: `从${landmark}出发，途经${nextLandmark}，抵达${thirdLandmark}，用一段轻快奔跑感受${city.name}的城市纹理。`
   };
 });
 

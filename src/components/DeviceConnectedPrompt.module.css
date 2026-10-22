@@ -1,0 +1,16 @@
+.layer { position: absolute; inset: 0; }
+.layer > :global(.modal-backdrop) { align-items: center; justify-content: center; padding: 24px; }
+.dialog:global(.modal-sheet) { width: 100%; max-width: 360px; padding: 30px 24px 18px; border: 1px solid #ffffff1c; border-radius: 26px; background: #151b24; color: #f2f5fa; text-align: center; }
+.dialog:global(.modal-sheet)::before { display: none; }
+.deviceIcon { position: relative; display: grid; place-items: center; width: 140px; height: 104px; margin: 0 auto 22px; border: 1px solid #ffffff18; border-radius: 24px; background: #2c405d; color: #74d8b6; }
+.treadmill { display: block; width: 112px; height: 77px; }
+.check { position: absolute; right: -4px; bottom: -2px; border-radius: 50%; background: #151b24; }
+.dialog h2 { margin: 0 0 12px; font-size: 23px; font-weight: 650; line-height: 1.35; }
+.connectionStatus { margin: 0 0 8px; font-size: 14px; color: #74d8b6; }
+.description { margin: 0; font-size: 13px; line-height: 1.7; color: #adb8c8; }
+.dialog button { display: block; width: 100%; min-height: 48px; border: 0; border-radius: 14px; font: inherit; cursor: pointer; }
+.confirm { margin-top: 24px; background: #74d8b6; color: #09281f; font-weight: 650 !important; }
+.viewDevice { margin-top: 4px; background: transparent; color: #c2ccdc; font-size: 13px !important; }
+.dialog button:focus-visible { outline: 2px solid #b8d9ff; outline-offset: 3px; }
+.confirm:active { background: #91e5c8; }
+.viewDevice:active { background: #ffffff08; }

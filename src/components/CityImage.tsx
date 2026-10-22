@@ -9,6 +9,8 @@ interface CityImageProps {
   className?: string;
   fallbackLabel?: string;
   referrerPolicy?: HTMLAttributeReferrerPolicy;
+  loading?: 'eager' | 'lazy';
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 const cityGradientStops = [
@@ -22,7 +24,7 @@ function getGradientIndex(label: string) {
   return Array.from(label).reduce((sum, char) => sum + char.charCodeAt(0), 0) % cityGradientStops.length;
 }
 
-export default function CityImage({ src, alt, className, fallbackLabel, referrerPolicy = 'no-referrer' }: CityImageProps) {
+export default function CityImage({ src, alt, className, fallbackLabel, referrerPolicy = 'no-referrer', loading = 'lazy', fetchPriority = 'auto' }: CityImageProps) {
   const [failed, setFailed] = useState(false);
   const label = fallbackLabel || alt || 'CITY';
 
@@ -41,7 +43,8 @@ export default function CityImage({ src, alt, className, fallbackLabel, referrer
         src={src}
         alt={alt}
         className={className}
-        loading="lazy"
+        loading={loading}
+        fetchPriority={fetchPriority}
         decoding="async"
         referrerPolicy={referrerPolicy}
         onError={() => setFailed(true)}
@@ -52,6 +55,7 @@ export default function CityImage({ src, alt, className, fallbackLabel, referrer
   return (
     <div
       aria-label={alt}
+      aria-hidden={alt === '' ? true : undefined}
       className={cn('flex items-center justify-center overflow-hidden bg-slate-950', className)}
       style={{ background: gradient }}
     >

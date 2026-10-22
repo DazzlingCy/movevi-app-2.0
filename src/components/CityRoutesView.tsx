@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, BarChart2, Globe2, Lock, Award, Route, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, Play, LockOpen, Star } from 'lucide-react';
 import { CityData } from '../data/cities';
 import CityImage from './CityImage';
+import RouteRunners from './RouteRunners';
+import RouteCardRail from './RouteCardRail';
 
 import { getRouteData } from '../data/cities';
 import CityRouteOverviewView from './CityRouteOverviewView';
+import styles from './CityRoutesView.module.css';
+import { getRouteCover } from '../data/routeCovers';
+import { getInitialRouteIndex } from '../journey/routeFocus';
+import { getRouteCategory, type RouteCategory } from '../data/routeCategories';
 
 export interface CityRouteListItem {
+  category?: RouteCategory;
   title: string;
   distance: string;
   duration: string;
@@ -15,6 +22,9 @@ export interface CityRouteListItem {
   rating: string;
   spots: string;
   intro: string;
+  coverImage?: string;
+  runnerCount?: number;
+  runnerAvatars?: string[];
   isCompleted?: boolean;
   isUnlocked?: boolean;
 }
@@ -32,13 +42,22 @@ interface CityRoutesViewProps {
 export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
   const [showLitModal, setShowLitModal] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
+  const [routeSelection, setRouteSelection] = useState<{ cityId: string; index: number } | null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [isLightingUp, setIsLightingUp] = useState(false);
-  const [activeTab, setActiveTab] = useState(city.id === '1' ? '环西湖' : '精选推荐');
-
-  const tabs = city.id === '1' 
-    ? ['环西湖', '文化类', '现代类', '自然类'] 
-    : ['精选推荐', '文化探索', '现代都市', '自然风光'];
+  const completedIndices = completedRouteIndices ?? city.completedRouteIndices ?? [];
+  const routes = Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }, (_, i) => {
+    const routeId = i + 1;
+    const data = routeItems?.[i] ?? getRouteData(city.id, routeId);
+    const isCompleted = routeItems?.[i]?.isCompleted ?? completedIndices.includes(routeId);
+    const isUnlocked = routeItems?.[i]?.isUnlocked ?? (
+      isCompleted || (Array.from({ length: i }, (_, index) => index + 1).every(index => completedIndices.includes(index))
+        && (openRouteCount === undefined || routeId <= openRouteCount))
+    );
+    return { routeId, data, isCompleted, isUnlocked };
+  });
+  const totalDistance = routes.reduce((sum, route) => sum + (Number.parseFloat(route.data.distance) || 0), 0);
+  const routeCardIndex = routeSelection?.cityId === city.id ? routeSelection.index : getInitialRouteIndex(routes);
 
   useEffect(() => {
     setShowOverview(false);
@@ -71,136 +90,81 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
 
 
   return (
-    <div className="w-full h-full bg-[#f4f6f8] overflow-y-auto text-slate-800 font-sans hide-scrollbar relative pb-12">
-      {/* Hero Header Area */}
-      <div className="relative w-full h-[40vh] shrink-0">
-        <CityImage src={city.image} alt={city.name} fallbackLabel={city.name} className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/20" />
-        
-        {/* Header Icons */}
-        <div className="absolute top-0 left-0 right-0 pt-safeb px-4 py-4 z-20 flex justify-between items-center text-white">
-          <button onClick={onBack} className="p-2 -ml-2 drop-shadow-md">
-            <ChevronLeft size={32} />
-          </button>
-          <button type="button" onClick={() => setShowOverview(true)} aria-label="查看路线概览" className="p-2 -mr-2 drop-shadow-md">
-            <BarChart2 size={24} />
-          </button>
+    <div className={styles.page} role="main" id="main-content">
+      <header className={styles.hero}>
+        <CityImage src={city.image} alt="" fallbackLabel={city.name} className={styles.heroImage} loading="eager" fetchPriority="high" />
+        <div className={styles.heroShade} />
+        <div className={styles.toolbar}>
+          <button type="button" onClick={onBack} className={styles.back} aria-label="返回城市"><ChevronLeft size={22} /></button>
+          <svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
+            <rect x="3" y="11" width="5" height="15" rx="1" fill="currentColor" />
+            <rect x="11.5" y="3" width="5" height="23" rx="1" fill="currentColor" />
+            <rect x="20" y="16" width="5" height="10" rx="1" fill="currentColor" />
+          </svg>
         </div>
-
-        {/* City Title and Button */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-10">
-          <div className="relative flex flex-col items-center">
-            <h1 className="text-5xl sm:text-6xl font-black text-white/90 tracking-widest drop-shadow-lg uppercase" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.8)' }}>
-              {city.englishName || 'CITY'}
-            </h1>
-            <h2 className="text-3xl font-bold text-white drop-shadow-md mt-1 mb-8" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              {city.name}
-            </h2>
-          </div>
-          
-          <button type="button" onClick={() => setShowOverview(true)} aria-label="查看路线概览" className="group flex min-w-[188px] items-center gap-3 rounded-2xl border border-white/25 bg-black/40 px-3 py-2.5 !text-white shadow-[0_10px_28px_rgba(0,0,0,.24)] backdrop-blur-xl transition hover:bg-black/50 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-orange-500">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#ff8c5a,#f45c2c)] text-white shadow-[0_5px_14px_rgba(244,92,44,.34)]"><Route size={19} /></span>
-            <strong className="min-w-0 flex-1 text-left text-[15px] font-black tracking-normal text-white">路线概览</strong>
-            <ChevronRight size={18} className="text-white/60 transition-transform group-hover:translate-x-0.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-[#f4f6f8] rounded-t-3xl -mt-6 relative z-20 px-4 pt-6 pb-2">
-        <div className="flex justify-between items-center mb-4 px-2">
-          {tabs.map((tab) => (
-            <button 
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`text-[15px] font-medium transition-colors ${activeTab === tab ? 'text-[#f45c2c]' : 'text-slate-500'}`}
-            >
-              {tab}
+        <div className={styles.heroContent}>
+          <p className={styles.englishName}>{city.englishName || 'CITY'}</p>
+          <h1>{city.name}</h1>
+          <div className={styles.heroBottom}>
+            <p>{routes.length} 条路线<span>·</span>{totalDistance.toFixed(1)} 公里</p>
+            <button type="button" onClick={() => setShowOverview(true)} className={styles.overview}>
+              <Route size={16} />路线概览<ChevronRight size={16} />
             </button>
-          ))}
+          </div>
         </div>
-        {/* Tab Indicator */}
-        <div className="flex justify-center items-center mb-2 px-2">
-           <div className="h-px bg-slate-200 flex-1" />
-           <span className="px-4 text-xs text-slate-400">{activeTab}</span>
-           <div className="h-px bg-slate-200 flex-1" />
+      </header>
+
+      <section className={styles.routeList} aria-labelledby="city-routes-title">
+        <div className={styles.listHeading}>
+          <h2 id="city-routes-title">选择路线</h2><p>按路线顺序探索</p>
         </div>
-      </div>
-
-      {/* Route List */}
-      <div className="px-4 space-y-4">
-        {Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }).map((_, i) => {
-          // Adjust logic so earlier routes are completed/unlocked for demo purpose
-          const routeId = i + 1;
-          const routeOverride = routeItems?.[i];
-          const isCompleted = routeOverride?.isCompleted ?? completedRouteIndices?.includes(routeId) ?? city.completedRouteIndices?.includes(routeId);
-          // Unlock the first one, or ones that are completed, or the one next to the last completed
-          const lastCompleted = (completedRouteIndices ?? city.completedRouteIndices ?? []).reduce((max, cur) => Math.max(max, cur), 0);
-          const isUnlocked = routeOverride?.isUnlocked ?? (openRouteCount ? routeId <= openRouteCount : routeId === 1 || isCompleted || routeId === lastCompleted + 1);
-          const isFreshlyUnlocked = isUnlocked && !isCompleted && routeId === lastCompleted + 1;
-
-          const routeData = routeOverride ?? getRouteData(city.id, routeId);
-          const numSpots = routeData.spots.split('—').length || 3;
-          const runners = 1890 - i * 300;
-
+        <div key={city.id} className={styles.railContainer}>
+        <RouteCardRail initialIndex={routeCardIndex} onSelect={index => setRouteSelection({ cityId: city.id, index })} items={routes.map(({ routeId, data, isCompleted, isUnlocked }) => {
+          const category = routeItems?.[routeId - 1]?.category ?? getRouteCategory(city.name, routeId);
+          const numSpots = data.spots.split(/—|→/).filter(spot => spot.trim()).length;
+          const statusLabel = isCompleted ? '已完成' : isUnlocked ? '已解锁' : '未解锁';
+          const durationParts = data.duration.split(':').map(Number);
+          const durationLabel = durationParts.length === 2 && durationParts.every(Number.isFinite)
+            ? `${durationParts[0]}分${durationParts[1] ? `${durationParts[1]}秒` : '钟'}`
+            : data.duration;
           return (
-            <div 
-              key={i} 
-              onClick={() => isUnlocked && onRouteClick(routeId)}
-              className={`relative bg-white rounded-2xl p-4 flex gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFreshlyUnlocked ? 'ring-2 ring-[#31d28c]/45 shadow-[0_8px_24px_rgba(49,210,140,0.18)]' : ''} ${!isUnlocked ? 'opacity-70 grayscale-[20%]' : 'cursor-pointer hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all'}`}
+            <button
+              type="button"
+              key={routeId}
+              className={`${styles.routeCard} ${isCompleted ? styles.completedRoute : isUnlocked ? styles.nextRoute : styles.lockedRoute}`}
+              onClick={() => onRouteClick(routeId)}
             >
-              {isFreshlyUnlocked && (
-                <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700 shadow-sm">
-                  <Sparkles size={11} className="fill-emerald-300 text-emerald-500" />
-                  新解锁
-                </div>
-              )}
-              {/* Left Image Area */}
-              <div className="w-[100px] h-[130px] bg-slate-100 rounded-xl overflow-hidden shrink-0 relative shadow-inner">
-                <CityImage src={city.image} alt="Route" fallbackLabel={city.name} className="absolute inset-0 w-full h-full object-cover" />
-                {!isUnlocked && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <div className="bg-gradient-to-b from-[#ffb48f] to-[#ff8c5a] p-2.5 rounded-full shadow-lg border-2 border-white/80">
-                      <Lock size={18} className="text-white" />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Content Area */}
-              <div className="flex-1 overflow-hidden flex flex-col justify-between py-1">
-                <h3 className="text-[15px] font-bold text-slate-800 line-clamp-2 leading-snug">
-                  路线{routeId}: {routeData.title}
-                </h3>
-                
-                <div className="bg-[#fff9f0] rounded px-3 py-2 my-2 border border-[#fef0dd]">
-                  <p className="text-[11px] text-[#b39c82] line-clamp-1">{routeData.spots}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-y-2 mt-auto">
-                   <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                     景点总数 <span className="font-semibold text-slate-700 text-xs">{numSpots}个</span>
-                   </div>
-                   <div className="text-[11px] text-slate-500 flex items-center justify-end gap-1">
-                     运动时长 <span className="font-semibold text-slate-700 text-xs font-mono">{routeData.duration}</span>
-                   </div>
-                   <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                     路线评分 <span className="font-bold text-[#f45c2c] text-xs">{routeData.rating}分</span>
-                   </div>
-                   <div className="flex justify-end items-center gap-1.5">
-                      <div className="flex -space-x-1">
-                        <img src={`https://i.pravatar.cc/100?img=${(i * 3 + 1) % 70}`} alt="avatar" className="w-[14px] h-[14px] rounded-full border border-white" />
-                        <img src={`https://i.pravatar.cc/100?img=${(i * 3 + 2) % 70}`} alt="avatar" className="w-[14px] h-[14px] rounded-full border border-white" />
-                        <img src={`https://i.pravatar.cc/100?img=${(i * 3 + 3) % 70}`} alt="avatar" className="w-[14px] h-[14px] rounded-full border border-white" />
-                      </div>
-                      <span className="text-[10px] text-slate-400 scale-90 origin-right">{runners}人跑过</span>
-                   </div>
-                </div>
-              </div>
-            </div>
+              <span className={styles.thumbnail}>
+                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={routeId === 1 ? 'eager' : 'lazy'} />
+                <span className={styles.imageShade} />
+                <span className={styles.routeIdentity}>
+                  <span className={styles.routeNumber}>{String(routeId).padStart(2, '0')}</span>
+                  <span className={styles.categoryTag}>{category}</span>
+                </span>
+                <span className={styles.routeStatus}>
+                  {isCompleted ? <Check size={14} /> : isUnlocked ? <LockOpen size={14} /> : <Lock size={14} />}{statusLabel}
+                </span>
+                <span className={styles.imageMeta}>
+                  <RouteRunners compact count={routeItems?.[routeId - 1]?.runnerCount} avatars={routeItems?.[routeId - 1]?.runnerAvatars} />
+                  <span className={styles.routeRating} aria-label={`路线评分 ${data.rating} 分`}><Star size={13} fill="currentColor" aria-hidden="true" /><b>{data.rating}</b><span>分</span></span>
+                </span>
+              </span>
+              <span className={styles.routeContent}>
+                <strong className={styles.routeTitle}>{data.title}</strong>
+                <span className={styles.landmarks}>{data.spots.replace(/—/g, ' → ')}</span>
+                <span className={styles.routeMetrics}><b>{data.distance}<small> km</small></b><span><Clock3 size={12} />{durationLabel}</span><span><MapPin size={12} />{numSpots} 景点</span></span>
+                <span className={styles.cardAction}>
+                  {isCompleted ? <Check size={16} /> : isUnlocked ? <Play size={16} /> : <Lock size={16} />}
+                  <span>{isCompleted ? '已完成 · 再跑一次' : isUnlocked ? '开始这条路线' : '未解锁 · 查看详情'}</span>
+                  <ChevronRight size={16} />
+                </span>
+              </span>
+            </button>
           );
-        })}
-      </div>
+        })} />
+        </div>
+        {routes.length === 0 && <div className={styles.empty}><Route size={26} /><h3>路线筹备中</h3><p>这座城市的路线即将开放</p></div>}
+      </section>
 
       {/* City Lit Modal */}
       <AnimatePresence>

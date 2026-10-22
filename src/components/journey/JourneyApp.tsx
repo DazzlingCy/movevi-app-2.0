@@ -20,6 +20,8 @@ import JourneyLevelView from '../JourneyLevelView';
 import LeaderboardView from '../LeaderboardView';
 import MedalLotteryView from '../MedalLotteryView';
 import OnlineSupportView from '../OnlineSupportView';
+import MyDevicesView from '../MyDevicesView';
+import DeviceConnectedPrompt from '../DeviceConnectedPrompt';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
 import TeamRelayView, { type TeamRelayMember, type TeamRelayTask } from '../TeamRelayView';
@@ -136,7 +138,6 @@ const getRouteListOpenCount = (state: JourneyState, cityId: string) => {
 
 const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteListItem => {
   const status = getRouteStatus(state, route.cityId, route.id);
-  const listOpenCount = getRouteListOpenCount(state, route.cityId);
   return {
     title: route.name,
     distance: route.distanceKm.toFixed(1),
@@ -146,7 +147,7 @@ const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteL
     spots: route.landmarks.join(' — '),
     intro: route.description,
     isCompleted: status === 'completed',
-    isUnlocked: status !== 'locked' && route.order <= listOpenCount
+    isUnlocked: status !== 'locked'
   };
 };
 
@@ -603,8 +604,8 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
             className={`home-quick-action home-quick-action--device ${deviceConnected ? 'is-online' : 'is-offline'}`}
             type="button"
             onClick={onDevice}
-            aria-label={deviceConnected ? '跑步机已连接，查看设备状态' : '跑步机未连接，查看连接设置'}
-            title={deviceConnected ? '跑步机已连接' : '跑步机未连接'}
+            aria-label="我的设备"
+            title="我的设备"
           >
             <TreadmillIcon connected={deviceConnected} />
           </button>
@@ -1416,7 +1417,9 @@ export default function JourneyApp() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [runningRoute, setRunningRoute] = useState<{ cityId: string; routeId: string } | null>(null);
   const [utilityMode, setUtilityMode] = useState<'device' | 'profile' | null>(null);
-  const [deviceConnected, setDeviceConnected] = useState(true);
+  const [deviceConnected, setDeviceConnected] = useState(false);
+  const [startupConnectionSucceeded, setStartupConnectionSucceeded] = useState(false);
+  const [deviceConnectionAcknowledged, setDeviceConnectionAcknowledged] = useState(false);
   const [manualReducedMotion, setManualReducedMotion] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [focusNextStation, setFocusNextStation] = useState(false);
@@ -1462,6 +1465,17 @@ export default function JourneyApp() {
   const effectiveCandidateId = selectedCandidateId ?? candidateCities[0]?.id ?? '';
 
   useEffect(() => {
+    // Prototype-only auto-connect. Replace this simulated success with the hardware
+    // adapter's successful connection callback before enabling real device support.
+    // Cleanup also prevents duplicate callbacks during React StrictMode mounting.
+    const timer = window.setTimeout(() => {
+      setDeviceConnected(true);
+      setStartupConnectionSucceeded(true);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (state.currentPage !== 'travel' || !state.pendingNextCityId) return;
     const timer = window.setTimeout(() => {
       dispatch({ type: 'ARRIVE_NEXT_CITY' });
@@ -1492,9 +1506,7 @@ export default function JourneyApp() {
     if (!cityForRoutes) return;
     const route = cityForRoutes.routes[routeIndex - 1];
     if (!route) return;
-    if (route.order > getRouteListOpenCount(state, cityForRoutes.id)) return;
     const status = getRouteStatus(state, cityForRoutes.id, route.id);
-    if (status === 'locked') return;
     if (status === 'discoverable') {
       dispatch({ type: 'REVEAL_ROUTE', cityId: cityForRoutes.id, routeId: route.id });
       setNotice(`${route.name}，已揭晓`);
@@ -1506,7 +1518,12 @@ export default function JourneyApp() {
     if (status === 'discoverable') { dispatch({ type: 'REVEAL_ROUTE', cityId: route.cityId, routeId: route.id }); setNotice(`${route.name}，已揭晓`); return; }
     if (status === 'revealed' || status === 'completed') setSelectedRouteId(route.id);
   };
-  const startRun = (route: JourneyRoute) => { if (!deviceConnected) setDeviceConnected(true); setRunningRoute({ cityId: route.cityId, routeId: route.id }); setRouteCityId(null); };
+  const startRun = (route: JourneyRoute) => {
+    if (getRouteStatus(state, route.cityId, route.id) === 'locked') return;
+    if (!deviceConnected) setDeviceConnected(true);
+    setRunningRoute({ cityId: route.cityId, routeId: route.id });
+    setRouteCityId(null);
+  };
   const startSelectedRoute = () => {
     if (!routeCityId || !selectedRouteId) return;
     const route = getJourneyRoute(routeCityId, selectedRouteId);
@@ -1636,6 +1653,10 @@ export default function JourneyApp() {
   const lastRunCity = state.lastRun ? getJourneyCity(state.lastRun.cityId) : undefined;
   const lastRunRoute = state.lastRun ? getJourneyRoute(state.lastRun.cityId, state.lastRun.routeId) : undefined;
   const pendingCity = state.pendingNextCityId ? getJourneyCity(state.pendingNextCityId) : undefined;
+  const showDeviceConnectedPrompt = startupConnectionSucceeded && deviceConnected && !deviceConnectionAcknowledged
+    && !isFirstUse && activeTab === 'home' && state.currentPage === 'home'
+    && !routeSheetCity && !runningRoute && !activityRoute && !runningActivityRoute
+    && !weightRoute && !runningWeightRoute && !legacyFeature && !cityListOpen && !utilityMode;
 
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell"><div className="paper-grain" aria-hidden="true" />
@@ -1665,9 +1686,10 @@ export default function JourneyApp() {
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
-        {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} /></motion.div>}
+        {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{utilityMode === 'device' ? <MyDevicesView connected={deviceConnected} onBack={() => setUtilityMode(null)} onAdd={() => setNotice('添加设备暂未接入，当前为页面预览')} onScan={() => setNotice('扫码绑定暂未接入，当前为页面预览')} /> : <UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} />}</motion.div>}
+        {showDeviceConnectedPrompt && <motion.div className="overlay-layer" key="device-connected" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18 }}><DeviceConnectedPrompt onDismiss={() => setDeviceConnectionAcknowledged(true)} onViewDevice={() => { setDeviceConnectionAcknowledged(true); setUtilityMode('device'); }} /></motion.div>}
       </AnimatePresence>
-      {!isFirstUse && !runningRoute && !runningActivityRoute && !activityRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!isFirstUse && utilityMode !== 'device' && !runningRoute && !runningActivityRoute && !activityRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );

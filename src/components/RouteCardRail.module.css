@@ -1,0 +1,9 @@
+.root { display: flex; flex-direction: column; flex: 1; min-width: 0; margin-inline: -8px; }
+.rail { position: relative; display: flex; flex: 1; align-items: stretch; gap: 12px; overflow-x: auto; padding-block: 4px; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x pan-y; cursor: grab; user-select: none; }
+.rail::-webkit-scrollbar { display: none; }
+.rail[data-dragging='true'] { scroll-snap-type: none; cursor: grabbing; }
+.slide { flex: 0 0 calc(100% - 48px); min-width: 0; display: flex; scroll-snap-align: center; }
+.slide:first-child { margin-left: 24px; }
+.slide:last-child { margin-right: 24px; }
+.slide > button { flex: 1; margin-bottom: 0; }
+.rail:focus-visible { outline: 2px solid #b4b6ff; outline-offset: -3px; border-radius: 16px; }
