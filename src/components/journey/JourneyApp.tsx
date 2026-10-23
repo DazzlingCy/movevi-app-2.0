@@ -7,6 +7,7 @@ import {
   Settings, Sparkles, SquarePen, Target, Trophy, UserRound, UsersRound, Wallet, Wifi, WifiOff, X
 } from 'lucide-react';
 import { CITIES, type CityData } from '../../data/cities';
+import { getRouteCover } from '../../data/routeCovers';
 import { getCityRouteReleaseDate, getJourneyCity, getJourneyRoute, hasPublishedCityRoutes, JOURNEY_SEQUENCE } from '../../journey/data';
 import {
   createDemoJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
@@ -141,6 +142,7 @@ const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteL
   const status = getRouteStatus(state, route.cityId, route.id);
   return {
     title: route.name,
+    coverImage: getRouteCover(getJourneyCity(route.cityId)?.name ?? '', route.order)?.src,
     distance: route.distanceKm.toFixed(1),
     duration: `${String(route.durationMinutes).padStart(2, '0')}:00`,
     calories: String(route.calories),
@@ -202,6 +204,7 @@ interface HomePageProps {
   onNextStationFocused: () => void;
   onDevice: () => void;
   onLegacyFeature: (feature: LegacyFeature) => void;
+  onCarouselEnd: () => void;
 }
 
 type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard' | 'level' | 'medalLottery' | 'weekendMedley' | 'teamRelay';
@@ -226,7 +229,7 @@ type ActivityRouteTarget = {
   taskId: string;
 };
 
-function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature }: HomePageProps) {
+function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature, onCarouselEnd }: HomePageProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const cityVideoRef = useRef<HTMLVideoElement>(null);
   const hasAlignedCarouselRef = useRef(false);
@@ -239,6 +242,26 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const mouseDragRef = useRef<{ pointerId: number; startX: number; scrollLeft: number; dragged: boolean; lastX: number; lastTime: number; velocity: number } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
+  const endGestureRef = useRef<{ x: number; y: number; atEnd: boolean } | null>(null);
+  const endNoticeTimeRef = useRef(-Infinity);
+  const endWheelRef = useRef({ time: -Infinity, distance: 0, atEnd: false, notified: false });
+  const isAtCarouselEnd = () => {
+    const rail = carouselRef.current;
+    return !!rail && rail.scrollWidth > rail.clientWidth && rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
+  };
+  const notifyCarouselEnd = () => {
+    const now = performance.now();
+    if (now - endNoticeTimeRef.current < 2000) return;
+    endNoticeTimeRef.current = now;
+    onCarouselEnd();
+  };
+  const finishEndGesture = (x: number, y: number) => {
+    const start = endGestureRef.current;
+    endGestureRef.current = null;
+    if (!start?.atEnd || !isAtCarouselEnd()) return;
+    const distance = start.x - x;
+    if (distance >= 48 && distance > Math.abs(start.y - y) * 1.2) notifyCarouselEnd();
+  };
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
   const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
@@ -409,6 +432,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const handleCarouselKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
+    if (event.key === 'ArrowRight' && isAtCarouselEnd()) {
+      if (!event.repeat) notifyCarouselEnd();
+      return;
+    }
     const direction = event.key === 'ArrowRight' ? 1 : -1;
     const nextCity = homeJourneyCities[Math.min(homeJourneyCities.length - 1, Math.max(0, cityIndex + direction))];
     if (nextCity) onBrowseCity(nextCity.id);
@@ -417,6 +444,7 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   const handleCarouselPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    endGestureRef.current = { x: event.clientX, y: event.clientY, atEnd: isAtCarouselEnd() };
     mouseDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -456,6 +484,10 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
   };
 
   const finishCarouselPointerDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse') {
+      if (event.type === 'pointerup') finishEndGesture(event.clientX, event.clientY);
+      else endGestureRef.current = null;
+    }
     event.currentTarget.classList.remove('is-dragging');
     const drag = mouseDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
@@ -625,6 +657,32 @@ function HomePage({ state, city, deviceConnected, onRoutes, onBrowseCity, onSele
           onPointerMove={handleCarouselPointerMove}
           onPointerUp={finishCarouselPointerDrag}
           onPointerCancel={finishCarouselPointerDrag}
+          onTouchStart={event => {
+            const touch = event.touches[0];
+            endGestureRef.current = event.touches.length === 1 && touch
+              ? { x: touch.clientX, y: touch.clientY, atEnd: isAtCarouselEnd() } : null;
+          }}
+          onTouchEnd={event => {
+            const touch = event.changedTouches[0];
+            if (touch) finishEndGesture(touch.clientX, touch.clientY);
+          }}
+          onTouchCancel={() => { endGestureRef.current = null; }}
+          onWheel={event => {
+            const now = performance.now();
+            const wheel = endWheelRef.current;
+            if (now - wheel.time > 300) {
+              wheel.atEnd = isAtCarouselEnd();
+              wheel.distance = 0;
+              wheel.notified = false;
+            }
+            wheel.time = now;
+            if (!wheel.atEnd || wheel.notified || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+            wheel.distance += event.deltaX * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? event.currentTarget.clientWidth : 1);
+            if (wheel.distance >= 48 && isAtCarouselEnd()) {
+              wheel.notified = true;
+              notifyCarouselEnd();
+            }
+          }}
         >
           {homeJourneyCities.map((item) => {
             const itemStatus = getCityStatus(state, item.id);
@@ -1683,7 +1741,7 @@ export default function JourneyApp() {
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} countryLevel={countryLevel} onDevice={() => setUtilityMode('device')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
         : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => openLegacyFeature('medalLottery')} onSelectMedley={() => openLegacyFeature('weekendMedley')} onSelectWeightLossPlan={() => openLegacyFeature('weightLossPlan')} onSelectTeamRelay={() => openLegacyFeature('teamRelay')} onSelectHundredCities={() => setNotice('百人百城计划 · 筹备中')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} onCountryLevel={() => openLegacyFeature('level')} /></motion.div>
-        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} /></motion.div>}
+        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} onCarouselEnd={() => setNotice('更多城市敬请期待')} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
@@ -1691,7 +1749,7 @@ export default function JourneyApp() {
         {showDeviceConnectedPrompt && <motion.div className="overlay-layer" key="device-connected" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18 }}><DeviceConnectedPrompt onDismiss={() => setDeviceConnectionAcknowledged(true)} onViewDevice={() => { setDeviceConnectionAcknowledged(true); setUtilityMode('device'); }} /></motion.div>}
       </AnimatePresence>
       {!isFirstUse && utilityMode !== 'device' && !runningRoute && !runningActivityRoute && !activityRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
-      <div className={`toast ${notice ? 'is-visible' : ''}`} role="status" aria-live="polite">{notice}</div>
+      <div className={`toast ${notice ? 'is-visible' : ''} ${notice === '更多城市敬请期待' ? 'toast--centered' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );
 }

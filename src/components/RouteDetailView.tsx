@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { Play, ChevronLeft, MessageCircle, MapPin, AlignLeft, X, Lock } from 'lucide-react';
+import { Play, ChevronLeft, MessageCircle, MapPin, AlignLeft, X, Lock, UserRound } from 'lucide-react';
 import { getRouteData } from '../data/cities';
 import CityImage from './CityImage';
 import RouteRunners from './RouteRunners';
@@ -17,6 +17,23 @@ interface RouteDetailViewProps {
   onStart: () => void;
 }
 
+interface RouteComment {
+  text: string;
+  createdAt: string;
+}
+
+function renderCommentEntry(comment: RouteComment, index: number) {
+  return (
+    <article key={index} className={styles.reviewEntry}>
+      <div className={styles.reviewAuthor}>
+        <span className={styles.reviewAvatar}><UserRound size={20} aria-hidden="true" /></span>
+        <div><strong>我</strong><time dateTime={comment.createdAt}>{new Date(comment.createdAt).toLocaleString('zh-CN', { hour12: false })}</time></div>
+      </div>
+      <p>{comment.text}</p>
+    </article>
+  );
+}
+
 export default function RouteDetailView({ cityId, routeIndex, image, routeOverride, collectionIntent, onBack, onStart }: RouteDetailViewProps) {
   const routeData = routeOverride ?? getRouteData(cityId, routeIndex);
   const isLocked = routeOverride?.isUnlocked === false && !routeOverride?.isCompleted;
@@ -25,10 +42,11 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
   const commentInputId = useId();
   const [showComments, setShowComments] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [comments, setComments] = useState<Record<string, string[]>>({});
+  const [comments, setComments] = useState<Record<string, RouteComment[]>>({});
   const routeKey = cityId + ':' + routeIndex;
   const draft = drafts[routeKey] ?? '';
   const routeComments = comments[routeKey] ?? [];
+  const landmarks = routeData.spots.split(/\s*[—→]\s*/).filter(Boolean);
   const stats = [
     { value: routeData.distance, label: '预计里程', unit: 'km' },
     { value: routeData.duration, label: '预计时长', unit: 'min' },
@@ -40,7 +58,7 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
     <div className={styles.page}>
       <main className={styles.scrollArea} inert={showComments || undefined}>
         <header className={styles.hero}>
-          <CityImage src={image} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
+          <CityImage src={routeOverride?.coverImage || image} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
           <div className={styles.heroShade} />
           <button type="button" onClick={onBack} className={styles.back} aria-label="返回">
             <ChevronLeft size={22} />
@@ -56,8 +74,8 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
             <dl className={styles.stats}>
               {stats.map((stat, index) => (
                 <div key={stat.label} className={index === 3 ? styles.rating : undefined}>
-                  <dt>{stat.label}<span>({stat.unit})</span></dt>
-                  <dd>{stat.value}</dd>
+                  <dt>{stat.label}</dt>
+                  <dd>{stat.value}<span>{stat.unit}</span></dd>
                 </div>
               ))}
             </dl>
@@ -78,11 +96,29 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
 
           <section className={styles.section} aria-labelledby="route-spots-title">
             <h2 id="route-spots-title"><MapPin size={18} aria-hidden="true" />路线景点</h2>
-            <p className={styles.spots}>{routeData.spots}</p>
+            <ol className={styles.spots}>
+              {landmarks.map((landmark, index) => (
+                <li key={`${index}-${landmark}`}>
+                  <span className={styles.spotLabel}>景点{['一', '二', '三'][index] ?? index + 1}</span>
+                  <span className={styles.spotName}>{landmark}</span>
+                </li>
+              ))}
+            </ol>
           </section>
           <section className={styles.section} aria-labelledby="route-intro-title">
             <h2 id="route-intro-title"><AlignLeft size={18} aria-hidden="true" />路线简介</h2>
             <p>{routeData.intro}</p>
+          </section>
+          <section className={styles.section} aria-labelledby="route-reviews-title">
+            <div className={styles.reviewsHeading}>
+              <h2 id="route-reviews-title"><MessageCircle size={18} aria-hidden="true" />路线评论<span className={styles.reviewCount}>{routeComments.length}</span></h2>
+            </div>
+            {routeComments.length ? (
+              <div>
+                {routeComments.map(renderCommentEntry)}
+                <p className={styles.reviewsEnd}>没有更多了</p>
+              </div>
+            ) : <div className={styles.reviewsEmpty}><MessageCircle size={26} aria-hidden="true" /><p>暂无评论，分享你的路线感受吧</p></div>}
           </section>
         </div>
       </main>
@@ -106,15 +142,14 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
             </div>
             <p className={styles.commentRoute}>{routeData.title}</p>
             <div className={styles.commentList} aria-live="polite">
-              {routeComments.length ? routeComments.map((text, index) => (
-                <article key={index}><strong>我 <small>本地演示</small></strong><p>{text}</p></article>
-              )) : <div className={styles.empty}><MessageCircle size={28} aria-hidden="true" /><p>暂无评论，分享你的路线感受吧</p></div>}
+              {routeComments.length ? routeComments.map(renderCommentEntry) : <div className={styles.empty}><MessageCircle size={28} aria-hidden="true" /><p>暂无评论，分享你的路线感受吧</p></div>}
             </div>
             <form onSubmit={event => {
               event.preventDefault();
               const text = draft.trim();
               if (!text) return;
-              setComments(previous => ({ ...previous, [routeKey]: [...(previous[routeKey] ?? []), text] }));
+              const comment = { text, createdAt: new Date().toISOString() };
+              setComments(previous => ({ ...previous, [routeKey]: [...(previous[routeKey] ?? []), comment] }));
               setDrafts(previous => ({ ...previous, [routeKey]: '' }));
             }}>
               <label htmlFor={commentInputId}>写评论</label>
