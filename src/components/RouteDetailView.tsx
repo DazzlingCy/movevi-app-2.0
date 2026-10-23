@@ -96,14 +96,7 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
 
           <section className={styles.section} aria-labelledby="route-spots-title">
             <h2 id="route-spots-title"><MapPin size={18} aria-hidden="true" />路线景点</h2>
-            <ol className={styles.spots}>
-              {landmarks.map((landmark, index) => (
-                <li key={`${index}-${landmark}`}>
-                  <span className={styles.spotLabel}>景点{['一', '二', '三'][index] ?? index + 1}</span>
-                  <span className={styles.spotName}>{landmark}</span>
-                </li>
-              ))}
-            </ol>
+            <p className={styles.spots}>{landmarks.join(' → ')}</p>
           </section>
           <section className={styles.section} aria-labelledby="route-intro-title">
             <h2 id="route-intro-title"><AlignLeft size={18} aria-hidden="true" />路线简介</h2>
