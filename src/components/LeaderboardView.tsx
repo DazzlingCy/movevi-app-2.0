@@ -55,7 +55,7 @@ export default function LeaderboardView({ onBack, currentLevel }: LeaderboardVie
     <main className="leaderboard-page" id="main-content">
       <header className="leaderboard-header">
         <button type="button" onClick={onBack} aria-label="返回世界页"><ChevronLeft /></button>
-        <div><h1>全球跑者榜</h1></div>
+        <div><h1>全球排行榜</h1></div>
         <button type="button" onClick={() => setShowRules(true)} aria-label="查看排行榜规则"><Info /><span>规则</span></button>
       </header>
 
@@ -66,7 +66,7 @@ export default function LeaderboardView({ onBack, currentLevel }: LeaderboardVie
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.2 }}
-          aria-label="全球跑者排行榜"
+          aria-label="全球排行榜"
         >
           <div className="leaderboard-podium">
             {podiumOrder.map((user, podiumIndex) => {
