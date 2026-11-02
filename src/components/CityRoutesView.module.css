@@ -22,6 +22,11 @@
 .page button:focus-visible { outline:2px solid var(--route-accent); outline-offset:3px; }
 .page > .hero { flex:0 0 auto; }
 .page[data-list-pinned='true'] > nav { background:var(--route-bg); box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; }
+.pinnedCategories { display:flex; align-items:center; flex:1; min-width:0; gap:6px; overflow-x:auto; scrollbar-width:none; }
+.pinnedCategories::-webkit-scrollbar { display:none; }
+.pinnedCategories > button { flex:0 0 auto; min-width:44px; min-height:44px; padding:6px 9px; border:1px solid #ffffff26; border-radius:999px; background:transparent; color:#c7ccda; font-size:11px; line-height:18px; font-weight:500; white-space:nowrap; }
+.pinnedCategories > button[aria-pressed='true'] { border-color:var(--route-accent); background:var(--route-accent); color:#17152d; font-weight:600; }
+.page[data-list-pinned='true'] .categoryTabs { visibility:hidden; pointer-events:none; }
 .hero { position:relative; isolation:isolate; display:flex; flex-direction:column; min-height:clamp(270px,34svh,340px); padding-top:calc(56px + max(16px,env(safe-area-inset-top,0px))); overflow:hidden; background:var(--route-bg); }
 .heroImage,.heroShade { position:absolute; inset:0; width:100%; height:100%; }
 .heroImage { z-index:-2; object-fit:cover; object-position:center 42%; }

@@ -1,4 +1,5 @@
 import { getJourneyCity, getJourneyRoute, hasPublishedCityRoutes, JOURNEY_CITIES, JOURNEY_SEQUENCE } from './data';
+import { getCityRouteSequence } from './routeList';
 import type {
   CityJourneyStatus,
   JourneyAction,
@@ -6,8 +7,10 @@ import type {
   RouteJourneyStatus
 } from './types';
 
-const routeIdsFor = (cityId: string, count: number) =>
-  getJourneyCity(cityId)?.routes.slice(0, count).map(route => route.id) ?? [];
+const routeIdsFor = (cityId: string, count: number) => {
+  const city = getJourneyCity(cityId);
+  return city ? getCityRouteSequence(city).slice(0, count).map(route => route.id) : [];
+};
 
 const demoCompletedCityIds = ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore'] as const;
 const PREVIEW_COMPLETED_ROUTE_COUNT = 8;
@@ -89,11 +92,12 @@ export const getRouteStatus = (
 ): RouteJourneyStatus => {
   if (getCompletedRouteIds(state, cityId).includes(routeId)) return 'completed';
   const city = getJourneyCity(cityId);
-  const routeIndex = city?.routes.findIndex(route => route.id === routeId) ?? -1;
+  const routes = city ? getCityRouteSequence(city) : [];
+  const routeIndex = routes.findIndex(route => route.id === routeId);
   if (!city || routeIndex < 0) return 'locked';
   // Only the first unfinished route is available, even for old out-of-order progress.
   const completed = new Set(getCompletedRouteIds(state, cityId));
-  if (!city.routes.slice(0, routeIndex).every(route => completed.has(route.id))) return 'locked';
+  if (!routes.slice(0, routeIndex).every(route => completed.has(route.id))) return 'locked';
   if (getRevealedRouteIds(state, cityId).includes(routeId)) return 'revealed';
   return 'discoverable';
 };

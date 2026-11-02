@@ -20,6 +20,8 @@ import type { CityData } from '../data/cities';
 import { getRouteData } from '../data/cities';
 import CityImage from './CityImage';
 import type { CityRouteListItem } from './CityRoutesView';
+import { getRouteCategory } from '../data/routeCategories';
+import { groupCityRoutes } from '../journey/routeList';
 
 interface CityRouteOverviewViewProps {
   city: CityData;
@@ -64,19 +66,25 @@ export default function CityRouteOverviewView({
 }: CityRouteOverviewViewProps) {
   const [showReport, setShowReport] = useState(false);
   const overview = useMemo(() => {
-    const routes: OverviewRoute[] = Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }, (_, index) => {
+    const sourceRoutes = Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }, (_, index) => {
       const order = index + 1;
       const item: CityRouteListItem = routeItems?.[index] ?? getRouteData(city.id, order);
       return {
         ...item,
+        category: item.category ?? getRouteCategory(city.name, order),
         order,
-        completed: Boolean(item.isCompleted),
-        unlocked: item.isUnlocked ?? order === 1,
+        completed: item.isCompleted ?? city.completedRouteIndices?.includes(order) ?? false,
         spotNames: item.spots.split(/\s*[—–]\s*/).filter(Boolean),
         distanceKm: Number.parseFloat(item.distance) || 0,
         durationMinutes: durationToMinutes(item.duration)
       };
     });
+    const ordered = groupCityRoutes(sourceRoutes).flatMap(group => group.routes);
+    const nextIndex = ordered.findIndex(route => !route.completed);
+    const routes: OverviewRoute[] = ordered.map((route, index) => ({
+      ...route, order: index + 1,
+      unlocked: route.completed || (index === nextIndex && (route.isUnlocked ?? true))
+    }));
 
     const uniqueSpots = new Set(routes.flatMap(route => route.spotNames));
     const completedCount = routes.filter(route => route.completed).length;

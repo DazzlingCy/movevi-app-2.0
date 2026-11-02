@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { JOURNEY_CITIES } from './data';
 import { createPrototypeJourneyState, getCompletedRouteIds, getRouteStatus, journeyReducer } from './state';
 import { getRouteCover } from '../data/routeCovers';
+import { getCityRouteSequence } from './routeList';
 import {
   createPuzzle, currentPuzzle, drawPuzzle, drawsLeft, emptyPuzzleState,
   finishPuzzle, joinPuzzle, openPuzzleTeams, ownPieces, periodParticipation,
@@ -97,7 +98,8 @@ test('a new city unlocks its next route through activity completion without leav
   let journey=createPrototypeJourneyState('tokyo');
   journey={...journey,completedRouteIdsByCity:{...journey.completedRouteIdsByCity,tokyo:[]},revealedRouteIdsByCity:{...journey.revealedRouteIdsByCity,tokyo:[]}};
   const city=JOURNEY_CITIES.find(c=>c.id==='tokyo')!;
-  const toRoute=(index:number):PuzzleRoute=>({id:city.id,name:city.name,image:getRouteCover(city.name,index+1)!.src,routeId:city.routes[index].id,routeIndex:index+1,title:city.routes[index].name,distanceKm:city.routes[index].distanceKm,minutes:city.routes[index].durationMinutes});
+  const sequence=getCityRouteSequence(city);
+  const toRoute=(index:number):PuzzleRoute=>({id:city.id,name:city.name,image:getRouteCover(city.name,sequence[index].order)!.src,routeId:sequence[index].id,routeIndex:sequence[index].order,title:sequence[index].name,distanceKm:sequence[index].distanceKm,minutes:sequence[index].durationMinutes});
   let now=FRIDAY+3600000,state=createPuzzle(emptyPuzzleState(),toRoute(0),'new-city',now);
   state=joinPuzzle(state,'new-city',{id:'peer',name:'搭子',joinedAt:now});
   for(let index=0;index<2;index++) {

@@ -48,22 +48,24 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
   const [categorySelection, setCategorySelection] = useState<{cityId:string;value:RouteFilter|null}>(()=>({cityId:city.id,value:routeListPositions.get(city.id)?.category??null}));
   const pageRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const pinnedTabsRef = useRef<HTMLDivElement>(null);
+  const transferCategoryFocusRef = useRef(false);
   const groupRefs = useRef(new Map<RouteFilter,HTMLElement>());
   const scrollFrameRef = useRef<number|null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [isLightingUp, setIsLightingUp] = useState(false);
   const completedIndices = completedRouteIndices ?? city.completedRouteIndices ?? [];
-  const routes = Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }, (_, i) => {
+  const routeData = Array.from({ length: routeItems?.length ?? Math.max(city.routes, 3) }, (_, i) => {
     const routeId = i + 1;
     const data = routeItems?.[i] ?? getRouteData(city.id, routeId);
     const isCompleted = routeItems?.[i]?.isCompleted ?? completedIndices.includes(routeId);
-    const isUnlocked = routeItems?.[i]?.isUnlocked ?? (
-      isCompleted || (Array.from({ length: i }, (_, index) => index + 1).every(index => completedIndices.includes(index))
-        && (openRouteCount === undefined || routeId <= openRouteCount))
-    );
     const category = routeItems?.[i]?.category ?? getRouteCategory(city.name, routeId);
-    return { routeId, data, isCompleted, isUnlocked, category };
+    return { routeId, data, isCompleted, category };
   });
+  const nextRouteId = groupCityRoutes(routeData).flatMap(group => group.routes).find(route => !route.isCompleted)?.routeId;
+  const routes = routeData.map(route => ({ ...route, isUnlocked: route.isCompleted || (
+    route.routeId === nextRouteId && openRouteCount !== 0 && (routeItems?.[route.routeId - 1]?.isUnlocked ?? true)
+  ) }));
   const totalDistance = routes.reduce((sum, route) => sum + (Number.parseFloat(route.data.distance) || 0), 0);
   const selectedCategory = categorySelection.cityId === city.id ? categorySelection.value : routeListPositions.get(city.id)?.category ?? null;
   const routeGroups = groupCityRoutes(routes);
@@ -74,13 +76,16 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
     if(!page||!tabs)return;
     const navHeight=page.querySelector('nav')?.offsetHeight??72;
     const pinned=tabs.getBoundingClientRect().top<=page.getBoundingClientRect().top+navHeight+1;
-    if(pinned!==isListPinned)setIsListPinned(pinned);
+    if(pinned!==isListPinned){
+      transferCategoryFocusRef.current=(isListPinned?pinnedTabsRef.current:tabsRef.current)?.contains(document.activeElement)??false;
+      setIsListPinned(pinned);
+    }
   };
   const readCategory = () => {
     const page=pageRef.current;
     if(!page)return activeCategory;
     const navHeight=page.querySelector('nav')?.offsetHeight??72;
-    const readingLine=page.getBoundingClientRect().top+navHeight+(tabsRef.current?.offsetHeight??60);
+    const readingLine=page.getBoundingClientRect().top+navHeight;
     const sections=categories.flatMap(category=>{
       const section=groupRefs.current.get(category);
       return section?[{category,top:section.getBoundingClientRect().top}]:[];
@@ -103,7 +108,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
     const page=pageRef.current,section=groupRefs.current.get(category);
     if(page&&section){
       const navHeight=page.querySelector('nav')?.offsetHeight??72;
-      const top=page.scrollTop+section.getBoundingClientRect().top-page.getBoundingClientRect().top-navHeight-(tabsRef.current?.offsetHeight??60);
+      const top=page.scrollTop+section.getBoundingClientRect().top-page.getBoundingClientRect().top-navHeight;
       page.scrollTo({top:Math.max(0,top),behavior:'auto'});
     }
     routeListPositions.set(city.id,{top:page?.scrollTop??0,category});
@@ -115,12 +120,18 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
     return ()=>{if(scrollFrameRef.current!==null){window.cancelAnimationFrame(scrollFrameRef.current);scrollFrameRef.current=null;}};
   },[city.id,showOverview]);
 
+  useLayoutEffect(()=>{
+    if(transferCategoryFocusRef.current){
+      (isListPinned?pinnedTabsRef.current:tabsRef.current)?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus({preventScroll:true});
+      transferCategoryFocusRef.current=false;
+    }
+  },[isListPinned]);
   useEffect(()=>{
-    const tabs=tabsRef.current,button=tabs?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+    const tabs=isListPinned?pinnedTabsRef.current:tabsRef.current,button=tabs?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
     if(tabs&&button&&(button.offsetLeft<tabs.scrollLeft||button.offsetLeft+button.offsetWidth>tabs.scrollLeft+tabs.clientWidth)){
       tabs.scrollTo({left:Math.max(0,button.offsetLeft-(tabs.clientWidth-button.offsetWidth)/2),behavior:'auto'});
     }
-  },[activeCategory,showOverview]);
+  },[activeCategory,isListPinned,showOverview]);
 
   useEffect(() => {
     setShowOverview(false);
@@ -150,17 +161,19 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
     }
   };
 
+  const categoryButtons = () => categories.map(category=><button type="button" key={category} aria-pressed={activeCategory===category} aria-controls={`route-group-${city.id}-${category}`} onClick={()=>changeCategory(category)}>{category}</button>);
+
 
 
   return (
     <div ref={pageRef} className={styles.page} role="main" id="main-content" data-list-pinned={isListPinned} onScroll={handleListScroll}>
       <StickyHeroNav transparent>
         <button type="button" onClick={()=>{routeListPositions.delete(city.id);onBack();}} className={styles.back} aria-label="返回城市"><ChevronLeft size={22} /></button>
-        <svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
+        {isListPinned?<div ref={pinnedTabsRef} className={styles.pinnedCategories} role="group" aria-label="路线分类">{categoryButtons()}</div>:<svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
           <rect x="3" y="11" width="5" height="15" rx="1" fill="currentColor" />
           <rect x="11.5" y="3" width="5" height="23" rx="1" fill="currentColor" />
           <rect x="20" y="16" width="5" height="10" rx="1" fill="currentColor" />
-        </svg>
+        </svg>}
       </StickyHeroNav>
       <header className={styles.hero}>
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className={styles.heroImage} loading="eager" fetchPriority="high" />
@@ -178,7 +191,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
       </header>
 
       <section className={styles.routeList} aria-label={`${city.name}城市路线`}>
-        {routes.length>0&&<div ref={tabsRef} className={styles.categoryTabs} role="group" aria-label="路线分类">{categories.map(category=><button type="button" key={category} aria-pressed={activeCategory===category} aria-controls={`route-group-${city.id}-${category}`} onClick={()=>changeCategory(category)}>{category}</button>)}</div>}
+        {routes.length>0&&<div ref={tabsRef} className={styles.categoryTabs} role="group" aria-label="路线分类" aria-hidden={isListPinned||undefined}>{categoryButtons()}</div>}
         {routeGroups.map(group=><section key={group.category} id={`route-group-${city.id}-${group.category}`} className={styles.routeGroup} data-route-category={group.category} aria-labelledby={`route-group-title-${city.id}-${group.category}`} ref={element=>{if(element)groupRefs.current.set(group.category,element);else groupRefs.current.delete(group.category);}}>
         <div className={styles.listHeading}>
           <h2 id={`route-group-title-${city.id}-${group.category}`}>{group.category}</h2><p>{group.routes.length} 条路线</p>
