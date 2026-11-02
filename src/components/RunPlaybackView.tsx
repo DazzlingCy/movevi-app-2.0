@@ -84,6 +84,8 @@ interface RunPlaybackViewProps {
   cityName?: string;
   routeOverride?: CityRouteListItem;
   onExit: () => void;
+  requireFullRoute?: boolean;
+  demoCompleteSignal?: number;
   onComplete: (stats: { distance: number; duration: number; calories: number }) => void;
 }
 
@@ -98,7 +100,7 @@ const parsePlannedDuration = (value: string) => {
   return minutes * 60 + seconds;
 };
 
-export default function RunPlaybackView({ cityId, routeIndex, image, cityName: cityNameOverride, routeOverride, onExit, onComplete }: RunPlaybackViewProps) {
+export default function RunPlaybackView({ cityId, routeIndex, image, cityName: cityNameOverride, routeOverride, onExit, onComplete, requireFullRoute = false, demoCompleteSignal = 0 }: RunPlaybackViewProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [distance, setDistance] = useState(0);
   const [time, setTime] = useState(0);
@@ -110,6 +112,11 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
   const cityName = cityNameOverride ?? city?.name ?? '城市';
   const plannedDistance = Number(route.distance) || 0;
   const plannedDuration = parsePlannedDuration(route.duration);
+  const routeFinished = !requireFullRoute || distance >= plannedDistance;
+  useEffect(() => {
+    if (!demoCompleteSignal) return;
+    setDistance(plannedDistance); setTime(plannedDuration); setIsPlaying(false); setShowSummary(true);
+  }, [demoCompleteSignal, plannedDistance, plannedDuration]);
 
   useEffect(() => {
     if (!isPlaying || showSummary) return;
@@ -121,14 +128,14 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
   }, [isPlaying, plannedDistance, showSummary]);
 
   const result = useMemo(() => {
-    const resultDistance = distance >= 0.05 ? distance : plannedDistance;
-    const resultDuration = time >= 20 ? time : plannedDuration;
+    const resultDistance = requireFullRoute ? distance : distance >= 0.05 ? distance : plannedDistance;
+    const resultDuration = requireFullRoute ? time : time >= 20 ? time : plannedDuration;
     return {
       distance: Number(resultDistance.toFixed(2)),
       duration: resultDuration,
       calories: Math.max(1, Math.round(resultDistance * 65))
     };
-  }, [distance, plannedDistance, plannedDuration, time]);
+  }, [distance, plannedDistance, plannedDuration, time, requireFullRoute]);
 
   const pace = distance > 0.01
     ? `${Math.floor(time / 60 / distance)}'${String(Math.floor(((time / 60 / distance) % 1) * 60)).padStart(2, '0')}\"`
@@ -219,11 +226,11 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
             >
               <div className="mb-1.5 flex items-center justify-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-cyan-400 motion-safe:animate-ping" />
-                <span className="font-mono text-xs font-bold tracking-[0.25em] text-cyan-400">路线已唤醒</span>
+                <span className="font-mono text-xs font-bold tracking-[0.25em] text-cyan-400">{requireFullRoute ? routeFinished ? '路线已完成' : '运动已结束' : '路线已唤醒'}</span>
               </div>
               <h2 id="run-summary-title" className="flex items-center justify-center gap-2 text-2xl font-black tracking-[0.15em] text-white drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
                 <Zap size={22} className="fill-cyan-400/20 text-cyan-400" />
-                路线已唤醒
+                {requireFullRoute ? routeFinished ? '路线已完成' : '路线尚未完成' : '路线已唤醒'}
               </h2>
             </motion.div>
 
@@ -300,11 +307,11 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
             </motion.section>
 
             <div className="flex w-full max-w-sm items-center gap-4 px-1">
-              <button onClick={() => onComplete(result)} className="flex-1 rounded-2xl bg-[#cb2027] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(203,32,39,0.3)] transition-all active:scale-95">
-                完成并返回
+              <button onClick={() => routeFinished ? onComplete(result) : onExit()} className="flex-1 rounded-2xl bg-[#cb2027] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(203,32,39,0.3)] transition-all active:scale-95">
+                {routeFinished ? '完成并返回' : '返回路线详情'}
               </button>
-              <button onClick={() => onComplete(result)} className="flex-1 rounded-2xl bg-[#26b180] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(38,177,128,0.3)] transition-all active:scale-95">
-                继续下一路线
+              <button onClick={() => { if (routeFinished) onComplete(result); else { setShowSummary(false); setIsPlaying(true); } }} className="flex-1 rounded-2xl bg-[#26b180] px-6 py-3.5 text-base font-extrabold tracking-wide text-white shadow-[0_4px_15px_rgba(38,177,128,0.3)] transition-all active:scale-95">
+                {routeFinished ? '继续下一路线' : '继续这条路线'}
               </button>
             </div>
           </motion.div>

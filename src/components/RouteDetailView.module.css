@@ -20,11 +20,11 @@
 .page button:focus-visible, .page textarea:focus-visible { outline: 2px solid var(--detail-accent); outline-offset: 3px; }
 .scrollArea { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: none; }
 .scrollArea::-webkit-scrollbar { display: none; }
-.hero { position: relative; isolation: isolate; display: flex; flex-direction: column; min-height: clamp(270px, 38svh, 340px); background: #1c2833; }
+.hero { padding-top: calc(56px + max(16px, env(safe-area-inset-top, 0px))); position: relative; isolation: isolate; display: flex; flex-direction: column; min-height: clamp(270px, 38svh, 340px); background: #1c2833; }
 .heroImage, .heroShade { position: absolute; inset: 0; width: 100%; height: 100%; }
 .heroImage { object-fit: cover; object-position: center 40%; z-index: -2; }
 .heroShade { z-index: -1; background: linear-gradient(180deg, #08101838 0%, #08101805 26%, #0b0d128c 62%, var(--detail-bg) 100%); }
-.back { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; margin: max(16px, env(safe-area-inset-top)) 20px 0; border: 1px solid #ffffff29; border-radius: 50%; color: white; background: #0b0d1299; }
+.back { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; margin: 0; border: 1px solid #ffffff29; border-radius: 50%; color: white; background: #0b0d1299; }
 .heroContent { margin-top: auto; padding: 38px 24px 32px; }
 .heroContent h1 { margin: 0 0 14px; max-width: 24ch; font-size: clamp(25px, 6.4vw, 30px); font-weight: 700; line-height: 1.35; letter-spacing: -.025em; overflow-wrap: anywhere; text-wrap: balance; text-shadow: 0 2px 14px #0005; }
 .content { position: relative; margin-top: -4px; padding: 0 20px 28px; }

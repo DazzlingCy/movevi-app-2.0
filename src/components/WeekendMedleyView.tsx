@@ -1,3 +1,4 @@
+import StickyHeroNav from './StickyHeroNav';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -1766,13 +1767,41 @@ export default function WeekendMedleyView({
       {/* Scrollable View Containment */}
       <div className="flex-1 overflow-y-auto pb-36 hide-scrollbar flex flex-col">
         
+        <StickyHeroNav>
+          <button
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 border border-white/10 backdrop-blur-md transition-colors"
+            title="返回"
+          >
+            <ChevronLeft size={20} className="text-slate-200" />
+          </button>
+
+          <div className="flex items-center gap-2 select-none">
+            <button
+              onClick={() => setSimulateNotStarted(prev => !prev)}
+              className={`px-2 py-1.5 rounded-full text-[9px] font-black border transition-all active:scale-95 flex items-center gap-1 shrink-0 shadow-md ${
+                simulateNotStarted
+                  ? 'bg-amber-950/50 border-amber-500/40 text-amber-400'
+                  : 'bg-black/50 border-white/5 text-slate-400 hover:text-slate-200'
+              }`}
+              title="一键切换：模拟活动未开放状态"
+            >
+              <span>{simulateNotStarted ? '已设未开始' : '模拟未开始'}</span>
+            </button>
+
+            <div className="bg-[#12231c]/70 border border-emerald-500/20 px-3 py-1.5 rounded-full text-[10px] font-black text-emerald-400 tracking-wider flex items-center gap-1.5 shadow-[0_4px_12px_rgba(16,185,129,0.15)]">
+              <span>📅 周末限时开放</span>
+            </div>
+          </div>
+        </StickyHeroNav>
+
         {/* 1. Header Hero Area (Poster Style with image backdrop) */}
-        <div className="relative w-full shrink-0 overflow-hidden bg-[#03060a]">
+        <div className="relative w-full shrink-0 overflow-hidden bg-[#03060a] pt-[calc(56px+max(16px,env(safe-area-inset-top)))]">
           {/* Unsplash beautiful high-quality image of sunset palace / backdrop */}
-          <img 
-            src="https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1200&q=80" 
-            alt="historical_backdrop" 
-            className="absolute inset-0 w-full h-[52vh] object-cover opacity-60 z-0" 
+          <img
+            src="https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1200&q=80"
+            alt="historical_backdrop"
+            className="absolute inset-0 w-full h-[52vh] object-cover opacity-60 z-0"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = "https://images.unsplash.com/photo-1506501139174-099022df5260?auto=format&fit=crop&w=1000&q=80";
@@ -1782,35 +1811,6 @@ export default function WeekendMedleyView({
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#03060a] to-transparent z-10 pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/20 z-10 pointer-events-none" />
           <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#03060a] via-[#03060a]/80 to-transparent z-10 pointer-events-none" />
-
-          {/* Floating Actions inside Header Area */}
-          <div className="relative z-20 flex justify-between items-center px-4 pt-5 pb-2">
-            <button 
-              onClick={onBack} 
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 border border-white/10 backdrop-blur-md transition-colors"
-              title="返回"
-            >
-              <ChevronLeft size={20} className="text-slate-200" />
-            </button>
-            
-            <div className="flex items-center gap-2 select-none">
-              <button
-                onClick={() => setSimulateNotStarted(prev => !prev)}
-                className={`px-2 py-1.5 rounded-full text-[9px] font-black border transition-all active:scale-95 flex items-center gap-1 shrink-0 shadow-md ${
-                  simulateNotStarted 
-                    ? 'bg-amber-950/50 border-amber-500/40 text-amber-400' 
-                    : 'bg-black/50 border-white/5 text-slate-400 hover:text-slate-200'
-                }`}
-                title="一键切换：模拟活动未开放状态"
-              >
-                <span>{simulateNotStarted ? '已设未开始' : '模拟未开始'}</span>
-              </button>
-
-              <div className="bg-[#12231c]/70 border border-emerald-500/20 px-3 py-1.5 rounded-full text-[10px] font-black text-emerald-400 tracking-wider flex items-center gap-1.5 shadow-[0_4px_12px_rgba(16,185,129,0.15)]">
-                <span>📅 周末限时开放</span>
-              </div>
-            </div>
-          </div>
 
           {/* Hero Content Block */}
           <div className="relative z-20 px-5 pt-12 pb-6 text-left">

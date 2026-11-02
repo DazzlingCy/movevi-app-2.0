@@ -1,3 +1,4 @@
+import StickyHeroNav from './StickyHeroNav';
 import { useId, useState } from 'react';
 import { Play, ChevronLeft, MessageCircle, MapPin, AlignLeft, X, Lock, UserRound } from 'lucide-react';
 import { getRouteData } from '../data/cities';
@@ -57,12 +58,14 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
   return (
     <div className={styles.page}>
       <main className={styles.scrollArea} inert={showComments || undefined}>
-        <header className={styles.hero}>
-          <CityImage src={routeOverride?.coverImage || image} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
-          <div className={styles.heroShade} />
+        <StickyHeroNav transparent>
           <button type="button" onClick={onBack} className={styles.back} aria-label="返回">
             <ChevronLeft size={22} />
           </button>
+        </StickyHeroNav>
+        <header className={styles.hero}>
+          <CityImage src={routeOverride?.coverImage || image} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
+          <div className={styles.heroShade} />
           <div className={styles.heroContent}>
             <h1>{routeData.title}</h1>
             <RouteRunners count={routeOverride?.runnerCount} avatars={routeOverride?.runnerAvatars} />

@@ -203,10 +203,9 @@ export const journeyReducer = (state: JourneyState, action: JourneyAction): Jour
         currentPage: 'routeComplete'
       };
 
-      if (action.cityId === state.currentCityId && completedRouteIds.length === 10) {
-        return completeCity(nextState, action.cityId);
-      }
-      return nextState;
+      const completedState = action.cityId === state.currentCityId && completedRouteIds.length === 10
+        ? completeCity(nextState, action.cityId) : nextState;
+      return action.background ? { ...completedState, currentPage: state.currentPage } : completedState;
     }
 
     case 'COMPLETE_CITY':

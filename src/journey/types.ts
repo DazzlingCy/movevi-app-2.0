@@ -57,7 +57,7 @@ export type JourneyAction =
   | { type: 'START_JOURNEY'; cityId: string }
   | { type: 'NAVIGATE'; page: 'home' | 'map' }
   | { type: 'REVEAL_ROUTE'; cityId: string; routeId: string }
-  | { type: 'COMPLETE_ROUTE'; cityId: string; routeId: string; result: RunResult }
+  | { type: 'COMPLETE_ROUTE'; cityId: string; routeId: string; result: RunResult; background?: boolean }
   | { type: 'COMPLETE_CITY'; cityId: string }
   | { type: 'SELECT_NEXT_CITY'; cityId: string }
   | { type: 'ARRIVE_NEXT_CITY' }

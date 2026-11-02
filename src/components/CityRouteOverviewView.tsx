@@ -1,3 +1,4 @@
+import StickyHeroNav from './StickyHeroNav';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
@@ -105,19 +106,20 @@ export default function CityRouteOverviewView({
 
   return (
     <main className="h-full w-full overflow-y-auto bg-[#f2f4f7] text-slate-900 hide-scrollbar" id="main-content">
+      <StickyHeroNav>
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="返回城市路线列表"
+          className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          <ChevronLeft size={26} />
+        </button>
+      </StickyHeroNav>
       <header className="relative min-h-[272px] overflow-hidden bg-slate-950 text-white">
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,13,.36),rgba(5,8,13,.48)_40%,rgba(5,8,13,.94))]" />
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(16px,env(safe-area-inset-top))]">
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="返回城市路线列表"
-            className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <ChevronLeft size={26} />
-          </button>
-        </div>
+
         <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-11">
           <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-orange-200"><Route size={14} /> 路线概览</span>
           <p className="mt-3 max-w-[330px] text-[12px] leading-5 text-white/72">先了解城市路线、沿途景点与运动强度。路线将依次解锁，陪你逐步跑遍整座城市。</p>
@@ -462,14 +464,15 @@ function CityReportView({ city, overview, onBack }: { city: CityData; overview: 
 
   return (
     <main className="h-full w-full overflow-y-auto bg-[#edf3f0] text-slate-900 hide-scrollbar" id="main-content">
+      <StickyHeroNav>
+        <button type="button" onClick={onBack} aria-label="返回路线概览" className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+          <ChevronLeft size={26} />
+        </button>
+      </StickyHeroNav>
       <header className="relative min-h-[320px] overflow-hidden bg-emerald-950 text-white">
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,20,16,.34),rgba(2,20,16,.52)_42%,rgba(2,20,16,.96))]" />
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center px-4 pt-[max(16px,env(safe-area-inset-top))]">
-          <button type="button" onClick={onBack} aria-label="返回路线概览" className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-            <ChevronLeft size={26} />
-          </button>
-        </div>
+
         <div className="absolute inset-x-0 bottom-0 z-10 px-5 pb-12">
           <span className="mb-2 flex items-center gap-1.5 text-xs font-bold text-emerald-300"><Trophy size={15} /> 城市报告</span>
           <h1 className="text-[34px] font-black leading-none tracking-[-.045em]">我跑遍了{city.name}</h1>

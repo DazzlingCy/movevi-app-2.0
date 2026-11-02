@@ -198,3 +198,13 @@ test('next-city selection accepts recommendations from later batches', () => {
   assert.equal(state.pendingNextCityId, 'berlin');
   assert.equal(state.currentPage, 'travel');
 });
+
+test('background route completion marks a completed city without taking over activity navigation',()=>{
+  let state=revealAndComplete(createDemoJourneyState(),9);
+  state=journeyReducer(state,{type:'NAVIGATE',page:'home'});
+  const route=JOURNEY_CITIES.find(city=>city.id==='tokyo')!.routes[9];
+  state=journeyReducer(state,{type:'REVEAL_ROUTE',cityId:'tokyo',routeId:route.id});
+  const next=journeyReducer(state,{type:'COMPLETE_ROUTE',cityId:'tokyo',routeId:route.id,result,background:true});
+  assert.equal(next.currentPage,'home');assert.ok(next.completedCityIds.includes('tokyo'));
+  assert.equal(getCompletedRouteIds(next,'tokyo').length,10);
+});

@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import StickyHeroNav from './StickyHeroNav';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, Play, LockOpen, Star } from 'lucide-react';
-import { CityData } from '../data/cities';
+import { ChevronLeft, ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, LockOpen, Star } from 'lucide-react';
+import { getRouteData, type CityData } from '../data/cities';
 import CityImage from './CityImage';
 import RouteRunners from './RouteRunners';
-import RouteCardRail from './RouteCardRail';
 
-import { getRouteData } from '../data/cities';
 import CityRouteOverviewView from './CityRouteOverviewView';
 import styles from './CityRoutesView.module.css';
 import { getRouteCover } from '../data/routeCovers';
-import { getInitialRouteIndex } from '../journey/routeFocus';
 import { getRouteCategory, type RouteCategory } from '../data/routeCategories';
+import { findVisibleRouteGroup, groupCityRoutes } from '../journey/routeList';
+
+type RouteFilter = RouteCategory;
+const routeListPositions = new Map<string, { top: number; category: RouteFilter | null }>();
 
 export interface CityRouteListItem {
   category?: RouteCategory;
@@ -42,7 +44,12 @@ interface CityRoutesViewProps {
 export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
   const [showLitModal, setShowLitModal] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
-  const [routeSelection, setRouteSelection] = useState<{ cityId: string; index: number } | null>(null);
+  const [isListPinned,setIsListPinned] = useState(false);
+  const [categorySelection, setCategorySelection] = useState<{cityId:string;value:RouteFilter|null}>(()=>({cityId:city.id,value:routeListPositions.get(city.id)?.category??null}));
+  const pageRef = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const groupRefs = useRef(new Map<RouteFilter,HTMLElement>());
+  const scrollFrameRef = useRef<number|null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [isLightingUp, setIsLightingUp] = useState(false);
   const completedIndices = completedRouteIndices ?? city.completedRouteIndices ?? [];
@@ -54,10 +61,66 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
       isCompleted || (Array.from({ length: i }, (_, index) => index + 1).every(index => completedIndices.includes(index))
         && (openRouteCount === undefined || routeId <= openRouteCount))
     );
-    return { routeId, data, isCompleted, isUnlocked };
+    const category = routeItems?.[i]?.category ?? getRouteCategory(city.name, routeId);
+    return { routeId, data, isCompleted, isUnlocked, category };
   });
   const totalDistance = routes.reduce((sum, route) => sum + (Number.parseFloat(route.data.distance) || 0), 0);
-  const routeCardIndex = routeSelection?.cityId === city.id ? routeSelection.index : getInitialRouteIndex(routes);
+  const selectedCategory = categorySelection.cityId === city.id ? categorySelection.value : routeListPositions.get(city.id)?.category ?? null;
+  const routeGroups = groupCityRoutes(routes);
+  const categories = routeGroups.map(group=>group.category);
+  const activeCategory = selectedCategory&&categories.includes(selectedCategory) ? selectedCategory : categories[0]??null;
+  const syncPinnedHeader = () => {
+    const page=pageRef.current,tabs=tabsRef.current;
+    if(!page||!tabs)return;
+    const navHeight=page.querySelector('nav')?.offsetHeight??72;
+    const pinned=tabs.getBoundingClientRect().top<=page.getBoundingClientRect().top+navHeight+1;
+    if(pinned!==isListPinned)setIsListPinned(pinned);
+  };
+  const readCategory = () => {
+    const page=pageRef.current;
+    if(!page)return activeCategory;
+    const navHeight=page.querySelector('nav')?.offsetHeight??72;
+    const readingLine=page.getBoundingClientRect().top+navHeight+(tabsRef.current?.offsetHeight??60);
+    const sections=categories.flatMap(category=>{
+      const section=groupRefs.current.get(category);
+      return section?[{category,top:section.getBoundingClientRect().top}]:[];
+    });
+    return findVisibleRouteGroup(sections,readingLine,page.scrollHeight>page.clientHeight&&page.scrollHeight-page.scrollTop-page.clientHeight<=2);
+  };
+  const rememberPosition = () => {
+    const page=pageRef.current;
+    if(!page)return;
+    syncPinnedHeader();
+    const category=readCategory();
+    routeListPositions.set(city.id,{top:page.scrollTop,category});
+    if(category!==activeCategory)setCategorySelection({cityId:city.id,value:category});
+  };
+  const handleListScroll = () => {
+    if(scrollFrameRef.current!==null)return;
+    scrollFrameRef.current=window.requestAnimationFrame(()=>{scrollFrameRef.current=null;rememberPosition();});
+  };
+  const changeCategory = (category:RouteFilter) => {
+    const page=pageRef.current,section=groupRefs.current.get(category);
+    if(page&&section){
+      const navHeight=page.querySelector('nav')?.offsetHeight??72;
+      const top=page.scrollTop+section.getBoundingClientRect().top-page.getBoundingClientRect().top-navHeight-(tabsRef.current?.offsetHeight??60);
+      page.scrollTo({top:Math.max(0,top),behavior:'auto'});
+    }
+    routeListPositions.set(city.id,{top:page?.scrollTop??0,category});
+    setCategorySelection({cityId:city.id,value:category});
+  };
+
+  useLayoutEffect(()=>{
+    if(!showOverview&&pageRef.current){pageRef.current.scrollTop=routeListPositions.get(city.id)?.top??0;syncPinnedHeader();}
+    return ()=>{if(scrollFrameRef.current!==null){window.cancelAnimationFrame(scrollFrameRef.current);scrollFrameRef.current=null;}};
+  },[city.id,showOverview]);
+
+  useEffect(()=>{
+    const tabs=tabsRef.current,button=tabs?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+    if(tabs&&button&&(button.offsetLeft<tabs.scrollLeft||button.offsetLeft+button.offsetWidth>tabs.scrollLeft+tabs.clientWidth)){
+      tabs.scrollTo({left:Math.max(0,button.offsetLeft-(tabs.clientWidth-button.offsetWidth)/2),behavior:'auto'});
+    }
+  },[activeCategory,showOverview]);
 
   useEffect(() => {
     setShowOverview(false);
@@ -90,37 +153,38 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
 
 
   return (
-    <div className={styles.page} role="main" id="main-content">
+    <div ref={pageRef} className={styles.page} role="main" id="main-content" data-list-pinned={isListPinned} onScroll={handleListScroll}>
+      <StickyHeroNav transparent>
+        <button type="button" onClick={()=>{routeListPositions.delete(city.id);onBack();}} className={styles.back} aria-label="返回城市"><ChevronLeft size={22} /></button>
+        <svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
+          <rect x="3" y="11" width="5" height="15" rx="1" fill="currentColor" />
+          <rect x="11.5" y="3" width="5" height="23" rx="1" fill="currentColor" />
+          <rect x="20" y="16" width="5" height="10" rx="1" fill="currentColor" />
+        </svg>
+      </StickyHeroNav>
       <header className={styles.hero}>
         <CityImage src={city.image} alt="" fallbackLabel={city.name} className={styles.heroImage} loading="eager" fetchPriority="high" />
         <div className={styles.heroShade} />
-        <div className={styles.toolbar}>
-          <button type="button" onClick={onBack} className={styles.back} aria-label="返回城市"><ChevronLeft size={22} /></button>
-          <svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
-            <rect x="3" y="11" width="5" height="15" rx="1" fill="currentColor" />
-            <rect x="11.5" y="3" width="5" height="23" rx="1" fill="currentColor" />
-            <rect x="20" y="16" width="5" height="10" rx="1" fill="currentColor" />
-          </svg>
-        </div>
         <div className={styles.heroContent}>
           <p className={styles.englishName}>{city.englishName || 'CITY'}</p>
           <h1>{city.name}</h1>
           <div className={styles.heroBottom}>
             <p>{routes.length} 条路线<span>·</span>{totalDistance.toFixed(1)} 公里</p>
-            <button type="button" onClick={() => setShowOverview(true)} className={styles.overview}>
+            <button type="button" onClick={() => {rememberPosition();setShowOverview(true);}} className={styles.overview}>
               <Route size={16} />路线概览<ChevronRight size={16} />
             </button>
           </div>
         </div>
       </header>
 
-      <section className={styles.routeList} aria-labelledby="city-routes-title">
+      <section className={styles.routeList} aria-label={`${city.name}城市路线`}>
+        {routes.length>0&&<div ref={tabsRef} className={styles.categoryTabs} role="group" aria-label="路线分类">{categories.map(category=><button type="button" key={category} aria-pressed={activeCategory===category} aria-controls={`route-group-${city.id}-${category}`} onClick={()=>changeCategory(category)}>{category}</button>)}</div>}
+        {routeGroups.map(group=><section key={group.category} id={`route-group-${city.id}-${group.category}`} className={styles.routeGroup} data-route-category={group.category} aria-labelledby={`route-group-title-${city.id}-${group.category}`} ref={element=>{if(element)groupRefs.current.set(group.category,element);else groupRefs.current.delete(group.category);}}>
         <div className={styles.listHeading}>
-          <h2 id="city-routes-title">选择路线</h2><p>按路线顺序探索</p>
+          <h2 id={`route-group-title-${city.id}-${group.category}`}>{group.category}</h2><p>{group.routes.length} 条路线</p>
         </div>
-        <div key={city.id} className={styles.railContainer}>
-        <RouteCardRail initialIndex={routeCardIndex} onSelect={index => setRouteSelection({ cityId: city.id, index })} items={routes.map(({ routeId, data, isCompleted, isUnlocked }) => {
-          const category = routeItems?.[routeId - 1]?.category ?? getRouteCategory(city.name, routeId);
+        <div className={styles.routeRows}>
+        {group.routes.map(({ routeId, data, isCompleted, isUnlocked }) => {
           const numSpots = data.spots.split(/—|→/).filter(spot => spot.trim()).length;
           const statusLabel = isCompleted ? '已完成' : isUnlocked ? '已解锁' : '未解锁';
           const durationParts = data.duration.split(':').map(Number);
@@ -132,37 +196,27 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
               type="button"
               key={routeId}
               className={`${styles.routeCard} ${isCompleted ? styles.completedRoute : isUnlocked ? styles.nextRoute : styles.lockedRoute}`}
-              onClick={() => onRouteClick(routeId)}
+              data-route-index={routeId}
+              aria-label={`路线 ${routeId}：${data.title}，${statusLabel}，查看详情`}
+              onClick={() => {rememberPosition();onRouteClick(routeId);}}
             >
               <span className={styles.thumbnail}>
-                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={Math.abs(routeId - 1 - routeCardIndex) <= 1 ? 'eager' : 'lazy'} fetchPriority={routeId - 1 === routeCardIndex ? 'high' : 'auto'} />
-                <span className={styles.imageShade} />
-                <span className={styles.routeIdentity}>
-                  <span className={styles.routeNumber}>{String(routeId).padStart(2, '0')}</span>
-                  <span className={styles.categoryTag}>{category}</span>
-                </span>
+                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={routeId<=3?'eager':'lazy'} />
                 <span className={styles.routeStatus}>
-                  {isCompleted ? <Check size={14} /> : isUnlocked ? <LockOpen size={14} /> : <Lock size={14} />}{statusLabel}
-                </span>
-                <span className={styles.imageMeta}>
-                  <RouteRunners compact count={routeItems?.[routeId - 1]?.runnerCount} avatars={routeItems?.[routeId - 1]?.runnerAvatars} />
-                  <span className={styles.routeRating} aria-label={`路线评分 ${data.rating} 分`}><Star size={13} fill="currentColor" aria-hidden="true" /><b>{data.rating}</b><span>分</span></span>
+                  {isCompleted ? <Check size={11} /> : isUnlocked ? <LockOpen size={11} /> : <Lock size={11} />}{statusLabel}
                 </span>
               </span>
               <span className={styles.routeContent}>
                 <strong className={styles.routeTitle}>{data.title}</strong>
                 <span className={styles.landmarks}>{data.spots.replace(/—/g, ' → ')}</span>
                 <span className={styles.routeMetrics}><b>{data.distance}<small> km</small></b><span><Clock3 size={12} />{durationLabel}</span><span><MapPin size={12} />{numSpots} 景点</span></span>
-                <span className={styles.cardAction}>
-                  {isCompleted ? <Check size={16} /> : isUnlocked ? <Play size={16} /> : <Lock size={16} />}
-                  <span>{isCompleted ? '已完成 · 再跑一次' : isUnlocked ? '开始这条路线' : '未解锁 · 查看详情'}</span>
-                  <ChevronRight size={16} />
-                </span>
+                <span className={styles.routeSocial}><span className={styles.routeRating} aria-label={`路线评分 ${data.rating} 分`}><Star size={12} fill="currentColor" aria-hidden="true" /><b>{data.rating}</b><span>分</span></span><RouteRunners compact dense count={routeItems?.[routeId - 1]?.runnerCount} avatars={routeItems?.[routeId - 1]?.runnerAvatars}/></span>
               </span>
             </button>
           );
-        })} />
+        })}
         </div>
+        </section>)}
         {routes.length === 0 && <div className={styles.empty}><Route size={26} /><h3>路线筹备中</h3><p>这座城市的路线即将开放</p></div>}
       </section>
 

@@ -999,6 +999,14 @@ body { background: var(--bg); }
   white-space: nowrap;
 }
 .page--home:has(.destination-carousel.is-browsing) .home-commandbar h1 { opacity: 1; translate: 0; }
+.home-commandbar-title { display:grid; align-items:center; flex:1; min-width:0; }
+.home-commandbar-title > * { grid-area:1 / 1; justify-self:start; }
+.home-city-list-entry { position:relative; pointer-events:auto; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:7px 12px; border:1px solid rgba(255,255,255,.17); border-radius:999px; background:rgba(13,25,34,.62); color:#f5f7fa; font-family:var(--font-body); font-size:12px; line-height:20px; font-weight:500; cursor:pointer; transition:opacity .18s ease,visibility .18s ease,background-color .18s ease; }
+.home-city-list-entry::after { content:''; position:absolute; inset:-3px 0; }
+.home-city-list-entry svg { width:18px; height:18px; flex-shrink:0; }
+.page--home:has(.destination-carousel.is-browsing) .home-city-list-entry { opacity:0; visibility:hidden; pointer-events:none; }
+@media(hover:hover) { .home-city-list-entry:hover { background:rgba(13,25,34,.84); } }
+@media(prefers-reduced-motion:reduce) { .home-city-list-entry { transition:none; } }
 .home-quick-actions { pointer-events: auto; flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
 .home-quick-action,
 .home-reward-chip {
@@ -1066,6 +1074,16 @@ body { background: var(--bg); }
 }
 .home-city-swipe-zone::before { left: 0; background: linear-gradient(90deg, #07080b, transparent); }
 .home-city-swipe-zone::after { right: 0; background: linear-gradient(270deg, #07080b, transparent); }
+.home-buddy-entry { position:absolute; z-index:4; left:50%; bottom:clamp(10px,3.5%,28px); display:inline-flex; align-items:center; justify-content:center; gap:9px; width:max-content; max-width:calc(100% - 40px); min-height:44px; padding:10px 16px; border:1px solid rgba(115,211,195,.3); border-radius:999px; background:#11292b; color:#d2f1e9; font-size:13px; font-weight:550; line-height:1.4; white-space:nowrap; opacity:0; visibility:hidden; pointer-events:none; translate:-50% 8px; transition:opacity .2s ease,translate .24s ease,visibility .2s; box-shadow:0 5px 16px #00000026; }
+.home-buddy-entry[hidden] { display:none; }
+.home-buddy-entry > svg { width:17px; height:17px; flex-shrink:0; color:#84d9c8; }
+.home-buddy-entry > svg:last-child { width:14px; height:14px; margin-left:3px; color:#a8d4cc; }
+.home-city-swipe-zone:has(.destination-carousel.is-browsing) .home-buddy-entry { opacity:1; visibility:visible; pointer-events:auto; translate:-50% 0; }
+.home-buddy-entry:focus-visible { outline:2px solid #a6e4d7; outline-offset:4px; }
+.home-buddy-entry:active { background:#193b3d; }
+@media (hover:hover) { .home-buddy-entry:hover { background:#183638; border-color:rgba(132,217,200,.55); } }
+@media (max-height:520px) { .home-buddy-entry { min-height:36px; padding:7px 13px; bottom:6px; font-size:12px; } }
+@media (prefers-reduced-motion:reduce) { .home-buddy-entry { transition:none; } }
 .destination-journey-card {
   --journey-card-x: 0px;
   --journey-card-browse-x: 0px;
@@ -1089,7 +1107,6 @@ body { background: var(--bg); }
   transition: translate .32s cubic-bezier(.18,.82,.22,1), transform .32s cubic-bezier(.18,.82,.22,1), opacity .22s ease, border-color .22s ease;
   will-change: auto;
 }
-.destination-carousel.is-browsing .destination-card__motion-badge { opacity: .28; }
 .destination-journey-card.is-active {
   --journey-card-y: 0px;
   --journey-card-scale: 1;
@@ -1113,11 +1130,8 @@ body { background: var(--bg); }
 .destination-card__photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.86) brightness(.64) contrast(1); transform: scale(1.015); }
 .destination-card__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 52%; opacity: 1; filter: saturate(.92) brightness(.64) contrast(1.04); transform: scale(1.025); transition: opacity .28s ease; }
 .destination-card__video.is-ready { opacity: 1; animation: destinationVideoReveal .42s ease both; }
-.destination-card__motion-badge { position: absolute; z-index: 3; top: 15px; right: 15px; display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; opacity: 0; background: rgba(5,7,12,.46); box-shadow: 0 6px 18px rgba(0,0,0,.18); backdrop-filter: blur(10px); color: rgba(255,255,255,.86); font-size: 10px; font-weight: 700; letter-spacing: .04em; transform: translateY(-4px); transition: opacity .24s ease, transform .24s ease; }
-.destination-card__video.is-ready + .destination-card__motion-badge { opacity: 1; transform: translateY(0); }
-.page--home .destination-card__motion-badge,
 .page--home .destination-upcoming-card__status { left: 18px; right: auto; }
-.destination-card__motion-badge i { width: 6px; height: 6px; border-radius: 50%; background: #57e5ad; box-shadow: 0 0 0 4px rgba(87,229,173,.12), 0 0 10px rgba(87,229,173,.6); animation: destinationLivePulse 1.6s ease-in-out infinite; }
+.page--home:not(:has(.destination-carousel.is-browsing)) .destination-journey-card.is-active :is(.destination-card__video-play,.destination-upcoming-card__status) { top:calc(max(12px,env(safe-area-inset-top,0px)) + 56px); }
 .destination-card__video-play { position: absolute; z-index: 4; top: 15px; left: 15px; min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; background: rgba(5,7,12,.66); box-shadow: 0 8px 22px rgba(0,0,0,.24); backdrop-filter: blur(12px); color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .destination-card__video-play svg { width: 13px; height: 13px; fill: currentColor; }
 .destination-card__video-play:active { transform: scale(.97); }
@@ -1127,10 +1141,8 @@ body { background: var(--bg); }
     linear-gradient(90deg, rgba(3,4,7,.18), transparent 58%);
 }
 @keyframes destinationVideoReveal { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: scale(1.018); } }
-@keyframes destinationLivePulse { 0%, 100% { opacity: .6; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) {
   .destination-card__video.is-ready { animation: none; transform: scale(1.018); }
-  .destination-card__motion-badge i { animation: none; }
 }
 .destination-card__kicker { color: rgba(255,255,255,.62); font-weight: 500; }
 .destination-card h2 { font-size: 48px; font-weight: 600; letter-spacing: -.065em; }

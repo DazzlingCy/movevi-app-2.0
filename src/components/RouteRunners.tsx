@@ -9,9 +9,9 @@ function RunnerAvatar({ src }: { src: string }) {
   return failed ? <UserRound size={15} /> : <img src={resolveLocalImage(src)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-export default function RouteRunners({ count, avatars, compact = false }: { count?: number; avatars?: readonly string[]; compact?: boolean }) {
+export default function RouteRunners({ count, avatars, compact = false, dense = false }: { count?: number; avatars?: readonly string[]; compact?: boolean; dense?: boolean }) {
   const runners = getRouteRunners(count, avatars);
-  return <span className={`${styles.group} ${compact ? styles.compact : ''}`}>
+  return <span className={`${styles.group} ${compact ? styles.compact : ''} ${dense ? styles.dense : ''}`}>
     <span className={styles.avatars} aria-hidden="true">
       {runners.avatars.length ? runners.avatars.map((src, index) => <span className={styles.avatar} key={`${src}-${index}`}><RunnerAvatar src={src} /></span>) : <UsersRound size={17} />}
     </span>

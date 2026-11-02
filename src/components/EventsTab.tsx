@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Calendar, ChevronRight, Flame, Gift, Globe2, MessageSquare, Sparkles, Users } from 'lucide-react';
+import { resolveLocalImage } from '../lib/localImages';
 
 interface EventsTabProps {
   onSelectMedley?: () => void;
@@ -173,6 +174,17 @@ export default function EventsTab({
         />
 
         <EventCard
+          title="环球搭子小队"
+          description="找个搭子，各自跑完城市路线，一起解锁大转盘。"
+          image={resolveLocalImage('https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=1200')!}
+          accent="cyan"
+          icon={<Users size={16} />}
+          tag={<span className="flex items-center gap-1"><Users size={10} />双人同行</span>}
+          onClick={onSelectTeamRelay}
+          delay={0.05}
+        />
+
+        <EventCard
           title="周末城市记忆串烧"
           description="选取 3 个城市经典记忆路线，完成后可抽取现金奖励。"
           image="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600&h=400"
@@ -205,16 +217,6 @@ export default function EventsTab({
           onClick={onSelectHundredCities}
         />
 
-        <EventCard
-          title="城市拼图小队"
-          description="创建或加入 2 人小队，完成随机城市路线拼图，点亮全城后瓜分现金奖励。"
-          image="https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&q=80&w=600&h=400"
-          accent="cyan"
-          icon={<Users size={16} />}
-          tag={<span className="flex items-center gap-1"><Users size={10} />2人小队</span>}
-          onClick={onSelectTeamRelay}
-          delay={0.15}
-        />
       </div>
     </div>
   );
