@@ -46,7 +46,7 @@ export default function Modal({ children, labelId, onClose, className = '', back
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      previouslyFocused?.focus();
+      previouslyFocused?.focus({ preventScroll: true });
     };
   }, []);
 
