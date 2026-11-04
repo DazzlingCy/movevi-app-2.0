@@ -11,12 +11,13 @@ test('editable goals default to five km and accept only supported positive value
   assert.equal(dailyGoalPercentage(3.75,5), 75);
   assert.equal(dailyGoalPercentage(3.75,10), 37);
 });
-test('preview starts at seventy-five percent without changing real empty-day records', () => {
-  const preview = createPreviewDailyExercise(5, noon);
-  assert.equal(dailyExerciseTotals(preview,noon).distanceKm, 3.75);
-  assert.equal(dailyGoalPercentage(dailyExerciseTotals(preview,noon).distanceKm), 75);
+test('preview starts at one km without changing real empty-day records', () => {
+  const preview = createPreviewDailyExercise(noon);
+  assert.equal(dailyExerciseTotals(preview,noon).distanceKm, 1);
+  assert.equal(dailyGoalPercentage(dailyExerciseTotals(preview,noon).distanceKm), 20);
   assert.equal(dailyExerciseTotals(readDailyExercise(null,noon),noon).distanceKm, 0);
 });
+
 test('daily goal shows partial progress and caps completed goals at 100 percent', () => {
   assert.equal(dailyGoalPercentage(0), 0);
   assert.equal(dailyGoalPercentage(2.5), 50);

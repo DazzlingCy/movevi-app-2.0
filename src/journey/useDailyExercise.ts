@@ -12,7 +12,11 @@ export function useDailyExercise(preview = false) {
     let saved;
     try { saved = readDailyExercise(localStorage.getItem(storageKey)); }
     catch { saved = readDailyExercise(null); }
-    return preview && saved.runs.length === 0 ? createPreviewDailyExercise(goalKm) : saved;
+    if (!preview) return saved;
+    const seed = createPreviewDailyExercise();
+    if (saved.runs.length === 0) return seed;
+    // Refresh the preview fixture while retaining runs completed in the prototype.
+    return { ...saved, runs:saved.runs.map(run => run.id === 'preview-today' ? seed.runs[0] : run) };
   });
   const latest = useRef(state);
   const [now, setNow] = useState(Date.now);

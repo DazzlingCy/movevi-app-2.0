@@ -5,18 +5,33 @@
 .panel :global(.journey-progress__topline) > div > span { color:#b0b3bf; }
 .coverContent { align-items:flex-end; gap:16px; }
 .coverContent > div { flex:1; min-width:0; }
+.browseRoute { position:absolute; z-index:4; left:15%; right:15%; bottom:clamp(10px,2.5%,22px); display:flex; align-items:center; gap:9px; min-width:0; min-height:64px; margin:0; padding:8px 10px; border:1px solid #ffffff14; border-radius:13px; background:#13161f; color:#edf0f8; text-align:left; cursor:pointer; opacity:0; visibility:hidden; pointer-events:none; translate:0 6px; transition:opacity .18s ease,translate .2s ease,visibility .18s; }
+:global(.home-city-swipe-zone:has(.destination-carousel.is-browsing)) .browseRoute { opacity:1; visibility:visible; pointer-events:auto; translate:0 0; }
+.browseRoute:focus-visible { outline:2px solid #b8acff; outline-offset:3px; }
+.browseRoute:active { background:#202332; }
+.browseRouteCover { flex:0 0 42px; width:42px; height:42px; object-fit:cover; border-radius:8px; }
+.browseRouteBody { display:grid; gap:3px; flex:1; min-width:0; }
+.browseRouteLabel { color:#aaa5d5; font-size:9px; line-height:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.browseRouteBody > strong { overflow:hidden; color:#e7eaf4; font-size:12px; font-weight:550; line-height:16px; white-space:nowrap; text-overflow:ellipsis; }
+.browseRouteStats { display:flex; align-items:center; gap:4px; color:#aab1c2; font-size:9px; line-height:12px; white-space:nowrap; }
+.browseRouteStats svg { width:10px; height:10px; }
+.browseRouteStats > span { margin-inline:1px; color:#656c7e; }
+.browseRouteArrow { flex:0 0 14px; width:14px; height:14px; color:#b9b2f2; }
 .coverContent .coverRunners { max-width:100%; margin:10px 0 0; min-height:22px; padding-inline:7px; gap:5px; font-size:9px; backdrop-filter:none; -webkit-backdrop-filter:none; }
-.dailySummary { position:relative; flex:0 0 104px; display:grid; justify-items:center; gap:5px; width:104px; margin:0; padding:8px 4px; border:1px solid #ffffff14; border-radius:12px; background:#0d121c73; text-align:center; text-shadow:0 1px 4px #00000080; transition:background .18s ease,border-color .18s ease; }
+.dailySummary { position:relative; flex:0 0 166px; display:grid; grid-template-columns:58px minmax(0,1fr); align-items:center; column-gap:8px; row-gap:3px; width:166px; margin:0; padding:11px 10px; border:1px solid #ffffff14; border-radius:14px; background:#0d121c99; text-align:left; text-shadow:0 1px 4px #00000080; transition:background .18s ease,border-color .18s ease; }
+.dailySummary .goalRing { grid-column:1; grid-row:1 / 4; }
 .dailySummary[data-state='complete'] { border-color:#6bd7b330; }
 .dailySummary:has(.editGoalAction:active) { background:#1b243f99; }
 .editGoalAction { position:absolute; inset:0; z-index:3; width:100%; border:0; border-radius:inherit; background:transparent; cursor:pointer; }
 .editGoalAction:focus-visible { outline:2px solid #dedaff; outline-offset:3px; }
 @media (hover:hover) { .dailySummary:hover { background:#1319268c; } }
-.dailyLabel { display:flex; align-items:center; gap:6px; color:#d1d4e0; font-size:11px; line-height:16px; font-weight:500; }
+.dailyLabel { grid-column:2; grid-row:1; display:flex; align-items:center; gap:6px; color:#c5cad6; font-size:10px; line-height:14px; font-weight:500; white-space:nowrap; }
 .dailyLabel svg { width:10px; height:10px; color:#bfc1d0; }
-.dailyDistance { display:block; color:#f3f4fa; font-size:22px; font-weight:600; line-height:1.15; font-variant-numeric:tabular-nums; }
+.dailyDistance { grid-column:2; grid-row:2; display:block; color:#f3f4fa; font-size:26px; font-weight:600; line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .dailyDistance small { margin-left:4px; color:#b8bdca; font-size:10px; font-weight:450; }
-.dailyTarget { color:#c0c4d1; font-size:10px; line-height:14px; white-space:nowrap; }
+.dailyTarget { grid-column:2; grid-row:3; display:flex; align-items:center; gap:4px; color:#aab2c2; font-size:9px; line-height:13px; white-space:nowrap; }
+.targetDistance { color:#c0c4d1; }
+.dailySummary[data-state='empty'] .targetDistance { margin-left:2px; }
 .cityTotals { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:4px 0 14px; padding:11px 0; border-block:1px solid #ffffff0c; }
 .cityTotals > div { display:grid; min-width:0; gap:5px; }
 .cityTotals > div + div { border-left:1px solid #ffffff0c; padding-left:12px; }
@@ -29,16 +44,27 @@
 .goalRing[data-complete='true'] { --goal-color:#6bd7b3; }
 .goalRing[data-state='empty'] { --goal-color:#c2c7d4; }
 .goalRing[data-state='empty'] .goalTrack { stroke:#9ba3b56b; }
-.goalRing svg { position:absolute; inset:0; width:100%; height:100%; rotate:-90deg; }
-.goalRing circle { fill:none; stroke-width:4; }
+.goalRing > svg:not(.treadmillMotion) { position:absolute; inset:0; width:100%; height:100%; rotate:-90deg; }
+.goalRing > svg:not(.treadmillMotion) circle { fill:none; stroke-width:4; }
 .goalTrack { stroke:#ffffff30; }
 .goalFill { stroke:var(--goal-color); stroke-linecap:round; transition:stroke-dashoffset .8s ease-out,stroke .3s ease; }
-.goalValue { display:grid; justify-items:center; gap:2px; color:var(--goal-color); }
-.goalValue > strong { font-size:15px; line-height:16px; font-weight:650; font-variant-numeric:tabular-nums; }
-.goalRing strong small { margin-left:1px; font-size:9px; font-weight:450; }
-.goalStatus { display:flex; align-items:center; gap:2px; font-size:8px; line-height:10px; font-weight:500; white-space:nowrap; }
-.goalStatus svg { position:static; width:8px; height:8px; rotate:none; stroke:currentColor; }
-.goalRing[data-state='empty'] .goalStatus svg { fill:currentColor; }
+.treadmillMotion { --treadmill-play-state:paused; position:relative; width:38px; height:38px; color:var(--goal-color); }
+.treadmillMachine { color:#b7bece; stroke-width:1.6; }
+.treadmillPerson { animation:treadmillBounce .72s ease-in-out infinite; }
+.treadmillPerson path { transform-box:view-box; }
+.treadmillArmFront, .treadmillArmBack { transform-origin:23px 16px; animation:treadmillArms .72s ease-in-out infinite; }
+.treadmillLegFront, .treadmillLegBack { transform-origin:19px 26px; animation:treadmillLegs .72s ease-in-out infinite; }
+.treadmillArmBack, .treadmillLegBack { animation-delay:-.36s; opacity:.65; }
+.treadmillBelt { animation:treadmillBelt .36s linear infinite; }
+.treadmillMotion :is(g,path) { animation-play-state:var(--treadmill-play-state); }
+:global(.destination-journey-card.is-active) .treadmillMotion { --treadmill-play-state:running; }
+:global(.destination-carousel.is-browsing) .treadmillMotion,
+.goalRing[data-animate='false'] .treadmillMotion,
+.goalRing[data-state='empty'] .treadmillMotion { --treadmill-play-state:paused; }
+@keyframes treadmillBounce { 0%,100% { translate:0 0; } 50% { translate:0 -1px; } }
+@keyframes treadmillArms { 0%,100% { rotate:-16deg; } 50% { rotate:22deg; } }
+@keyframes treadmillLegs { 0%,100% { rotate:18deg; } 50% { rotate:-22deg; } }
+@keyframes treadmillBelt { from { translate:2px 0; } to { translate:-2px 0; } }
 .goalLayer { position:absolute; inset:0; z-index:70; pointer-events:auto; }
 .goalEditor { color:#f3f4fa; padding:22px 20px max(24px,env(safe-area-inset-bottom)); }
 .goalEditor header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px; }
@@ -56,36 +82,44 @@
 .goalError { margin:0 0 16px; color:#ffb7aa; font-size:12px; line-height:18px; }
 .saveGoal { width:100%; min-height:48px; border:0; border-radius:14px; background:#aaa3ff; color:#17152d; font-size:15px; font-weight:650; }
 .saveGoal:active { background:#c5bfff; }
-@media (max-width:360px) { .coverContent { gap:12px; } .dailySummary { flex-basis:96px; width:96px; } .coverContent :global(h2) { font-size:32px; overflow-wrap:anywhere; } }
+@media (max-width:360px) { .coverContent { gap:12px; } .dailySummary { flex-basis:150px; width:150px; grid-template-columns:48px minmax(0,1fr); column-gap:6px; padding-inline:8px; } .dailySummary .goalRing { width:48px; height:48px; } .dailySummary .treadmillMotion { width:32px; height:32px; } .dailyDistance { font-size:24px; } .coverContent :global(h2) { font-size:32px; overflow-wrap:anywhere; } }
 @media (max-height:640px) {
-  .dailySummary { gap:4px; padding-block:6px; }
+  .browseRoute { min-height:52px; padding:5px 7px; gap:6px; border-radius:10px; }
+  .browseRouteCover { flex-basis:34px; width:34px; height:34px; border-radius:6px; }
+  .browseRouteBody { gap:1px; }
+  .browseRouteBody > strong { font-size:11px; line-height:14px; }
+  .browseRouteStats { gap:3px; font-size:8px; }
+  .browseRouteStats svg { display:none; }
+  .dailySummary { padding-block:8px; }
   .dailySummary .goalRing { width:46px; height:46px; }
-  .dailySummary .dailyDistance { font-size:22px; }
-  .goalStatus { font-size:7px; line-height:9px; }
-  .goalStatus svg { width:7px; height:7px; }
+  .dailySummary .treadmillMotion { width:30px; height:30px; }
 }
-@media (prefers-reduced-motion:reduce) { .goalFill { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .browseRoute { transition:none; } .goalFill { transition:none; } .treadmillMotion :is(g,path) { animation:none; } }
+:global([data-reduced-motion='true']) .browseRoute { transition:none; }
 :global([data-reduced-motion='true']) .goalFill { transition:none; }
-.track { --track-accent:#a7a3ff; --run-play-state:paused; position:relative; height:34px; margin:2px 0; }
+:global([data-reduced-motion='true']) .treadmillMotion :is(g,path) { animation:none; }
+.track { --track-accent:#a7a3ff; --run-play-state:paused; position:relative; height:22px; margin:6px 0 4px; }
 .track[data-state='completed'] { --track-accent:#6bd7b3; }
 .track[data-state='locked'] { --track-accent:#7f8491; }
 .lanes { position:absolute; right:26px; bottom:0; left:0; height:16px; padding:5px 7px; border:1px solid #ffffff24; border-radius:12px; }
 .lanes::before { content:''; position:absolute; inset:2px; border:1px solid #ffffff0c; border-radius:10px; pointer-events:none; }
 .lanes::after { content:''; position:absolute; top:3px; bottom:3px; left:3px; width:4px; border-inline:1px solid #b7b6ce; opacity:.65; }
 .segments { position:relative; display:grid; gap:3px; height:4px; }
-.segments i { border-radius:2px; background:#343640; }
+.segments i { position:relative; overflow:hidden; border-radius:2px; background:#343640; }
 .segments i[data-complete='true'] { background:var(--track-accent); }
-.runner { position:absolute; bottom:10px; display:grid; width:24px; height:24px; place-items:center; transform:translateX(-50%); color:var(--track-accent); transition:left .5s cubic-bezier(.2,.8,.2,1); }
-.runner svg { width:23px; height:23px; }
+.segments i[data-complete='true']::after { content:''; position:absolute; inset:0; background:linear-gradient(100deg,transparent 15%,#ffffff35 35%,#ffffffe0 50%,#ffffff35 65%,transparent 85%); translate:-130% 0; animation:progressFlow 3s ease-in-out infinite; animation-delay:calc(var(--segment-index) * .12s); animation-play-state:var(--run-play-state); }
+@keyframes progressFlow { 0%,15% { translate:-130% 0; } 45%,100% { translate:130% 0; } }
 .finish { position:absolute; right:0; bottom:3px; width:18px; height:20px; color:var(--track-accent); }
 .runningFigure { animation:runBounce .64s ease-in-out infinite; animation-play-state:var(--run-play-state); }
 .runningFigure .frontArm, .runningFigure .backArm { transform-box:view-box; transform-origin:50% 37.5%; animation:armStride .64s ease-in-out infinite; animation-play-state:var(--run-play-state); }
 .runningFigure .frontLeg, .runningFigure .backLeg { transform-box:view-box; transform-origin:41.67% 62.5%; animation:legStride .64s ease-in-out infinite; animation-play-state:var(--run-play-state); }
 .runningFigure .backArm, .runningFigure .backLeg { animation-delay:-.32s; }
 :global(.destination-journey-card.is-active) .track[data-state='current'] { --run-play-state:running; }
+:global(.destination-journey-card.is-active) .track[data-state='completed'] { --run-play-state:running; }
 :global(.destination-carousel.is-browsing) .track[data-state='current'] { --run-play-state:paused; }
 @keyframes runBounce { 0%,100% { translate:0 0; } 50% { translate:0 -1px; } }
 @keyframes armStride { 0%,100% { rotate:-18deg; } 50% { rotate:22deg; } }
 @keyframes legStride { 0%,100% { rotate:22deg; } 50% { rotate:-24deg; } }
-@media (prefers-reduced-motion:reduce) { .runner { transition:none; } .runningFigure, .runningFigure path { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .segments i::after { animation:none; display:none; } .runningFigure, .runningFigure path { animation:none; } }
+:global([data-reduced-motion='true']) .segments i::after { animation:none; display:none; }
 :global([data-reduced-motion='true']) .runningFigure, :global([data-reduced-motion='true']) .runningFigure path { animation:none; }

@@ -1,12 +1,10 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
-import { Check, Clock3, Flame, Footprints, Pencil, Play, X } from 'lucide-react';
+import { Clock3, Flame, Footprints, Pencil, X } from 'lucide-react';
 import type { RunResult } from '../../journey/types';
 import { dailyGoalPercentage, DEFAULT_DAILY_GOAL_KM, isValidDailyGoal } from '../../journey/dailyExercise';
 import Modal from './Modal';
 import styles from './HomeRunElements.module.css';
 
-// Retain the last visible progress while the city list and run screens are open.
-const seenCityProgress = new Map<string, number>();
 const distanceFormatter = new Intl.NumberFormat('zh-CN', { minimumFractionDigits:1, maximumFractionDigits:3, useGrouping:false });
 
 export function RunIcon({ animated = false }: { animated?: boolean }) {
@@ -23,27 +21,33 @@ export function RunIcon({ animated = false }: { animated?: boolean }) {
 export function CityRunProgress({ cityName, completed, total, current }: { cityName: string; completed: number; total: number; current: boolean }) {
   const count = Math.min(total, Math.max(0, completed));
   const finished = total > 0 && count === total;
-  const progress = total > 0 ? count / total : 0;
-  const marker = useRef<HTMLSpanElement>(null);
-  const previous = useRef(seenCityProgress.get(cityName) ?? count);
-  useEffect(() => {
-    if (count > previous.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && !marker.current?.closest('[data-reduced-motion="true"]')) {
-      marker.current?.animate([{ translate: '0 0' }, { translate: '0 -4px' }, { translate: '0 0' }], { duration: 420, easing: 'ease-out' });
-    }
-    previous.current = count;
-    seenCityProgress.set(cityName, count);
-  }, [cityName, count]);
-
   return <div className={styles.track} data-state={finished ? 'completed' : current ? 'current' : 'locked'} role="progressbar" aria-label={`${cityName}跑步路线进度`} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count} aria-valuetext={`已完成 ${count} / ${total} 条路线`}>
     <div className={styles.lanes} aria-hidden="true"><div className={styles.segments} style={{ gridTemplateColumns: `repeat(${Math.max(1,total)}, minmax(0, 1fr))` }}>
-      {Array.from({ length: total }, (_, index) => <i key={index} data-complete={index < count} />)}
+      {Array.from({ length: total }, (_, index) => <i key={index} data-complete={index < count} style={{ '--segment-index':index } as CSSProperties} />)}
     </div></div>
-    {(current || finished) && <span ref={marker} className={styles.runner} style={{ left: `calc(${progress * 100}% + ${8 - 42 * progress}px)` } as CSSProperties} aria-hidden="true">{finished ? <Check /> : <RunIcon animated />}</span>}
     <svg className={styles.finish} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 22V3h15v11H4" />
       <path d="M4 3h5v5H4zm5 5h5v6H9zm5-5h5v5h-5z" fill="currentColor" stroke="none" />
     </svg>
   </div>;
+}
+
+function TreadmillRunner() {
+  return <svg className={styles.treadmillMotion} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <g className={styles.treadmillPerson}>
+      <circle cx="25" cy="9" r="3" fill="currentColor" stroke="none" />
+      <path d="m23 16-4 10" />
+      <path className={styles.treadmillArmFront} d="m23 16 5 5 5-3" />
+      <path className={styles.treadmillArmBack} d="m23 16-6 4-4-2" />
+      <path className={styles.treadmillLegFront} d="m19 26 7 4-2 6" />
+      <path className={styles.treadmillLegBack} d="m19 26-5 7-5-1" />
+    </g>
+    <g className={styles.treadmillMachine}>
+      <path d="m36 36-3-17m-4-2h7" />
+      <rect x="6" y="36" width="34" height="5" rx="2.5" />
+      <path className={styles.treadmillBelt} d="M13 38.5h2m7 0h2m7 0h2" />
+    </g>
+  </svg>;
 }
 
 function DailyGoalRing({ distanceKm, goalKm, animate }: { distanceKm: number; goalKm: number; animate: boolean }) {
@@ -58,15 +62,12 @@ function DailyGoalRing({ distanceKm, goalKm, animate }: { distanceKm: number; go
     motion.addEventListener('change', cancel);
     return () => { cancel(); motion.removeEventListener('change', cancel); };
   }, [percentage, goalKm, animate]);
-  return <div className={styles.goalRing} data-state={state} data-complete={percentage === 100} role="progressbar" aria-label="今日里程目标" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} aria-valuetext={`${state === 'empty' ? '尚未开始，' : state === 'complete' ? '目标已达成，' : ''}已完成 ${percentage}%，今日 ${distanceKm} 公里，目标 ${goalKm} 公里`}>
+  return <div className={styles.goalRing} data-state={state} data-animate={animate} data-complete={percentage === 100} role="progressbar" aria-label="今日里程目标" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} aria-valuetext={`${state === 'empty' ? '尚未开始，' : state === 'complete' ? '目标已达成，' : ''}已完成 ${percentage}%，今日 ${distanceKm} 公里，目标 ${goalKm} 公里`}>
     <svg viewBox="0 0 60 60" aria-hidden="true">
       <circle className={styles.goalTrack} cx="30" cy="30" r="25" />
       <circle ref={fill} className={styles.goalFill} cx="30" cy="30" r="25" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - percentage} strokeOpacity={percentage > 0 ? 1 : 0} />
     </svg>
-    <div className={styles.goalValue} aria-hidden="true"><strong>{percentage}<small>%</small></strong>
-      {state === 'empty' && <span className={styles.goalStatus}><Play aria-hidden="true" />待开始</span>}
-      {state === 'complete' && <span className={styles.goalStatus}><Check aria-hidden="true" />已达成</span>}
-    </div>
+    <TreadmillRunner />
   </div>;
 }
 
@@ -78,7 +79,10 @@ export function TodayExerciseSummary({ today, goalKm, animate, onEdit }: { today
         <span className={styles.dailyLabel}>今日运动<Pencil aria-hidden="true" /></span>
         <DailyGoalRing distanceKm={today.distanceKm} goalKm={goalKm} animate={animate} />
         <strong className={styles.dailyDistance} aria-label={`今日跑步 ${distance} 公里`}>{distance}<small>km</small></strong>
-        <span className={styles.dailyTarget}>目标 {goalKm} km</span>
+        <span className={styles.dailyTarget}>
+          {state === 'empty' ? <span>待开始</span> : <span>目标</span>}
+          <span className={styles.targetDistance}>{goalKm} km</span>
+        </span>
     </section>;
 }
 

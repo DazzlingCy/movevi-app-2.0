@@ -15,8 +15,8 @@ const dayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai
 export const exerciseDay = (now = Date.now()) => dayFormatter.format(now);
 const validResult = (result: RunResult) => [result.distanceKm, result.durationSeconds, result.calories].every(value => Number.isFinite(value) && value >= 0);
 export const emptyDailyExercise = (now = Date.now()): DailyExercise => ({ day: exerciseDay(now), runs: [] });
-export function createPreviewDailyExercise(goalKm = DEFAULT_DAILY_GOAL_KM, now = Date.now()): DailyExercise {
-  const distanceKm = goalKm * .75;
+export function createPreviewDailyExercise(now = Date.now()): DailyExercise {
+  const distanceKm = 1;
   return { day: exerciseDay(now), runs: [{ id:'preview-today', distanceKm, durationSeconds:Math.round(distanceKm * 480), calories:Math.round(distanceKm * 65) }] };
 }
 
