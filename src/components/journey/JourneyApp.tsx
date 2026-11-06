@@ -27,7 +27,8 @@ import MedalLotteryView from '../MedalLotteryView';
 import OnlineSupportView from '../OnlineSupportView';
 import MyDevicesView from '../MyDevicesView';
 import DeviceConnectedPrompt from '../DeviceConnectedPrompt';
-import { resolveLocalImage } from '../../lib/localImages';
+import { resolveLocalImage, resolveRecommendationCover } from '../../lib/localImages';
+import { createRunSceneryVideo } from '../../lib/runScenery';
 import RouteDetailView from '../RouteDetailView';
 import RunPlaybackView from '../RunPlaybackView';
 import TeamRelayView from '../TeamRelayView';
@@ -855,7 +856,7 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
                       {itemHasJourneyProgress ? (
                         <>
                           {itemStatus === 'current' && <RunIcon />}
-                          {itemStatus === 'completed' ? `查看${item.name}旅程` : `继续${item.name}跑步旅程`}
+                          {itemStatus === 'completed' ? `查看${item.name}旅程` : '开始跑步'}
                           <ArrowRight aria-hidden="true" />
                         </>
                       ) : (
@@ -920,7 +921,7 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
           onPointerCancel={armCarouselSettle}
           onClick={event => { event.stopPropagation(); selectNearestCity(); onRecommendations(); }}
         >
-          <CityImage className={homeRunStyles.browseRouteCover} src={getRouteCover(featuredRecommendation.city.name, featuredRecommendation.route.order)?.src ?? cityImageFor(featuredRecommendation.city)} alt="" fallbackLabel={featuredRecommendation.route.landmarks[0]} loading="eager" />
+          <CityImage className={homeRunStyles.browseRouteCover} src={resolveRecommendationCover(getRouteCover(featuredRecommendation.city.name, featuredRecommendation.route.order)?.src, 'thumbnail') ?? cityImageFor(featuredRecommendation.city)} alt="" fallbackLabel={featuredRecommendation.route.landmarks[0]} loading="eager" />
           <span className={homeRunStyles.browseRouteBody}>
             <strong>每日推荐</strong>
             <span className={homeRunStyles.browseRouteDetail}>{recommendations.map(({ city }) => city.name).join(' · ')}</span>
@@ -1562,6 +1563,17 @@ function UtilityPanel({ mode, deviceConnected, manualReducedMotion, onToggleDevi
 }
 
 export default function JourneyApp() {
+  const runSceneryRef = useRef<HTMLVideoElement | null>(null);
+  const prepareRunScenery = useCallback(() => {
+    return runSceneryRef.current ??= createRunSceneryVideo();
+  }, []);
+  const startRunScenery = () => {
+    const video = prepareRunScenery();
+    video.preload = 'auto';
+    void video.play().catch(() => {
+      // The run screen offers an in-page playback retry.
+    });
+  };
   const {enabled:puzzleDemo,openOnLoad:puzzleDeepLink}=getPuzzlePreviewMode(window.location.search);
   const dailyExercise = useDailyExercise(puzzleDemo);
   const [dailyGoalOpen, setDailyGoalOpen] = useState(false);
@@ -1679,6 +1691,14 @@ export default function JourneyApp() {
     }
   };
   const openRecommendations = () => {
+    const featured = recommendations[0];
+    const featuredCover = featured && resolveRecommendationCover(getRouteCover(featured.city.name, featured.route.order)?.src, 'feature');
+    if (featuredCover) {
+      const preload = new Image();
+      preload.fetchPriority = 'high';
+      preload.referrerPolicy = 'no-referrer';
+      preload.src = featuredCover;
+    }
     recommendationScrollTop.current = 0;
     setRouteCityId(null);
     setSelectedRouteId(null);
@@ -1721,6 +1741,7 @@ export default function JourneyApp() {
       && getRouteStatus(state, route.cityId, route.id) !== 'locked';
     if (!countsForJourney && !(fromRecommendation && hasPublishedCityRoutes(route.cityId))) return;
     exerciseSessionId.current = crypto.randomUUID();
+    startRunScenery();
     if (!deviceConnected) connectPreviewDevice();
     setRunningRoute({ cityId: route.cityId, routeId: route.id, countsForJourney });
     setRouteCityId(null);
@@ -1920,6 +1941,15 @@ export default function JourneyApp() {
   const runningRouteData = runningRoute ? getJourneyRoute(runningRoute.cityId, runningRoute.routeId) : undefined;
   const routeSheetCity = routeCityId ? getJourneyCity(routeCityId) : undefined;
   const selectedRouteData = routeSheetCity && selectedRouteId ? getJourneyRoute(routeSheetCity.id, selectedRouteId) : undefined;
+  const canWarmRunScenery = !!activityRoute || !!(routeSheetCity && selectedRouteData && (
+    recommendationsOpen || (
+      ['current', 'completed'].includes(getCityStatus(state, routeSheetCity.id))
+      && getRouteStatus(state, routeSheetCity.id, selectedRouteData.id) !== 'locked'
+    )
+  ));
+  useEffect(() => {
+    if (canWarmRunScenery) prepareRunScenery();
+  }, [canWarmRunScenery, prepareRunScenery]);
   const lastRunCity = state.lastRun ? getJourneyCity(state.lastRun.cityId) : undefined;
   const lastRunRoute = state.lastRun ? getJourneyRoute(state.lastRun.cityId, state.lastRun.routeId) : undefined;
   const pendingCity = state.pendingNextCityId ? getJourneyCity(state.pendingNextCityId) : undefined;
@@ -1932,7 +1962,7 @@ export default function JourneyApp() {
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell" data-reduced-motion={reduceMotion}><div className="paper-grain" aria-hidden="true" />
       <AnimatePresence mode="wait" initial={false}>
         {isFirstUse ? <motion.div className="screen-layer" key="first-city" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }}><FirstJourneyExperience selectedId={firstCityChoiceId} currentCity={currentCity} currentCityCompletedRoutes={currentCityCompletedRoutes} hasExistingJourney={hasExistingJourney} onSelect={setFirstCityChoiceId} onContinue={startFirstJourney} onResume={resumeCurrentJourney} /></motion.div>
-        : runningActivityRoute ? <motion.div className="screen-layer" key="running-activity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningActivityRoute.cityId} cityName={runningActivityRoute.source === 'teamRelay' ? getJourneyCity(runningActivityRoute.cityId)?.name : undefined} routeIndex={runningActivityRoute.routeIndex} image={runningActivityRoute.image} routeOverride={runningActivityRoute.source === 'teamRelay' ? toLegacyRouteItem(getJourneyCity(runningActivityRoute.cityId)!.routes[runningActivityRoute.routeIndex-1],state) : undefined} requireFullRoute={runningActivityRoute.source === 'teamRelay'} onExit={() => { puzzleSession.current=null; setActivityRoute(runningActivityRoute); setRunningActivityRoute(null); }} onComplete={stats => completeActivityRoute(runningActivityRoute,stats)} /></motion.div>
+        : runningActivityRoute ? <motion.div className="screen-layer" key="running-activity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView prepareScenery={prepareRunScenery} cityId={runningActivityRoute.cityId} cityName={runningActivityRoute.source === 'teamRelay' ? getJourneyCity(runningActivityRoute.cityId)?.name : undefined} routeIndex={runningActivityRoute.routeIndex} image={runningActivityRoute.image} routeOverride={runningActivityRoute.source === 'teamRelay' ? toLegacyRouteItem(getJourneyCity(runningActivityRoute.cityId)!.routes[runningActivityRoute.routeIndex-1],state) : undefined} requireFullRoute={runningActivityRoute.source === 'teamRelay'} onExit={() => { puzzleSession.current=null; setActivityRoute(runningActivityRoute); setRunningActivityRoute(null); }} onComplete={stats => completeActivityRoute(runningActivityRoute,stats)} /></motion.div>
         : activityRoute ? <motion.div className="screen-layer" key="activity-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={activityRoute.cityId} routeIndex={activityRoute.routeIndex} image={activityRoute.image} routeOverride={activityRoute.source === 'teamRelay' ? toLegacyRouteItem(getJourneyCity(activityRoute.cityId)!.routes[activityRoute.routeIndex-1],state) : undefined} onBack={() => setActivityRoute(null)} onStart={() => {
           if (activityRoute.source === 'teamRelay') {
             const team = periodParticipation(puzzle.state,weekendPeriod(puzzle.now()).id); const route = puzzleRoutes.find(r => r.id === activityRoute.cityId && r.routeIndex === activityRoute.routeIndex);
@@ -1940,7 +1970,7 @@ export default function JourneyApp() {
             puzzleSession.current = {id:crypto.randomUUID(),teamId:team.id,startedAt:puzzle.now(),slot:Number(activityRoute.taskId),route};
             dispatch({ type:'REVEAL_ROUTE',cityId:route.id,routeId:route.routeId });
           }
-          exerciseSessionId.current = crypto.randomUUID(); setRunningActivityRoute(activityRoute); setActivityRoute(null);
+          exerciseSessionId.current = crypto.randomUUID(); startRunScenery(); setRunningActivityRoute(activityRoute); setActivityRoute(null);
         }} /></motion.div>
         : legacyFeature === 'level' ? <motion.div className="screen-layer" key="journey-level" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><JourneyLevelView state={state} onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'leaderboard' ? <motion.div className="screen-layer" key="leaderboard" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><LeaderboardView currentLevel={countryLevel.level} onBack={() => setLegacyFeature(null)} /></motion.div>
@@ -1949,7 +1979,7 @@ export default function JourneyApp() {
         : legacyFeature === 'weekendMedley' ? <motion.div className="screen-layer" key="weekend-medley" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeekendMedleyView onBack={() => setLegacyFeature(null)} selectedRouteIds={medleySelectedRouteIds} completedRouteIds={medleyCompletedRouteIds} lotteryChances={medleyLotteryChances} drawHistory={medleyDrawHistory} shareBonusClaimed={medleyShareBonusClaimed} activityStarted={medleyActivityStarted} onUpdateState={(next) => { if (next.selectedRouteIds !== undefined) setMedleySelectedRouteIds(next.selectedRouteIds); if (next.completedRouteIds !== undefined) setMedleyCompletedRouteIds(next.completedRouteIds); if (next.lotteryChances !== undefined) setMedleyLotteryChances(next.lotteryChances); if (next.drawHistory !== undefined) setMedleyDrawHistory(next.drawHistory); if (next.shareBonusClaimed !== undefined) setMedleyShareBonusClaimed(next.shareBonusClaimed); if (next.activityStarted !== undefined) setMedleyActivityStarted(next.activityStarted); }} onNavigateToRouteDetail={openMedleyRoute} /></motion.div>
         : legacyFeature === 'teamRelay' ? <motion.div className="screen-layer" key="team-relay" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><TeamRelayView preview={puzzleDemo} state={puzzle.state} cities={puzzleCities} routes={puzzleRoutes} storageFailed={puzzle.storageFailed} onBack={() => setLegacyFeature(null)} onCreate={puzzle.create} onJoin={puzzle.join} onDraw={puzzle.draw} now={puzzle.now()} onRun={openTeamRelayRoute} onSimulatePartner={puzzleDemo?puzzle.demoFinishPartner:undefined} onSimulateJoin={puzzleDemo?puzzle.demoJoin:undefined} /></motion.div>
         : legacyFeature === 'firstCityRewards' ? <motion.div className="screen-layer" key="first-city-rewards" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><FirstCityRewardsView state={firstCityRewards.state} city={{ name:rewardCity.name, image:cityImageFor(rewardCity), total:rewardCity.routes.length }} storageFailed={firstCityRewards.storageFailed} onBack={() => setLegacyFeature(null)} onDevice={openFirstCityActivation} onContinue={continueFirstCityTask} onClaim={firstCityRewards.claim} /></motion.div>
-        : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state, recommendationsOpen)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
+        : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView prepareScenery={prepareRunScenery} cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state, recommendationsOpen)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
         : state.currentPage === 'routeComplete' && state.lastRun && lastRunCity && lastRunRoute ? <motion.div className="screen-layer" key="route-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><RouteCompletePage city={lastRunCity} route={lastRunRoute} completed={getCompletedRouteIds(state, lastRunCity.id).length} result={state.lastRun} firstCompletion={state.lastRun.isFirstCompletion} onNext={() => { setActiveTab('home'); dispatch({ type: 'NAVIGATE', page: 'home' }); window.setTimeout(() => openCity(state.currentCityId), 0); }} onMap={() => selectPrimaryTab('world')} /></motion.div>
         : state.currentPage === 'cityComplete' ? <motion.div className="screen-layer" key="city-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CityCompletePage city={currentCity} candidates={candidateCities} selectedId={effectiveCandidateId} onSelect={setSelectedCandidateId} onContinue={() => effectiveCandidateId && dispatch({ type: 'SELECT_NEXT_CITY', cityId: effectiveCandidateId })} /></motion.div>
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>

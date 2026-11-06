@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Award, ChevronLeft, MapPin, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
 import { CITIES, getRouteData } from '../data/cities';
@@ -7,7 +7,6 @@ import type { CityRouteListItem } from './CityRoutesView';
 import Modal from './journey/Modal';
 import styles from './RunPlaybackView.module.css';
 
-const sceneryVideoSource = `${import.meta.env.BASE_URL}video/routes/hangzhou-city-mobile.mp4`;
 const sceneryLoadTimeoutMs = 8000;
 
 const MEDALS = [
@@ -25,6 +24,7 @@ interface RunPlaybackViewProps {
   image: string;
   cityName?: string;
   routeOverride?: CityRouteListItem;
+  prepareScenery: () => HTMLVideoElement;
   onExit: () => void;
   requireFullRoute?: boolean;
   demoCompleteSignal?: number;
@@ -42,7 +42,7 @@ const parsePlannedDuration = (value: string) => {
   return minutes * 60 + seconds;
 };
 
-export default function RunPlaybackView({ cityId, routeIndex, image, cityName: cityNameOverride, routeOverride, onExit, onComplete, requireFullRoute = false, demoCompleteSignal = 0 }: RunPlaybackViewProps) {
+export default function RunPlaybackView({ cityId, routeIndex, image, cityName: cityNameOverride, routeOverride, prepareScenery, onExit, onComplete, requireFullRoute = false, demoCompleteSignal = 0 }: RunPlaybackViewProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [distance, setDistance] = useState(0);
   const [time, setTime] = useState(0);
@@ -50,6 +50,7 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
   const [showRunActions, setShowRunActions] = useState(false);
   const runActionsTitleId = useId();
   const runSummaryTitleId = useId();
+  const sceneryHostRef = useRef<HTMLDivElement>(null);
   const sceneryVideoRef = useRef<HTMLVideoElement>(null);
   const [sceneryVisible, setSceneryVisible] = useState(false);
   const [sceneryMuted, setSceneryMuted] = useState(true);
@@ -76,6 +77,39 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
     }, 1000);
     return () => window.clearInterval(timer);
   }, [runActive, plannedDistance]);
+
+  useLayoutEffect(() => {
+    const host = sceneryHostRef.current;
+    if (!host) return;
+    const video = prepareScenery();
+    const showScenery = () => {
+      setSceneryVisible(true);
+      setSceneryStatus('playing');
+    };
+    const showBuffering = () => setSceneryStatus(status => status === 'playing' ? 'loading' : status);
+    const showRetry = () => {
+      setSceneryVisible(false);
+      setSceneryStatus('retry');
+    };
+    video.addEventListener('playing', showScenery);
+    video.addEventListener('waiting', showBuffering);
+    video.addEventListener('error', showRetry);
+    host.append(video);
+    sceneryVideoRef.current = video;
+    if (video.error) showRetry();
+    else if (!video.paused && video.readyState >= video.HAVE_FUTURE_DATA) showScenery();
+    return () => {
+      video.removeEventListener('playing', showScenery);
+      video.removeEventListener('waiting', showBuffering);
+      video.removeEventListener('error', showRetry);
+      video.pause();
+      if (video.readyState !== video.HAVE_NOTHING) video.currentTime = 0;
+      video.muted = true;
+      video.preload = 'metadata';
+      video.remove();
+      sceneryVideoRef.current = null;
+    };
+  }, [prepareScenery]);
 
   const playScenery = useCallback((retry = false) => {
     const video = sceneryVideoRef.current;
@@ -143,26 +177,7 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
 
   return (
     <div className={`${styles.player} relative h-full w-full overflow-hidden bg-[#05070A] font-sans text-white`} aria-label={`${cityName}${route.title}跑步界面`}>
-      <video
-        ref={sceneryVideoRef}
-        src={sceneryVideoSource}
-        className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
-        autoPlay={runActive && sceneryMuted}
-        muted={sceneryMuted}
-        playsInline
-        loop
-        preload="metadata"
-        aria-hidden="true"
-        onPlaying={() => {
-          setSceneryVisible(true);
-          setSceneryStatus('playing');
-        }}
-        onWaiting={() => setSceneryStatus(status => status === 'playing' ? 'loading' : status)}
-        onError={() => {
-          setSceneryVisible(false);
-          setSceneryStatus('retry');
-        }}
-      />
+      <div ref={sceneryHostRef} className={styles.sceneryVideo} aria-hidden="true" />
       {!sceneryVisible && (
         <motion.div
           className="absolute inset-0 bg-[#05070A]"

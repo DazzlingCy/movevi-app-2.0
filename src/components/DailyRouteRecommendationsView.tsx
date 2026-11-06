@@ -4,6 +4,7 @@ import { getRouteCategory } from '../data/routeCategories';
 import { getRouteCover } from '../data/routeCovers';
 import type { DailyRouteRecommendation } from '../journey/routeRecommendations';
 import type { JourneyCity, JourneyRoute } from '../journey/types';
+import { resolveRecommendationCover } from '../lib/localImages';
 import CityImage from './CityImage';
 import styles from './DailyRouteRecommendationsView.module.css';
 
@@ -45,11 +46,21 @@ export default function DailyRouteRecommendationsView({ cityImageFor, day, recom
               <li key={route.id}>
                 <button type="button" className={`${styles.route}${index === 0 ? ` ${styles.featured}` : ''}`} onClick={() => onRouteClick(route, pageRef.current?.scrollTop ?? 0)}>
                   <span className={styles.cover}>
-                    <CityImage className={styles.image} src={getRouteCover(city.name, route.order)?.src ?? cityImageFor(city)} alt="" fallbackLabel={route.landmarks[0]} loading={index === 0 ? 'eager' : 'lazy'} />
+                    <CityImage
+                      className={styles.image}
+                      src={resolveRecommendationCover(getRouteCover(city.name, route.order)?.src, index === 0 ? 'feature' : 'thumbnail') ?? cityImageFor(city)}
+                      alt=""
+                      fallbackLabel={route.landmarks[0]}
+                      loading={index < 3 ? 'eager' : 'lazy'}
+                      fetchPriority={index === 0 ? 'high' : 'low'}
+                    />
                   </span>
                   {index === 0 && <span className={styles.kicker}>今日精选</span>}
                   <span className={styles.routeBody}>
-                    <span className={styles.routeMeta}>{city.name} · {getRouteCategory(city.name, route.order)}</span>
+                    <span className={styles.routeMeta}>
+                      {city.name}
+                      <span className={styles.routeType}>{getRouteCategory(city.name, route.order)}</span>
+                    </span>
                     <strong>{route.name}</strong>
                     {index === 0 && <span className={styles.landmarks}>{route.landmarks.join(' · ')}</span>}
                   </span>
