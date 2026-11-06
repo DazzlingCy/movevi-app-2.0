@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { bindFirstCity, claimFirstCityReward, completeFirstCityRoute, emptyFirstCityRewards, FIRST_CITY_REWARDS_STORAGE, observeFirstCityRewards, type FirstCityRewardsState, type FirstCityTaskId } from './firstCityRewards';
 import type { JourneyState } from './types';
 
-export function useFirstCityRewards(initial: FirstCityRewardsState, journey: JourneyState, connected: boolean, ready: boolean) {
+export function useFirstCityRewards(initial: FirstCityRewardsState, journey: JourneyState, connected: boolean, ready: boolean, persist: boolean) {
   const [state, setState] = useState(initial);
   const latest = useRef(initial);
   const [storageFailed, setStorageFailed] = useState(false);
@@ -10,9 +10,10 @@ export function useFirstCityRewards(initial: FirstCityRewardsState, journey: Jou
     if (next === latest.current) return;
     latest.current = next;
     setState(next);
+    if (!persist) return;
     try { localStorage.setItem(FIRST_CITY_REWARDS_STORAGE, JSON.stringify(next)); setStorageFailed(false); }
     catch { setStorageFailed(true); }
-  }, []);
+  }, [persist]);
   useEffect(() => {
     if (!ready) return;
     let next = latest.current;
@@ -29,8 +30,10 @@ export function useFirstCityRewards(initial: FirstCityRewardsState, journey: Jou
       const result = claimFirstCityReward(latest.current, taskId);
       if (!result.success) return result;
       // Persist before acknowledging a claim; duplicate clicks within this run remain idempotent.
-      try { localStorage.setItem(FIRST_CITY_REWARDS_STORAGE, JSON.stringify(result.state)); }
-      catch { setStorageFailed(true); return { state:latest.current, success:false, message:'暂时无法保存领取记录，请检查浏览器存储后重试' }; }
+      if (persist) {
+        try { localStorage.setItem(FIRST_CITY_REWARDS_STORAGE, JSON.stringify(result.state)); }
+        catch { setStorageFailed(true); return { state:latest.current, success:false, message:'暂时无法保存领取记录，请检查浏览器存储后重试' }; }
+      }
       latest.current = result.state; setState(result.state); setStorageFailed(false);
       return result;
     },

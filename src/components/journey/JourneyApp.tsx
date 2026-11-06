@@ -16,7 +16,7 @@ import {
   getCompletedRouteIds, getCountryLevelProgress, getHomeJourneyCityIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
 } from '../../journey/state';
 import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../journey/types';
-import { FIRST_CITY_REWARDS, formatRewardCents, loadFirstCityRewards, restoreFirstCityJourney } from '../../journey/firstCityRewards';
+import { emptyFirstCityRewards, FIRST_CITY_REWARDS, formatRewardCents, loadFirstCityRewards, restoreFirstCityJourney } from '../../journey/firstCityRewards';
 import { useFirstCityRewards } from '../../journey/useFirstCityRewards';
 import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import CityImage from '../CityImage';
@@ -1579,7 +1579,9 @@ export default function JourneyApp() {
   const {enabled:puzzleDemo,openOnLoad:puzzleDeepLink}=getPuzzlePreviewMode(window.location.search);
   const dailyExercise = useDailyExercise(puzzleDemo);
   const [dailyGoalOpen, setDailyGoalOpen] = useState(false);
+  const persistFirstCityRewards = import.meta.env.DEV;
   const [firstCityInitial] = useState(() => {
+    if (!persistFirstCityRewards) return emptyFirstCityRewards();
     const saved = loadFirstCityRewards();
     return { ...saved, achievedTaskIds:saved.achievedTaskIds.filter(id => id === 'firstCity'), claims:[] };
   });
@@ -1634,7 +1636,7 @@ export default function JourneyApp() {
     .filter(r => getRouteStatus(state,c.id,r.id) !== 'locked').map(r => ({ ...c, routeId:r.id, routeIndex:r.order,
       title:r.name, image:getRouteCover(c.name,r.order)?.src || c.image, distanceKm:r.distanceKm, minutes:r.durationMinutes })));
   const puzzle = usePuzzleTeam(puzzleDemo,puzzleCities.filter(c=>puzzleRoutes.some(r=>r.id===c.id)));
-  const firstCityRewards = useFirstCityRewards(firstCityInitial, state, deviceConnected, !isFirstUse);
+  const firstCityRewards = useFirstCityRewards(firstCityInitial, state, deviceConnected, !isFirstUse, persistFirstCityRewards);
   const rewardCity = getJourneyCity(firstCityRewards.state.firstCityId ?? state.currentCityId)!;
   const systemReducedMotion = useReducedMotion();
   const reduceMotion = Boolean(systemReducedMotion || manualReducedMotion);
