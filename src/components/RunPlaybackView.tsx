@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Award, ChevronLeft, MapPin, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
 import { CITIES, getRouteData } from '../data/cities';
@@ -7,7 +7,8 @@ import type { CityRouteListItem } from './CityRoutesView';
 import Modal from './journey/Modal';
 import styles from './RunPlaybackView.module.css';
 
-const sceneryVideoSource = `${import.meta.env.BASE_URL}video/routes/hangzhou-city-demo.mp4`;
+const sceneryVideoSource = `${import.meta.env.BASE_URL}video/routes/hangzhou-city-mobile.mp4`;
+const sceneryLoadTimeoutMs = 8000;
 
 const MEDALS = [
   { id: 'm1', name: '首航·星际启程', text: '🏯' },
@@ -52,6 +53,7 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
   const sceneryVideoRef = useRef<HTMLVideoElement>(null);
   const [sceneryVisible, setSceneryVisible] = useState(false);
   const [sceneryMuted, setSceneryMuted] = useState(true);
+  const [sceneryStatus, setSceneryStatus] = useState<'loading' | 'playing' | 'retry'>('loading');
   const reduceMotion = useReducedMotion();
 
   const city = CITIES.find(item => String(item.id) === String(cityId));
@@ -75,14 +77,32 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
     return () => window.clearInterval(timer);
   }, [runActive, plannedDistance]);
 
+  const playScenery = useCallback((retry = false) => {
+    const video = sceneryVideoRef.current;
+    if (!video) return;
+    if (video.paused || retry) setSceneryStatus('loading');
+    if (retry && (video.error || video.readyState < video.HAVE_FUTURE_DATA)) {
+      const position = video.currentTime;
+      video.load();
+      video.currentTime = position;
+    }
+    void video.play().catch(error => {
+      if (error.name !== 'AbortError') setSceneryStatus('retry');
+    });
+  }, []);
+
   useEffect(() => {
     const video = sceneryVideoRef.current;
     if (!video || !runActive) return;
-    void video.play().catch(() => {
-      // The route cover is visible until the video starts playing.
-    });
+    playScenery();
     return () => video.pause();
-  }, [runActive]);
+  }, [playScenery, runActive]);
+
+  useEffect(() => {
+    if (!runActive || sceneryStatus !== 'loading') return;
+    const timer = window.setTimeout(() => setSceneryStatus('retry'), sceneryLoadTimeoutMs);
+    return () => window.clearTimeout(timer);
+  }, [runActive, sceneryStatus]);
 
   const result = useMemo(() => {
     const resultDistance = requireFullRoute ? distance : distance >= 0.05 ? distance : plannedDistance;
@@ -123,25 +143,35 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
 
   return (
     <div className={`${styles.player} relative h-full w-full overflow-hidden bg-[#05070A] font-sans text-white`} aria-label={`${cityName}${route.title}跑步界面`}>
-      <motion.div
-        className="absolute inset-0"
-        animate={reduceMotion || !runActive || sceneryVisible ? { scale: 1 } : { scale: [1, 1.035, 1] }}
-        transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-      >
-        <CityImage src={image} alt={`${cityName}路线风景`} fallbackLabel={cityName} className="h-full w-full object-cover opacity-70" />
-      </motion.div>
       <video
         ref={sceneryVideoRef}
         src={sceneryVideoSource}
-        className={`pointer-events-none absolute inset-0 h-full w-full bg-black object-contain ${sceneryVisible ? 'opacity-100' : 'opacity-0'}`}
+        className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+        autoPlay={runActive && sceneryMuted}
         muted={sceneryMuted}
         playsInline
         loop
         preload="metadata"
         aria-hidden="true"
-        onPlaying={() => setSceneryVisible(true)}
-        onError={() => setSceneryVisible(false)}
+        onPlaying={() => {
+          setSceneryVisible(true);
+          setSceneryStatus('playing');
+        }}
+        onWaiting={() => setSceneryStatus(status => status === 'playing' ? 'loading' : status)}
+        onError={() => {
+          setSceneryVisible(false);
+          setSceneryStatus('retry');
+        }}
       />
+      {!sceneryVisible && (
+        <motion.div
+          className="absolute inset-0 bg-[#05070A]"
+          animate={reduceMotion || !runActive ? { scale: 1 } : { scale: [1, 1.035, 1] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+        >
+          <CityImage src={image} alt={`${cityName}路线风景`} fallbackLabel={cityName} className="h-full w-full object-cover opacity-70" />
+        </motion.div>
+      )}
       <div className={styles.shade} aria-hidden="true" />
       <header className={`${styles.header} absolute inset-x-0 top-0 z-10`}>
         <button type="button" onClick={finishRun} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/35 backdrop-blur-md active:scale-95" aria-label="返回并查看结算" aria-haspopup="dialog">
@@ -160,6 +190,14 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
           <div><dt>配速</dt><dd>{pace}</dd></div>
           <div><dt>千卡</dt><dd>{Math.round(distance * 65)}</dd></div>
         </dl>
+        {runActive && sceneryStatus === 'loading' && (
+          <p className={styles.sceneryNotice} role="status">正在加载视频…</p>
+        )}
+        {runActive && sceneryStatus === 'retry' && (
+          <button className={styles.sceneryNotice} type="button" onClick={() => playScenery(true)}>
+            <Play size={16} aria-hidden="true" /> 点按播放视频
+          </button>
+        )}
         {!showSummary && (
           <div className={styles.playbackControls}>
             {sceneryVisible && (
