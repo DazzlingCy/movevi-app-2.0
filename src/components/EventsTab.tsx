@@ -2,11 +2,12 @@ import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Calendar, ChevronRight, Flame, Gift, Globe2, MessageSquare, Sparkles, Users } from 'lucide-react';
 import { resolveLocalImage } from '../lib/localImages';
+import { FIRST_CITY_TOTAL_CENTS } from '../journey/firstCityRewards';
 
 interface EventsTabProps {
   onSelectMedley?: () => void;
   onSelectMedalLottery?: () => void;
-  onSelectWeightLossPlan?: () => void;
+  onSelectFirstCityRewards?: () => void;
   onSelectTeamRelay?: () => void;
   onSelectHundredCities?: () => void;
 }
@@ -152,7 +153,7 @@ function EventCard({
 export default function EventsTab({
   onSelectMedley,
   onSelectMedalLottery,
-  onSelectWeightLossPlan,
+  onSelectFirstCityRewards,
   onSelectTeamRelay,
   onSelectHundredCities
 }: EventsTabProps) {
@@ -195,13 +196,13 @@ export default function EventsTab({
         />
 
         <EventCard
-          title="30天燃脂计划"
-          description="每天推荐 1 条燃脂路线，完成关键节点即可开启现金红包盲盒。"
+          title="新手任务"
+          description={`首次激活、完成首条路线和首座城市，累计领${FIRST_CITY_TOTAL_CENTS / 100}元。`}
           image="https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&q=80&w=600&h=400"
           accent="rose"
           icon={<Flame size={16} />}
-          tag={<span className="flex items-center gap-1"><Calendar size={10} />30天计划</span>}
-          onClick={onSelectWeightLossPlan}
+          tag={<span className="flex items-center gap-1"><Gift size={10} />累计{FIRST_CITY_TOTAL_CENTS / 100}元</span>}
+          onClick={onSelectFirstCityRewards}
           delay={0.05}
         />
 

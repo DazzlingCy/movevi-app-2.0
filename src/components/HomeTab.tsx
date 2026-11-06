@@ -591,13 +591,13 @@ export default function HomeTab({ onNavigate, completedChapters = [], targetFlig
         </button>
         <button
           className="group flex flex-col items-center gap-1.5 text-[10px] font-black text-orange-100"
-          onClick={() => onNavigate && onNavigate('weightLossPlan', null)}
-          aria-label="打开打卡红包活动"
+          onClick={() => onNavigate && onNavigate('firstCityRewards', null)}
+          aria-label="打开新手任务"
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-full border border-orange-200/24 bg-orange-300/12 text-orange-200 shadow-[0_12px_34px_rgba(0,0,0,0.26)] backdrop-blur-md transition group-hover:border-orange-200/50 group-hover:bg-orange-300/18">
             <Flame size={18} />
           </span>
-          打卡领红包
+          奖励
         </button>
         <button
           type="button"

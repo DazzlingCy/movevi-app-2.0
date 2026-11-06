@@ -519,11 +519,9 @@ h1, h2, h3, p { margin-top: 0; }
 
 .journey-progress { margin-top: 15px; padding: 17px; border: 1px solid var(--line); border-radius: 24px; background: rgba(255,255,255,.44); }
 .journey-progress__topline { display: flex; align-items: center; justify-content: space-between; }
-.journey-progress__topline > div { display: flex; align-items: baseline; gap: 10px; }
 .journey-progress__topline span { font-size: 12px; font-weight: 700; color: var(--muted); }
 .journey-progress__topline strong { font: 700 32px/1 var(--font-display); }
 .journey-progress__topline strong small, .new-progress strong small { font: 600 14px var(--font-body); color: var(--muted); }
-.journey-progress__topline p { margin: 0; text-align: right; font-size: 11px; line-height: 1.45; color: var(--muted); }
 .progress-segments { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin: 14px 0 16px; }
 .progress-segments.has-runner { position: relative; padding-top: 12px; }
 .progress-segments__runner { position: absolute; z-index: 3; top: -3px; left: clamp(8px, var(--completed-progress), calc(100% - 8px)); width: 18px; height: 18px; display: grid; place-items: center; color: #c7cbff; filter: drop-shadow(0 0 6px rgba(125,134,243,.62)); transition: left .62s cubic-bezier(.22,.8,.24,1); animation: cityFootstepsRun .58s ease-in-out infinite; pointer-events: none; }
@@ -1004,6 +1002,8 @@ body { background: var(--bg); }
 .home-city-list-entry { position:relative; pointer-events:auto; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:7px 12px; border:1px solid rgba(255,255,255,.17); border-radius:999px; background:rgba(13,25,34,.62); color:#f5f7fa; font-family:var(--font-body); font-size:12px; line-height:20px; font-weight:500; cursor:pointer; transition:opacity .18s ease,visibility .18s ease,background-color .18s ease; }
 .home-city-list-entry::after { content:''; position:absolute; inset:-3px 0; }
 .home-city-list-entry svg { width:18px; height:18px; flex-shrink:0; }
+.city-new-badge { position:absolute; padding:1px 5px; border:1px solid #1d1929; border-radius:6px; background:#ffce9c; color:#332018; font-size:9px; font-weight:750; line-height:12px; letter-spacing:.03em; pointer-events:none; }
+.home-city-list-entry__new { top:-5px; right:-7px; }
 .page--home:has(.destination-carousel.is-browsing) .home-city-list-entry { opacity:0; visibility:hidden; pointer-events:none; }
 @media(hover:hover) { .home-city-list-entry:hover { background:rgba(13,25,34,.84); } }
 @media(prefers-reduced-motion:reduce) { .home-city-list-entry { transition:none; } }
@@ -1131,7 +1131,8 @@ body { background: var(--bg); }
 .destination-card__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 52%; opacity: 1; filter: saturate(.92) brightness(.64) contrast(1.04); transform: scale(1.025); transition: opacity .28s ease; }
 .destination-card__video.is-ready { opacity: 1; animation: destinationVideoReveal .42s ease both; }
 .page--home .destination-upcoming-card__status { left: 18px; right: auto; }
-.page--home:not(:has(.destination-carousel.is-browsing)) .destination-journey-card.is-active :is(.destination-card__video-play,.destination-upcoming-card__status) { top:calc(max(12px,env(safe-area-inset-top,0px)) + 56px); }
+.page--home:not(:has(.destination-carousel.is-browsing)) .destination-journey-card.is-active :is(.destination-card__video-play,.destination-upcoming-card__status,.destination-card__new) { top:calc(max(12px,env(safe-area-inset-top,0px)) + 56px); }
+.destination-card__new { z-index:3; top:14px; right:14px; padding:2px 7px; font-size:10px; line-height:14px; }
 .destination-card__video-play { position: absolute; z-index: 4; top: 15px; left: 15px; min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; background: rgba(5,7,12,.66); box-shadow: 0 8px 22px rgba(0,0,0,.24); backdrop-filter: blur(12px); color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .destination-card__video-play svg { width: 13px; height: 13px; fill: currentColor; }
 .destination-card__video-play:active { transform: scale(.97); }
@@ -1407,7 +1408,6 @@ body { background: var(--bg); }
 .destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-radius: 0; background: linear-gradient(180deg, #111216, #0f1014); }
 .journey-progress__topline span { color: var(--muted); font-weight: 400; }
 .journey-progress__topline strong { font-family: var(--font-display); font-weight: 600; }
-.journey-progress__topline p { color: var(--muted); }
 .progress-segments span { background: #2a2c33; }
 .progress-segments span.is-complete { background: #7d86f3; }
 .city-card-sport-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: -1px 0 15px; padding: 12px 0; border-block: 1px solid rgba(255,255,255,.055); }
@@ -1451,15 +1451,21 @@ body { background: var(--bg); }
   background: linear-gradient(135deg, #23a987, #15816f);
   box-shadow: 0 12px 28px rgba(35,169,135,.18);
 }
-.journey-cta--candidate,
-.journey-cta--candidate:disabled,
-.journey-cta--locked,
-.journey-cta--locked:disabled {
-  border-color: rgba(255,255,255,.06);
-  background: rgba(255,255,255,.035);
-  color: #6f737c;
-  box-shadow: none;
+.journey-cta:is(.journey-cta--candidate, .journey-cta--locked) {
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-inline: 12px;
+  border-color: #a9a2f340;
+  background: #20212e;
+  cursor: pointer;
 }
+.journey-cta__status, .journey-cta__label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.journey-cta__status { color: #b9bdca; font-size: 12px; font-weight: 500; }
+.journey-cta__label { color: #d5cdff; }
+.journey-cta__status svg, .journey-cta__label svg { width: 15px; height: 15px; }
+.journey-cta:is(.journey-cta--candidate, .journey-cta--locked):focus-visible { outline: 2px solid #c5baff; outline-offset: 2px; }
+@media (hover:hover) { .journey-cta:is(.journey-cta--candidate, .journey-cta--locked):hover { background: #292a3a; } }
+.journey-cta:is(.journey-cta--candidate, .journey-cta--locked):active { background: #34354a; }
 .secondary-button { border-color: var(--line); border-radius: 12px; background: #111216; }
 .journey-totals { margin-top: 14px; }
 .journey-totals div { border-color: var(--line); }

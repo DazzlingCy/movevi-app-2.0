@@ -114,7 +114,7 @@ export default function CityRouteOverviewView({
 
   return (
     <main className="h-full w-full overflow-y-auto bg-[#f2f4f7] text-slate-900 hide-scrollbar" id="main-content">
-      <StickyHeroNav>
+      <StickyHeroNav transparent>
         <button
           type="button"
           onClick={onBack}

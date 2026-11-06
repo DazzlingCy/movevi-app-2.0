@@ -1,0 +1,73 @@
+.page { --rewards-bg:#0b0d12; --rewards-surface:#161a22; --rewards-border:#ffffff12; --rewards-muted:#a8b1c2; --rewards-accent:#b6abff; display:flex; flex-direction:column; width:100%; height:100%; overflow:hidden; color:#f1f3f8; background:var(--rewards-bg); }
+.page ::selection { color:#17142a; background:#c7bfff; }
+.page button { font:inherit; cursor:pointer; transition:background-color .18s ease, border-color .18s ease; }
+.page button:focus-visible, .task:focus-visible { outline:2px solid var(--rewards-accent); outline-offset:3px; }
+.header { display:grid; grid-template-columns:68px 1fr 68px; align-items:center; gap:8px; flex-shrink:0; padding:12px 16px 8px; border-bottom:1px solid var(--rewards-border); background:var(--rewards-bg); }
+.header > button { display:grid; place-items:center; width:44px; height:44px; border:0; border-radius:50%; color:#e2e7f1; background:#ffffff05; }
+.header h1 { margin:0; text-align:center; font-size:17px; font-weight:600; }
+.header > .rulesButton { width:68px; border-radius:8px; color:#c5baff; background:transparent; font-size:12px; }
+.content { flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain; padding:20px 20px max(32px,env(safe-area-inset-bottom)); scrollbar-width:none; }
+.content::-webkit-scrollbar { display:none; }
+.intro { display:grid; grid-template-columns:minmax(0,1fr) 104px; align-items:center; padding:12px 16px 0; border:1px solid #c3b9ff26; border-radius:18px; background:#242134; }
+.intro h2 { margin:0; color:#f0ebff; font-size:17px; font-weight:550; line-height:1.45; letter-spacing:-.02em; }
+.rewardLine { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:4px; margin-top:4px; font-size:13px; }
+.intro h2 strong { color:#d0c6ff; font-size:36px; line-height:1.15; font-weight:650; font-variant-numeric:tabular-nums; }
+.intro h2 strong > span { margin-left:2px; font-size:16px; font-weight:500; }
+.rewardArt { display:block; width:104px; height:92px; }
+.collected { grid-column:1 / -1; display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:10px 0; border-top:1px solid #c3b9ff24; }
+.collected > span { color:#c3badb; font-size:12px; }
+.collected > strong { color:#f0ebff; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
+.collected small { color:#b6aec9; font-size:12px; font-weight:400; }
+.tasks { display:grid; gap:12px; margin-top:20px; }
+.task { min-width:0; padding:16px; border:1px solid var(--rewards-border); border-radius:16px; background:var(--rewards-surface); }
+.task[data-state='ready'] { border-color:#b6abff38; }
+.taskTop { display:flex; align-items:center; gap:9px; }
+.taskIcon { display:grid; place-items:center; flex-shrink:0; width:32px; height:32px; border-radius:9px; background:#b6abff0d; color:#bfb7ed; }
+.taskTop h3 { flex:1; min-width:0; margin:0; font-size:15px; font-weight:550; line-height:22px; }
+.amount { flex-shrink:0; color:#ffd0a2; font-size:21px; line-height:26px; font-weight:600; font-variant-numeric:tabular-nums; }
+.description { margin:8px 0 12px; color:var(--rewards-muted); font-size:12px; line-height:19px; }
+.task:not(.cityTask) { display:grid; grid-template-columns:minmax(0,1fr) 112px; column-gap:8px; }
+.task:not(.cityTask) .taskTop { grid-column:1 / -1; }
+.task:not(.cityTask) .description { grid-column:1; grid-row:2; margin:7px 0 0; }
+.task:not(.cityTask) .taskBottom { display:contents; }
+.task:not(.cityTask) .status { grid-column:1; grid-row:3; align-self:start; margin-top:3px; }
+.task:not(.cityTask) .taskAction { grid-column:2; grid-row:2 / 4; align-self:center; margin-top:5px; }
+.taskBottom { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.status { display:flex; align-items:center; gap:4px; color:#a4adbd; font-size:11px; white-space:nowrap; }
+.task[data-state='ready'] .status { color:#83d9bd; }
+.task[data-state='claimed'] .status { color:#9aa7b6; }
+.taskAction { display:flex; align-items:center; justify-content:center; gap:4px; min-width:112px; min-height:44px; padding:8px 12px; border:1px solid #b6abff26; border-radius:11px; background:#b6abff0d; color:#d1c9ff; font-size:12px !important; font-weight:550 !important; }
+.task[data-state='ready'] .taskAction { border-color:transparent; background:#b6abff; color:#1b1732; }
+.taskAction:active:not(:disabled) { filter:brightness(1.12); }
+.taskAction:disabled { border-color:transparent; background:#ffffff04; color:#98a4b5; cursor:default; }
+.cityTask .taskIcon { background:transparent; }
+.cityProgress { position:relative; display:flex; align-items:flex-end; min-height:144px; overflow:hidden; isolation:isolate; margin:12px 0 16px; border-radius:12px; background:#202936; }
+.cityImage { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 55%; z-index:-2; }
+.cityProgress::before { position:absolute; inset:0; z-index:-1; content:''; background:linear-gradient(180deg,#080c1200 20%,#080c1299 58%,#080c12f0 100%); }
+.cityCaption { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; width:100%; padding:56px 14px 26px; }
+.cityCaption > strong { color:#fff; font-size:26px; line-height:32px; font-weight:600; }
+.cityCaption p { margin:0 0 3px; color:#e2e6ee; font-size:11px; line-height:20px; white-space:nowrap; }
+.cityCaption b { margin-left:4px; color:#fff; font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; }
+.cityCaption small { font-size:11px; font-weight:400; }
+.progressTrack { position:absolute; right:14px; bottom:14px; left:14px; height:4px; overflow:hidden; border-radius:4px; background:#ffffff30; }
+.progressTrack i { display:block; height:100%; border-radius:inherit; background:var(--rewards-accent); }
+.cityTask .taskAction { min-width:112px; margin-left:auto; }
+.error { margin:14px 0 0; padding:10px 12px; border:1px solid #ffb5a02e; border-radius:10px; color:#ffbfae; font-size:12px; line-height:1.7; }
+.resultLayer { position:absolute; inset:0; z-index:40; }
+.page .resultBackdrop { justify-content:center; align-items:center; padding:24px; }
+.page .resultDialog { position:relative; width:100%; max-width:304px; padding:30px 24px 24px; border:1px solid #ffffff18; border-radius:24px; background:#191e28; color:#f1f3f8; text-align:center; }
+.page .resultDialog::before { display:none; }
+.page .rulesDialog { max-width:340px; max-height:calc(100dvh - 48px); overflow-y:auto; text-align:left; }
+.rulesDialog ol { margin:20px 0 24px; padding-left:22px; list-style:decimal outside; color:#bac3d3; font-size:13px; line-height:1.9; }
+.rulesDialog li { padding-left:4px; }
+.rulesDialog li::marker { color:#c5baff; font-weight:600; font-variant-numeric:tabular-nums; }
+.rulesDialog li + li { margin-top:12px; }
+.close { position:absolute; top:8px; right:8px; display:grid; place-items:center; width:44px; height:44px; border:0; border-radius:50%; background:transparent; color:#abb5c6; }
+.resultIcon { display:grid; place-items:center; width:48px; height:48px; margin:0 auto 16px; border-radius:50%; color:#85ddbc; background:#85ddbc12; }
+.resultDialog h2 { margin:0; font-size:18px; line-height:26px; font-weight:550; }
+.resultAmount { display:block; margin:14px 0; color:#ffd0a2; font-size:38px; line-height:46px; font-weight:650; font-variant-numeric:tabular-nums; }
+.resultDialog p { margin:0 0 24px; color:var(--rewards-muted); font-size:12px; }
+.confirm { width:100%; min-height:46px; border:0; border-radius:12px; background:var(--rewards-accent); color:#1b1732; font-size:14px !important; font-weight:550 !important; }
+@media (hover:hover) { .header > button:hover { background:#ffffff0d; } .taskAction:hover:not(:disabled), .confirm:hover { filter:brightness(1.08); } }
+@media (prefers-reduced-motion:reduce) { .page button { transition:none; } }
+@media(max-width:360px) { .content { padding:16px 16px 32px; } .intro { grid-template-columns:minmax(0,1fr) 88px; padding:12px 14px 0; } .intro h2 { font-size:16px; } .rewardLine { font-size:12px; } .intro h2 strong { font-size:34px; } .rewardArt { width:88px; height:84px; } .task { padding:14px; } .task:not(.cityTask) { grid-template-columns:minmax(0,1fr) 104px; } .taskTop h3 { font-size:14px; } .amount { font-size:18px; } .taskIcon { width:28px; height:28px; } .taskAction { min-width:104px; padding-right:8px; padding-left:8px; } .cityProgress { min-height:136px; } .cityCaption { gap:8px; padding-right:12px; padding-left:12px; } .cityCaption > strong { font-size:24px; } }

@@ -64,6 +64,32 @@
 .startButton { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 56px; border: 1px solid #74d8b633; border-radius: 16px; background: #74d8b6; color: #09281f; font-size: 16px !important; font-weight: 700 !important; }
 .actions button { transition: background .18s ease, transform .18s ease; }
 .startButton:disabled { background: #252a33; border-color: #ffffff1c; color: #a6afbf; cursor: not-allowed; }
+.startButton[data-unselected-city='true'] { background:#252a33; border-color:#ffffff1c; color:#d2d8e4; }
+.page .cityUnlockBackdrop { align-items:center; justify-content:center; padding:24px; }
+.page .cityUnlockSheet { width:100%; max-width:336px; max-height:100%; padding:0; border:1px solid #ffffff16; border-radius:24px; background:#171b24; text-align:left; color:var(--detail-ink); box-shadow:0 20px 60px #0005; }
+.page .cityUnlockSheet::before { display:none; }
+.cityUnlockCard { padding:20px 24px 12px; }
+.cityUnlockHeader { container-type:inline-size; display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 -10px 6px 0; }
+.cityUnlockHeader h2 { margin:0; font-size:clamp(11px, calc((100cqi - 52px) / 14), 17px); line-height:1.4; font-weight:600; letter-spacing:-.02em; white-space:nowrap; }
+.cityUnlockClose { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; margin:0; padding:0; border:0; border-radius:50%; background:transparent; color:#a8b0c1; }
+.cityUnlockClose:active { background:#ffffff14; }
+.cityUnlockCard > p { margin:0; font-size:14px; line-height:1.8; color:#acb5c6; }
+.currentJourney { display:flex; gap:12px; align-items:stretch; padding:12px; margin:20px 0 24px; border:1px solid #ffffff0d; border-radius:14px; background:#ffffff04; }
+.currentJourneyImage { flex:0 0 60px; width:60px; height:86px; border-radius:9px; object-fit:cover; }
+.currentJourneyInfo { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:6px; }
+.currentJourneyInfo > span { color:#929eb2; font-size:10px; line-height:14px; }
+.currentJourneyInfo > div:not(.currentJourneyProgress) { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.currentJourneyInfo strong { min-width:0; color:#eff2f9; font-size:20px; line-height:25px; font-weight:600; overflow-wrap:anywhere; }
+.currentJourneyInfo > div > span { flex-shrink:0; color:#c9bfff; font-size:15px; font-variant-numeric:tabular-nums; }
+.currentJourneyInfo small { color:#9ca7bb; font-size:10px; line-height:15px; font-weight:400; }
+.currentJourneyInfo > div > span small { margin-left:2px; }
+.currentJourneyProgress { height:4px; overflow:hidden; border-radius:4px; background:#ffffff12; }
+.currentJourneyProgress i { display:block; height:100%; border-radius:inherit; background:#aaa3ff; }
+.cityUnlockContinue { width:100%; min-height:48px; border:0; border-radius:13px; background:#aaa3ff; color:#17152d; font-size:15px; font-weight:600; }
+.cityUnlockContinue:active { background:#c7c0ff; }
+.cityUnlockBrowse { width:100%; min-height:44px; margin-top:6px; border:0; border-radius:10px; background:transparent; color:#b9c1d0; font-size:13px; }
+.cityUnlockBrowse:active { background:#ffffff08; }
+.cityUnlockCard button:focus-visible { outline-color:#c7bfff; }
 .actions button:not(:disabled):active { transform: scale(.98); }
 .modalLayer { position: absolute; inset: 0; z-index: 40; }
 .commentSheet { color: var(--detail-ink); }
@@ -87,10 +113,16 @@
 .commentSubmit button { min-height: 44px; padding: 0 16px; margin-left: auto; border: 0; border-radius: 12px; background: var(--detail-accent); color: #09281f; font-weight: 600; }
 .commentSubmit button:disabled { opacity: .4; cursor: default; }
 @media (hover: hover) {
-  .startButton:not(:disabled):hover { background: #91e5c8; }
+  .startButton:not(:disabled):not([data-unselected-city='true']):hover { background: #91e5c8; }
+  .startButton[data-unselected-city='true']:hover { background:#303744; }
   .commentButton:hover, .back:hover { background: #2b3340; }
 }
 @media (max-width: 360px) {
+  .page .cityUnlockBackdrop { padding-inline:16px; }
+  .cityUnlockCard { padding-inline:20px; }
+  .cityUnlockCard > p { font-size:13px; }
+  .currentJourney { gap:10px; padding:10px; }
+  .currentJourneyImage { flex-basis:48px; width:48px; }
   .heroContent { padding-inline: 20px; }
   .content { padding-inline: 12px; }
   .actions { padding-inline: 16px; }

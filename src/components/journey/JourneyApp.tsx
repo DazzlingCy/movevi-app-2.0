@@ -12,11 +12,12 @@ import { getRouteCover } from '../../data/routeCovers';
 import { getCityRouteSequence } from '../../journey/routeList';
 import { getCityRouteReleaseDate, getJourneyCity, getJourneyRoute, hasPublishedCityRoutes, JOURNEY_SEQUENCE } from '../../journey/data';
 import {
-  createDemoJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
+  createPrototypeJourneyState, getCandidateCityIds, getCityPlanTotals, getCityStatus,
   getCompletedRouteIds, getCountryLevelProgress, getHomeJourneyCityIds, getJourneyTotals, getOpenRouteCount, getRouteStatus, journeyReducer
 } from '../../journey/state';
 import type { JourneyCity, JourneyRoute, JourneyState, RunResult } from '../../journey/types';
-import { getWeightPlanRewardAmount, type WeightPlanRewardRecord } from '../../lib/weightPlan';
+import { FIRST_CITY_REWARDS, formatRewardCents, loadFirstCityRewards, restoreFirstCityJourney } from '../../journey/firstCityRewards';
+import { useFirstCityRewards } from '../../journey/useFirstCityRewards';
 import CityRoutesView, { type CityRouteListItem } from '../CityRoutesView';
 import CityImage from '../CityImage';
 import EventsTab from '../EventsTab';
@@ -35,9 +36,12 @@ import { getPuzzlePreviewMode } from '../../journey/puzzleDemo';
 import { createCarouselSettler, hasMeaningfulCarouselScroll } from '../../journey/homeCarousel';
 import { CityRunProgress, DailyGoalEditor, HomeSportStats, RunIcon, TodayExerciseSummary } from './HomeRunElements';
 import { useDailyExercise } from '../../journey/useDailyExercise';
+import { exerciseDay } from '../../journey/dailyExercise';
+import { getDailyRouteRecommendations, type DailyRouteRecommendation } from '../../journey/routeRecommendations';
+import DailyRouteRecommendationsView from '../DailyRouteRecommendationsView';
 import homeRunStyles from './HomeRunElements.module.css';
 import { periodParticipation, ownPieces, puzzleComplete, type PuzzleRoute } from '../../journey/puzzleTeam';
-import WeightLossPlanView from '../WeightLossPlanView';
+import FirstCityRewardsView from '../FirstCityRewardsView';
 import WeekendMedleyView from '../WeekendMedleyView';
 import Modal from './Modal';
 
@@ -46,6 +50,7 @@ const JourneyGlobe = lazy(() => import('./JourneyGlobe'));
 const JOURNEY_CITY_SEQUENCE: JourneyCity[] = JOURNEY_SEQUENCE
   .map(cityId => getJourneyCity(cityId))
   .filter((city): city is JourneyCity => Boolean(city));
+const PUBLISHED_CITY_IDS = JOURNEY_CITY_SEQUENCE.map(city => city.id).filter(hasPublishedCityRoutes);
 
 const CITY_CONTINENT_FILTERS = ['全部', '亚洲', '欧洲', '非洲', '北美洲', '南美洲', '大洋洲', '南极洲'] as const;
 type CityContinentFilter = (typeof CITY_CONTINENT_FILTERS)[number];
@@ -148,7 +153,7 @@ const getRouteListOpenCount = (state: JourneyState, cityId: string) => {
   return getOpenRouteCount(completedCount);
 };
 
-const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteListItem => {
+const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState, fromRecommendation = false): CityRouteListItem => {
   const status = getRouteStatus(state, route.cityId, route.id);
   return {
     title: route.name,
@@ -160,7 +165,7 @@ const toLegacyRouteItem = (route: JourneyRoute, state: JourneyState): CityRouteL
     spots: route.landmarks.join(' — '),
     intro: route.description,
     isCompleted: status === 'completed',
-    isUnlocked: status !== 'locked'
+    isUnlocked: fromRecommendation || status !== 'locked'
   };
 };
 
@@ -205,6 +210,8 @@ function ProgressSegments({ completed, showRunner = false }: { completed: number
 
 interface HomePageProps {
   state: JourneyState;
+  newCityIds: readonly string[];
+  recommendations: DailyRouteRecommendation[];
   todayExercise: RunResult;
   dailyGoalKm: number;
   allowGoalAnimation: boolean;
@@ -212,7 +219,7 @@ interface HomePageProps {
   city: JourneyCity;
   deviceConnected: boolean;
   onRoutes: (cityId: string) => void;
-  onPreviewRoute: (cityId: string, routeId: string) => void;
+  onRecommendations: () => void;
   onBrowseCity: (cityId: string) => void;
   onSelectNextCity: (cityId: string) => void;
   focusNextStation: boolean;
@@ -222,14 +229,7 @@ interface HomePageProps {
   onCarouselEnd: () => void;
 }
 
-type LegacyFeature = 'onlineSupport' | 'weightLossPlan' | 'leaderboard' | 'level' | 'medalLottery' | 'weekendMedley' | 'teamRelay';
-
-type WeightRouteTarget = {
-  cityId: string;
-  routeIndex: number;
-  image: string;
-  day: number;
-};
+type LegacyFeature = 'onlineSupport' | 'firstCityRewards' | 'leaderboard' | 'level' | 'medalLottery' | 'weekendMedley' | 'teamRelay';
 
 type ActivityRouteTarget = {
   source: 'medley';
@@ -244,7 +244,8 @@ type ActivityRouteTarget = {
   taskId: string;
 };
 
-function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEditDailyGoal, city, deviceConnected, onRoutes, onPreviewRoute, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature, onCarouselEnd }: HomePageProps) {
+function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoalKm, allowGoalAnimation, onEditDailyGoal, city, deviceConnected, onRoutes, onRecommendations, onBrowseCity, onSelectNextCity, focusNextStation, onNextStationFocused, onDevice, onLegacyFeature, onCarouselEnd }: HomePageProps) {
+  const hasNewCity = newCityIds.length > 0;
   const carouselRef = useRef<HTMLDivElement>(null);
   const cityVideoRef = useRef<HTMLVideoElement>(null);
   const hasAlignedCarouselRef = useRef(false);
@@ -279,13 +280,7 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
     if (distance >= 48 && distance > Math.abs(start.y - y) * 1.2) notifyCarouselEnd();
   };
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
-  const [previewCityId, setPreviewCityId] = useState<string | null>(city.id);
-  const previewCityIdRef = useRef<string | null>(city.id);
-  const previewCity = previewCityId ? getJourneyCity(previewCityId) : undefined;
-  const previewCanOpenDetail = previewCity && ['current', 'completed'].includes(getCityStatus(state, previewCity.id));
-  const previewRoutes = previewCity && hasPublishedCityRoutes(previewCity.id) ? getCityRouteSequence(previewCity) : [];
-  const previewRoute = previewRoutes.find(route => ['revealed', 'discoverable'].includes(getRouteStatus(state, route.cityId, route.id))) ?? previewRoutes[0];
-  const previewStatus = previewRoute ? getRouteStatus(state, previewRoute.cityId, previewRoute.id) : null;
+  const featuredRecommendation = recommendations[0];
   const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
@@ -296,12 +291,6 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
     (_, offset) => nextStationCandidatePool[(candidateBatchIndex * 3 + offset) % nextStationCandidatePool.length]
   ).filter(Boolean);
   const currentCityCompleted = getCompletedRouteIds(state, state.currentCityId).length >= 10 || state.completedCityIds.includes(state.currentCityId);
-  const getProgressCopy = (item: JourneyCity) => {
-    const itemStatus = getCityStatus(state, item.id);
-    return itemStatus === 'completed' || itemStatus === 'current'
-      ? ''
-      : '完成前序旅程后解锁';
-  };
 
   const updateCarouselCardVisuals = useCallback(() => {
     const carousel = carouselRef.current;
@@ -318,13 +307,6 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
       const eased = closeness * closeness * (3 - 2 * closeness);
       return { card, signedDistance, distanceRatio, eased };
     });
-
-    const nearest = measurements.reduce<(typeof measurements)[number] | null>((best, item) => !best || Math.abs(item.signedDistance) < Math.abs(best.signedDistance) ? item : best, null);
-    const nearestCityId = nearest?.card.dataset.cityId ?? null;
-    if (nearestCityId !== previewCityIdRef.current) {
-      previewCityIdRef.current = nearestCityId;
-      setPreviewCityId(nearestCityId);
-    }
 
     measurements.forEach(({ card, signedDistance, eased }) => {
       const nearby = Math.abs(signedDistance) <= viewportWidth * 2;
@@ -688,17 +670,21 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
       <header className="home-commandbar">
         <div className="home-commandbar-title">
           <h1>今天跑哪里？</h1>
-          <button className="home-city-list-entry" type="button" aria-label="浏览城市列表" aria-controls="home-city-carousel" onPointerDown={handleCtaPointerDown} onClick={()=>{scheduleNearestCitySelection();carouselRef.current?.focus({preventScroll:true});}}>
+          <button className="home-city-list-entry" type="button" aria-label="浏览城市列表" aria-description={hasNewCity ? '有新开放的城市' : undefined} aria-controls="home-city-carousel" onPointerDown={handleCtaPointerDown} onClick={() => {
+            scheduleNearestCitySelection();
+            carouselRef.current?.focus({ preventScroll: true });
+          }}>
             <GalleryHorizontalEnd aria-hidden="true"/><span>城市列表</span>
+            {hasNewCity && <span className="city-new-badge home-city-list-entry__new" aria-hidden="true">NEW</span>}
           </button>
         </div>
         <nav className="home-quick-actions" aria-label="首页快捷入口">
           <button className="home-quick-action home-quick-action--support" type="button" onClick={() => onLegacyFeature('onlineSupport')} aria-label="打开在线客服" title="在线客服">
             <HeadphonesIcon />
           </button>
-          <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('weightLossPlan')} aria-label="打开打卡红包">
+          <button className="home-reward-chip" type="button" onClick={() => onLegacyFeature('firstCityRewards')} aria-label="打开新手任务">
             <Flame />
-            <span>打卡</span>
+            <span>奖励</span>
           </button>
           <button
             className={`home-quick-action home-quick-action--device ${deviceConnected ? 'is-online' : 'is-offline'}`}
@@ -788,9 +774,10 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
             }, { distance: 0, duration: 0, calories: 0 });
             const itemHasJourneyProgress = itemStatus === 'current' || itemStatus === 'completed';
             const itemLabel = itemStatus === 'completed' ? '已完成城市' : itemStatus === 'current' ? '当前目的地' : '全球目的地';
+            const isNew = newCityIds.includes(item.id);
             return (
               <Fragment key={item.id}>
-                <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}`} onClick={() => handleCityCardClick(item.id)}>
+                <section className={`destination-journey-card${item.id === city.id ? ' is-active' : ' is-side'}`} data-city-id={item.id} key={item.id} style={cityStyle(item)} aria-label={`${item.name}，${itemLabel}${isNew ? '，新上线' : ''}`} onClick={() => handleCityCardClick(item.id)}>
                   <div className="destination-card">
                     <img className="destination-card__photo" src={cityImageFor(item)} alt="" aria-hidden="true" />
                     {itemStatus === 'current' && item.id === city.id && cityVideoFor(item) && (
@@ -846,6 +833,7 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
                       </>
                     )}
                     <div className="destination-card__overlay" />
+                    {isNew && <span className="city-new-badge destination-card__new" aria-hidden="true">NEW</span>}
                     <div className={`destination-card__content ${homeRunStyles.coverContent}`}>
                       <div>
                         <span className="destination-card__kicker"><MapPin /> {itemLabel}</span>
@@ -857,15 +845,25 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
                   </div>
                   <section className={`journey-progress ${homeRunStyles.panel}`} aria-label={`${item.name}旅程进度`}>
                     <div className="journey-progress__topline">
-                      <div><span>城市进度</span><strong>{itemCompleted}<small>/10</small></strong></div>
-                      {getProgressCopy(item) && <p>{getProgressCopy(item)}</p>}
+                      <span>城市进度</span><strong>{itemCompleted}<small>/{item.routes.length}</small></strong>
                     </div>
                     <CityRunProgress cityName={item.name} completed={itemCompleted} total={item.routes.length} current={itemStatus === 'current'} />
                     {itemHasJourneyProgress && (
                       <HomeSportStats cumulative={{ distanceKm:itemExerciseTotals.distance, durationSeconds:itemExerciseTotals.duration*60, calories:itemExerciseTotals.calories }} completed={itemStatus === 'completed'} />
                     )}
-                    <button className={`${itemHasJourneyProgress ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }}>
-                      {itemStatus === 'current' && <RunIcon />}{itemStatus === 'completed' ? `查看${item.name}旅程` : itemStatus === 'current' ? `继续${item.name}跑步旅程` : `${item.name} · 尚未解锁`} {itemHasJourneyProgress ? <ArrowRight /> : <LockKeyhole />}
+                    <button className={`${itemHasJourneyProgress ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" aria-label={itemHasJourneyProgress ? undefined : `${item.name}，尚未解锁，查看路线`} onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }}>
+                      {itemHasJourneyProgress ? (
+                        <>
+                          {itemStatus === 'current' && <RunIcon />}
+                          {itemStatus === 'completed' ? `查看${item.name}旅程` : `继续${item.name}跑步旅程`}
+                          <ArrowRight aria-hidden="true" />
+                        </>
+                      ) : (
+                        <>
+                          <span className="journey-cta__status"><LockKeyhole aria-hidden="true" />尚未解锁</span>
+                          <span className="journey-cta__label">查看路线<ChevronRight aria-hidden="true" /></span>
+                        </>
+                      )}
                     </button>
                   </section>
                 </section>
@@ -909,10 +907,10 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
             );
           })}
         </div>
-        {previewCity && previewRoute && <button
+        {featuredRecommendation && <button
           className={homeRunStyles.browseRoute}
           type="button"
-          aria-label={`${previewCity.name}，${previewRoute.name}，${previewRoute.distanceKm}公里，约${previewRoute.durationMinutes}分钟，${previewCanOpenDetail ? '查看路线详情' : '查看城市路线'}`}
+          aria-label={`每日推荐，查看 ${recommendations.length} 条路线`}
           onPointerEnter={holdCarouselBrowsing}
           onPointerLeave={armCarouselSettle}
           onFocus={holdCarouselBrowsing}
@@ -920,13 +918,12 @@ function HomePage({ state, todayExercise, dailyGoalKm, allowGoalAnimation, onEdi
           onPointerDown={event => { handleCtaPointerDown(event); holdCarouselBrowsing(); }}
           onPointerUp={armCarouselSettle}
           onPointerCancel={armCarouselSettle}
-          onClick={event => { event.stopPropagation(); if (previewCanOpenDetail) onPreviewRoute(previewCity.id, previewRoute.id); else onRoutes(previewCity.id); }}
+          onClick={event => { event.stopPropagation(); selectNearestCity(); onRecommendations(); }}
         >
-          <CityImage className={homeRunStyles.browseRouteCover} src={getRouteCover(previewCity.name, previewRoute.order)?.src} alt="" fallbackLabel={previewRoute.landmarks[0]} loading="eager" />
+          <CityImage className={homeRunStyles.browseRouteCover} src={getRouteCover(featuredRecommendation.city.name, featuredRecommendation.route.order)?.src ?? cityImageFor(featuredRecommendation.city)} alt="" fallbackLabel={featuredRecommendation.route.landmarks[0]} loading="eager" />
           <span className={homeRunStyles.browseRouteBody}>
-            <span className={homeRunStyles.browseRouteLabel}>{previewCity.name} · {!previewCanOpenDetail || previewStatus === 'locked' ? '路线预览' : previewStatus === 'completed' ? '重跑推荐' : '待跑路线'}</span>
-            <strong>{previewRoute.name}</strong>
-            <span className={homeRunStyles.browseRouteStats}><Footprints aria-hidden="true" />{previewRoute.distanceKm} km<span>·</span><Clock3 aria-hidden="true" />约 {previewRoute.durationMinutes} 分钟</span>
+            <strong>每日推荐</strong>
+            <span className={homeRunStyles.browseRouteDetail}>{recommendations.map(({ city }) => city.name).join(' · ')}</span>
           </span>
           <ChevronRight className={homeRunStyles.browseRouteArrow} aria-hidden="true" />
         </button>}
@@ -1559,7 +1556,7 @@ function UtilityPanel({ mode, deviceConnected, manualReducedMotion, onToggleDevi
   return (
     <Modal labelId="utility-title" onClose={onClose} className="utility-panel">
       <header className="sheet-header"><div><span>{mode === 'device' ? 'Device' : 'Account'}</span><h2 id="utility-title">{mode === 'device' ? '我的设备' : '个人与设置'}</h2></div><button className="icon-button icon-button--paper" type="button" onClick={onClose} aria-label="关闭面板"><X /></button></header>
-      {mode === 'device' ? <><section className={`device-card ${deviceConnected ? 'is-online' : ''}`}><div className="device-card__icon"><TreadmillIcon connected={deviceConnected} /></div><div><strong>MOVEVI Runner S1</strong><span>{deviceConnected ? '已连接 · 信号良好' : '当前未连接'}</span></div><i /></section><button className="secondary-button" type="button" onClick={onToggleDevice}>{deviceConnected ? '断开设备' : '连接设备'}</button><div className="help-note"><CircleHelp /><p><strong>连接遇到问题？</strong><span>确认跑步机已开机，并让手机靠近设备。</span></p></div></> : <><section className="account-card"><span className="account-avatar">沐</span><div><strong>沐小六</strong><small>MOVEVI ID · MV-3026</small></div></section><div className="settings-list"><div><Settings /><span><strong>减少动效</strong><small>直接呈现旅程结果</small></span><button className={`switch ${manualReducedMotion ? 'is-on' : ''}`} type="button" onClick={onToggleMotion} aria-pressed={manualReducedMotion}><i /></button></div><div><Headphones /><span><strong>帮助与反馈</strong><small>设备连接、跑步与账号问题</small></span><ArrowRight /></div><button type="button" onClick={onReset}><RotateCcw /><span><strong>恢复演示状态</strong><small>回到东京 6/10</small></span><ArrowRight /></button></div></>}
+      {mode === 'device' ? <><section className={`device-card ${deviceConnected ? 'is-online' : ''}`}><div className="device-card__icon"><TreadmillIcon connected={deviceConnected} /></div><div><strong>MOVEVI Runner S1</strong><span>{deviceConnected ? '已连接 · 信号良好' : '当前未连接'}</span></div><i /></section><button className="secondary-button" type="button" onClick={onToggleDevice}>{deviceConnected ? '断开设备' : '连接设备'}</button><div className="help-note"><CircleHelp /><p><strong>连接遇到问题？</strong><span>确认跑步机已开机，并让手机靠近设备。</span></p></div></> : <><section className="account-card"><span className="account-avatar">沐</span><div><strong>沐小六</strong><small>MOVEVI ID · MV-3026</small></div></section><div className="settings-list"><div><Settings /><span><strong>减少动效</strong><small>直接呈现旅程结果</small></span><button className={`switch ${manualReducedMotion ? 'is-on' : ''}`} type="button" onClick={onToggleMotion} aria-pressed={manualReducedMotion}><i /></button></div><div><Headphones /><span><strong>帮助与反馈</strong><small>设备连接、跑步与账号问题</small></span><ArrowRight /></div><button type="button" onClick={onReset}><RotateCcw /><span><strong>恢复演示状态</strong><small>重置城市进度与新手任务</small></span><ArrowRight /></button></div></>}
     </Modal>
   );
 }
@@ -1568,6 +1565,12 @@ export default function JourneyApp() {
   const {enabled:puzzleDemo,openOnLoad:puzzleDeepLink}=getPuzzlePreviewMode(window.location.search);
   const dailyExercise = useDailyExercise(puzzleDemo);
   const [dailyGoalOpen, setDailyGoalOpen] = useState(false);
+  const [firstCityInitial] = useState(() => {
+    const saved = loadFirstCityRewards();
+    return { ...saved, achievedTaskIds:saved.achievedTaskIds.filter(id => id === 'firstCity'), claims:[] };
+  });
+  const firstCityReturnRef = useRef(false);
+  const firstCityPreviewTaskRef = useRef<'activation' | 'firstRoute' | null>(null);
   const exerciseSessionId = useRef<string | null>(null);
   const recordCompletedExercise = (result: RunResult) => {
     const id = exerciseSessionId.current;
@@ -1575,16 +1578,22 @@ export default function JourneyApp() {
     exerciseSessionId.current = null;
     dailyExercise.record(id, result);
   };
-  const [state, dispatch] = useReducer(journeyReducer, undefined, createDemoJourneyState);
+  const [state, dispatch] = useReducer(journeyReducer, firstCityInitial, restoreFirstCityJourney);
   const nextStationFocusTimerRef = useRef<number | null>(null);
-  const [isFirstUse, setIsFirstUse] = useState(!puzzleDeepLink);
+  // Keep onboarding available in code while the preview opens directly on home.
+  const [isFirstUse, setIsFirstUse] = useState(false);
   const [firstCityChoiceId, setFirstCityChoiceId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PrimaryTab>('home');
   const [homeCityId, setHomeCityId] = useState(state.currentCityId);
   const [cityListOpen, setCityListOpen] = useState(false);
   const [routeCityId, setRouteCityId] = useState<string | null>(null);
+  const [recommendationsOpen, setRecommendationsOpen] = useState(false);
+  const recommendationScrollTop = useRef(0);
+  const recommendationDay = exerciseDay();
+  const recommendations = getDailyRouteRecommendations(recommendationDay);
+  const [newCityIds, setNewCityIds] = useState(() => PUBLISHED_CITY_IDS.slice(-1));
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
-  const [runningRoute, setRunningRoute] = useState<{ cityId: string; routeId: string } | null>(null);
+  const [runningRoute, setRunningRoute] = useState<{ cityId: string; routeId: string; countsForJourney: boolean } | null>(null);
   const [utilityMode, setUtilityMode] = useState<'device' | 'profile' | null>(null);
   const [deviceConnected, setDeviceConnected] = useState(false);
   const [startupConnectionSucceeded, setStartupConnectionSucceeded] = useState(false);
@@ -1611,15 +1620,8 @@ export default function JourneyApp() {
     .filter(r => getRouteStatus(state,c.id,r.id) !== 'locked').map(r => ({ ...c, routeId:r.id, routeIndex:r.order,
       title:r.name, image:getRouteCover(c.name,r.order)?.src || c.image, distanceKm:r.distanceKm, minutes:r.durationMinutes })));
   const puzzle = usePuzzleTeam(puzzleDemo,puzzleCities.filter(c=>puzzleRoutes.some(r=>r.id===c.id)));
-  const [weightRoute, setWeightRoute] = useState<WeightRouteTarget | null>(null);
-  const [runningWeightRoute, setRunningWeightRoute] = useState<WeightRouteTarget | null>(null);
-  const [weightPlanStarted, setWeightPlanStarted] = useState(false);
-  const [weightCompletedDays, setWeightCompletedDays] = useState<number[]>([]);
-  const [weightRewardBoxes, setWeightRewardBoxes] = useState<number[]>([]);
-  const [weightOpenedRewardDays, setWeightOpenedRewardDays] = useState<number[]>([]);
-  const [weightRewardHistory, setWeightRewardHistory] = useState<WeightPlanRewardRecord[]>([]);
-  const [activationClaimed, setActivationClaimed] = useState(false);
-  const [firstRouteClaimed, setFirstRouteClaimed] = useState(false);
+  const firstCityRewards = useFirstCityRewards(firstCityInitial, state, deviceConnected, !isFirstUse);
+  const rewardCity = getJourneyCity(firstCityRewards.state.firstCityId ?? state.currentCityId)!;
   const systemReducedMotion = useReducedMotion();
   const reduceMotion = Boolean(systemReducedMotion || manualReducedMotion);
   const currentCity = getJourneyCity(state.currentCityId)!;
@@ -1631,16 +1633,11 @@ export default function JourneyApp() {
   const candidateCities = getCandidateCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const effectiveCandidateId = selectedCandidateId ?? candidateCities[0]?.id ?? '';
 
-  useEffect(() => {
-    // Prototype-only auto-connect. Replace this simulated success with the hardware
-    // adapter's successful connection callback before enabling real device support.
-    // Cleanup also prevents duplicate callbacks during React StrictMode mounting.
-    const timer = window.setTimeout(() => {
-      setDeviceConnected(true);
-      setStartupConnectionSucceeded(true);
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const connectPreviewDevice = () => {
+    setDeviceConnected(true);
+    setStartupConnectionSucceeded(true);
+    setDeviceConnectionAcknowledged(false);
+  };
 
   useEffect(() => {
     if (state.currentPage !== 'travel' || !state.pendingNextCityId) return;
@@ -1656,25 +1653,50 @@ export default function JourneyApp() {
     return () => window.clearTimeout(timer);
   }, [notice]);
   useEffect(() => setHomeCityId(state.currentCityId), [state.currentCityId]);
+  useEffect(() => {
+    if (!routeCityId) return;
+    setNewCityIds(ids => ids.includes(routeCityId) ? ids.filter(id => id !== routeCityId) : ids);
+  }, [routeCityId]);
   useEffect(() => () => {
     if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current);
   }, []);
 
   const openCity = (cityId: string) => {
+    setRecommendationsOpen(false);
     setSelectedRouteId(null); setRouteCityId(cityId);
   };
-  const openPreviewRoute = (cityId: string, routeId: string) => {
-    const route = getJourneyCity(cityId)?.routes.find(item => item.id === routeId);
-    if (!route || !hasPublishedCityRoutes(cityId)) return;
-    if (!['current', 'completed'].includes(getCityStatus(state, cityId))) { openCity(cityId); return; }
-    if (getRouteStatus(state, cityId, routeId) === 'discoverable') dispatch({ type:'REVEAL_ROUTE', cityId, routeId });
+  const continueCurrentJourney = () => {
+    setRecommendationsOpen(false);
+    setSelectedRouteId(null);
+    if (getCityStatus(state, state.currentCityId) === 'completed') {
+      setRouteCityId(null);
+      setActiveTab('home');
+      setHomeCityId(state.currentCityId);
+      dispatch({ type:'NAVIGATE', page:'home' });
+      setFocusNextStation(true);
+    } else {
+      setRouteCityId(state.currentCityId);
+    }
+  };
+  const openRecommendations = () => {
+    recommendationScrollTop.current = 0;
+    setRouteCityId(null);
+    setSelectedRouteId(null);
+    setRecommendationsOpen(true);
+  };
+  const openRecommendedRoute = (route: JourneyRoute, scrollTop: number) => {
+    const { cityId, id:routeId } = route;
+    recommendationScrollTop.current = scrollTop;
+    const cityStatus = getCityStatus(state, cityId);
+    if ((cityStatus === 'current' || cityStatus === 'completed') && getRouteStatus(state, cityId, routeId) === 'discoverable') {
+      dispatch({ type:'REVEAL_ROUTE', cityId, routeId });
+    }
     setRouteCityId(cityId);
     setSelectedRouteId(routeId);
   };
   const openCityRoutesFromList = (cityId: string) => {
     setCityListOpen(false);
-    setSelectedRouteId(null);
-    setRouteCityId(cityId);
+    openCity(cityId);
   };
   const openLegacyRoute = (routeIndex: number) => {
     const cityForRoutes = routeCityId ? getJourneyCity(routeCityId) : undefined;
@@ -1682,7 +1704,7 @@ export default function JourneyApp() {
     const route = cityForRoutes.routes[routeIndex - 1];
     if (!route) return;
     const status = getRouteStatus(state, cityForRoutes.id, route.id);
-    if (status === 'discoverable') {
+    if (status === 'discoverable' && ['current', 'completed'].includes(getCityStatus(state, cityForRoutes.id))) {
       dispatch({ type: 'REVEAL_ROUTE', cityId: cityForRoutes.id, routeId: route.id });
       setNotice(`${route.name}，已揭晓`);
     }
@@ -1693,31 +1715,51 @@ export default function JourneyApp() {
     if (status === 'discoverable') { dispatch({ type: 'REVEAL_ROUTE', cityId: route.cityId, routeId: route.id }); setNotice(`${route.name}，已揭晓`); return; }
     if (status === 'revealed' || status === 'completed') setSelectedRouteId(route.id);
   };
-  const startRun = (route: JourneyRoute) => {
-    if (getRouteStatus(state, route.cityId, route.id) === 'locked') return;
+  const startRun = (route: JourneyRoute, fromRecommendation = false) => {
+    const cityStatus = getCityStatus(state, route.cityId);
+    const countsForJourney = (cityStatus === 'current' || cityStatus === 'completed')
+      && getRouteStatus(state, route.cityId, route.id) !== 'locked';
+    if (!countsForJourney && !(fromRecommendation && hasPublishedCityRoutes(route.cityId))) return;
     exerciseSessionId.current = crypto.randomUUID();
-    if (!deviceConnected) setDeviceConnected(true);
-    setRunningRoute({ cityId: route.cityId, routeId: route.id });
+    if (!deviceConnected) connectPreviewDevice();
+    setRunningRoute({ cityId: route.cityId, routeId: route.id, countsForJourney });
     setRouteCityId(null);
   };
   const startSelectedRoute = () => {
     if (!routeCityId || !selectedRouteId) return;
     const route = getJourneyRoute(routeCityId, selectedRouteId);
     if (!route) return;
-    startRun(route);
+    startRun(route, recommendationsOpen);
   };
   const completeRun = (result: RunResult) => {
     if (!runningRoute) return;
     recordCompletedExercise(result);
+    if (!runningRoute.countsForJourney) {
+      setRunningRoute(null);
+      setSelectedRouteId(null);
+      setNotice('运动已完成，已计入今日运动');
+      return;
+    }
+    firstCityRewards.completeRoute(runningRoute.cityId, runningRoute.routeId);
     const alreadyCompleted = getCompletedRouteIds(state, runningRoute.cityId).includes(runningRoute.routeId);
     const completedAfterRun = getCompletedRouteIds(state, runningRoute.cityId).length + (alreadyCompleted ? 0 : 1);
     const willCompleteCurrentCity = runningRoute.cityId === state.currentCityId && completedAfterRun >= 10;
     const completedCityId = runningRoute.cityId;
-    dispatch({ type: 'COMPLETE_ROUTE', ...runningRoute, result });
+    dispatch({ type: 'COMPLETE_ROUTE', cityId: runningRoute.cityId, routeId: runningRoute.routeId, result });
     setRunningRoute(null);
     setSelectedRouteId(null);
     setSelectedCandidateId(null);
+    if (firstCityReturnRef.current) {
+      firstCityReturnRef.current = false;
+      firstCityPreviewTaskRef.current = null;
+      setRouteCityId(null);
+      setLegacyFeature('firstCityRewards');
+      dispatch({ type:'NAVIGATE', page:'home' });
+      setNotice(willCompleteCurrentCity ? `首座城市已完成，可领取 ${formatRewardCents(FIRST_CITY_REWARDS.firstCity)} 奖励` : '路线已完成，首城进度已更新');
+      return;
+    }
     if (willCompleteCurrentCity) {
+      setRecommendationsOpen(false);
       setActiveTab('home');
       setHomeCityId(state.currentCityId);
       setFocusNextStation(false);
@@ -1730,14 +1772,21 @@ export default function JourneyApp() {
       }, reduceMotion ? 40 : 260);
     } else {
       dispatch({ type: 'NAVIGATE', page: 'home' });
-      setRouteCityId(completedCityId);
+      setRouteCityId(recommendationsOpen ? null : completedCityId);
       if (!alreadyCompleted && completedAfterRun < 10) setNotice(`路线 ${String(completedAfterRun + 1).padStart(2, '0')} 已解锁`);
     }
   };
-  const resetDemo = () => { if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current); nextStationFocusTimerRef.current = null; dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setFocusNextStation(false); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
+  const resetDemo = () => { if (nextStationFocusTimerRef.current) window.clearTimeout(nextStationFocusTimerRef.current); nextStationFocusTimerRef.current = null; firstCityReturnRef.current = false; firstCityRewards.reset(); firstCityPreviewTaskRef.current = null; setDeviceConnected(false); setStartupConnectionSucceeded(false); setDeviceConnectionAcknowledged(false); setLegacyFeature(null); dispatch({ type: 'RESET_DEMO' }); setActiveTab('home'); setHomeCityId('tokyo'); setFocusNextStation(false); setCityListOpen(false); setUtilityMode(null); setRouteCityId(null); setSelectedRouteId(null); setRunningRoute(null); setSelectedCandidateId(null); setNotice('演示状态已恢复'); };
   const clearNextStationFocus = useCallback(() => setFocusNextStation(false), []);
   const startFirstJourney = () => {
     if (!firstCityChoiceId || !getJourneyCity(firstCityChoiceId)) return;
+    if (firstCityRewards.state.firstCityId && firstCityRewards.state.firstCityId !== firstCityChoiceId && !firstCityRewards.state.achievedTaskIds.includes('firstCity')) {
+      setIsFirstUse(false);
+      setNotice(`请先完成${rewardCity.name}，再选择下一座城市`);
+      return;
+    }
+    const initialJourney = createPrototypeJourneyState(firstCityChoiceId);
+    firstCityRewards.bind(firstCityChoiceId, getCompletedRouteIds(initialJourney, firstCityChoiceId));
     dispatch({ type: 'START_JOURNEY', cityId: firstCityChoiceId });
     setHomeCityId(firstCityChoiceId);
     setActiveTab('home');
@@ -1745,6 +1794,7 @@ export default function JourneyApp() {
     setNotice(`${getJourneyCity(firstCityChoiceId)?.name ?? '第一站'}，旅程从这里开始`);
   };
   const resumeCurrentJourney = () => {
+    firstCityRewards.bind(state.currentCityId, getCompletedRouteIds(state, state.currentCityId));
     setHomeCityId(state.currentCityId);
     setActiveTab('home');
     dispatch({ type: 'NAVIGATE', page: 'home' });
@@ -1756,6 +1806,8 @@ export default function JourneyApp() {
     dispatch({ type: 'NAVIGATE', page: tab === 'world' ? 'map' : 'home' });
   };
   const openLegacyFeature = (feature: LegacyFeature) => {
+    firstCityReturnRef.current = false;
+    firstCityPreviewTaskRef.current = null;
     if(feature==='teamRelay'&&puzzleDemo)puzzle.restartPreview();
     setLegacyFeature(feature);
     setRouteCityId(null);
@@ -1812,31 +1864,56 @@ export default function JourneyApp() {
     if (record && stats) {
       const next = puzzle.finish(record.teamId, {...record, memberId:'self', finishedAt:puzzle.now(), distanceKm:stats.distance});
       const earned = next.teams.some(t => t.pieces.some(p => p.id === record.id));
-      if(earned)dispatch({type:'COMPLETE_ROUTE',cityId:record.route.id,routeId:record.route.routeId,background:true,result:{distanceKm:stats.distance,durationSeconds:stats.duration,calories:stats.calories}});
+      if(earned) {
+        firstCityRewards.completeRoute(record.route.id, record.route.routeId);
+        dispatch({type:'COMPLETE_ROUTE',cityId:record.route.id,routeId:record.route.routeId,background:true,result:{distanceKm:stats.distance,durationSeconds:stats.duration,calories:stats.calories}});
+      }
       if(!puzzleDemo||!earned)setNotice(earned ? (puzzleComplete(next.teams.find(t => t.id === record.teamId)!) ? '小队已完成 3 条路线，可以去抽奖了' : '路线已完成，小队进度已更新') : '本次未计入，请完整跑完路线；每人每期最多 2 条');
     }
     setLegacyFeature('teamRelay');
   };
-  const openWeightRoute = (cityId: string, routeIndex: number, image: string, day: number) => {
-    setWeightRoute({ cityId, routeIndex, image, day });
+  const continueFirstCityTask = (task: 'firstRoute' | 'firstCity') => {
+    firstCityReturnRef.current = true;
+    firstCityPreviewTaskRef.current = task === 'firstRoute' ? 'firstRoute' : null;
+    setLegacyFeature(null);
+    setRouteCityId(rewardCity.id);
+    setSelectedRouteId(null);
   };
-  const completeWeightRoute = (target: WeightRouteTarget, stats: {distance:number;duration:number;calories:number}) => {
-    recordCompletedExercise({ distanceKm:stats.distance, durationSeconds:stats.duration, calories:stats.calories });
-    setWeightCompletedDays(days => [...new Set([...days, target.day])].sort((a, b) => a - b));
-    setWeightRewardBoxes(days => [...new Set([...days, target.day])].sort((a, b) => a - b));
-    setRunningWeightRoute(null);
-    setLegacyFeature('weightLossPlan');
+  const openFirstCityActivation = () => {
+    firstCityPreviewTaskRef.current = 'activation';
+    setUtilityMode('device');
   };
-  const openWeightReward = (day: number) => {
-    if (!weightRewardBoxes.includes(day)) return { success: false, message: '完成当天路线后即可领取红包' };
-    if (weightOpenedRewardDays.includes(day)) return { success: false, message: '这一天的红包已领取' };
-    const amount = getWeightPlanRewardAmount(day);
-    setWeightOpenedRewardDays(days => [...new Set([...days, day])].sort((a, b) => a - b));
-    setWeightRewardHistory(records => [
-      { day, amount, openedAt: new Date().toLocaleString('zh-CN', { hour12: false }) },
-      ...records
-    ]);
-    return { success: true, message: `第${day}天红包已到账`, amount };
+  const closeDevicePage = () => {
+    if (firstCityPreviewTaskRef.current === 'activation') {
+      firstCityPreviewTaskRef.current = null;
+      connectPreviewDevice();
+      setNotice('激活已完成，可领取奖励');
+    }
+    setUtilityMode(null);
+  };
+  const closeCityRoutes = () => {
+    setRouteCityId(null);
+    setSelectedRouteId(null);
+    if (!firstCityReturnRef.current) return;
+    if (firstCityPreviewTaskRef.current === 'firstRoute') {
+      const routes = getCityRouteSequence(rewardCity);
+      const nextRoute = routes.find(route => {
+        const status = getRouteStatus(state, rewardCity.id, route.id);
+        return status === 'discoverable' || status === 'revealed';
+      });
+      if (nextRoute) {
+        dispatch({ type:'REVEAL_ROUTE', cityId:rewardCity.id, routeId:nextRoute.id });
+        dispatch({type:'COMPLETE_ROUTE',cityId:rewardCity.id,routeId:nextRoute.id,background:true,result:{distanceKm:nextRoute.distanceKm,durationSeconds:nextRoute.durationMinutes * 60,calories:nextRoute.calories}});
+      }
+      const previewRoute = nextRoute ?? routes.find(route => getRouteStatus(state, rewardCity.id, route.id) === 'completed');
+      if (previewRoute) {
+        firstCityRewards.completeRoute(rewardCity.id, previewRoute.id);
+        setNotice('首条路线已完成，可领取奖励');
+      }
+    }
+    firstCityReturnRef.current = false;
+    firstCityPreviewTaskRef.current = null;
+    setLegacyFeature('firstCityRewards');
   };
 
   const runningCity = runningRoute ? getJourneyCity(runningRoute.cityId) : undefined;
@@ -1848,8 +1925,8 @@ export default function JourneyApp() {
   const pendingCity = state.pendingNextCityId ? getJourneyCity(state.pendingNextCityId) : undefined;
   const showDeviceConnectedPrompt = startupConnectionSucceeded && deviceConnected && !deviceConnectionAcknowledged
     && !isFirstUse && activeTab === 'home' && state.currentPage === 'home'
-    && !routeSheetCity && !runningRoute && !activityRoute && !runningActivityRoute
-    && !weightRoute && !runningWeightRoute && !legacyFeature && !cityListOpen && !utilityMode;
+    && !routeSheetCity && !recommendationsOpen && !runningRoute && !activityRoute && !runningActivityRoute
+    && !legacyFeature && !cityListOpen && !utilityMode;
 
   return (
     <div className="app-stage"><a className="skip-link" href="#main-content">跳到主要内容</a><div className="phone-shell" data-reduced-motion={reduceMotion}><div className="paper-grain" aria-hidden="true" />
@@ -1865,33 +1942,43 @@ export default function JourneyApp() {
           }
           exerciseSessionId.current = crypto.randomUUID(); setRunningActivityRoute(activityRoute); setActivityRoute(null);
         }} /></motion.div>
-        : runningWeightRoute ? <motion.div className="screen-layer" key="running-weight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningWeightRoute.cityId} routeIndex={runningWeightRoute.routeIndex} image={runningWeightRoute.image} onExit={() => { setRunningWeightRoute(null); setWeightRoute(runningWeightRoute); }} onComplete={stats => completeWeightRoute(runningWeightRoute, stats)} /></motion.div>
-        : weightRoute ? <motion.div className="screen-layer" key="weight-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={weightRoute.cityId} routeIndex={weightRoute.routeIndex} image={weightRoute.image} onBack={() => setWeightRoute(null)} onStart={() => { exerciseSessionId.current = crypto.randomUUID(); setRunningWeightRoute(weightRoute); setWeightRoute(null); }} /></motion.div>
         : legacyFeature === 'level' ? <motion.div className="screen-layer" key="journey-level" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><JourneyLevelView state={state} onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'leaderboard' ? <motion.div className="screen-layer" key="leaderboard" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><LeaderboardView currentLevel={countryLevel.level} onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'onlineSupport' ? <motion.div className="screen-layer" key="online-support" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><OnlineSupportView onBack={() => setLegacyFeature(null)} /></motion.div>
         : legacyFeature === 'medalLottery' ? <motion.div className="screen-layer" key="medal-lottery" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MedalLotteryView tickets={medalLotteryTickets} onBack={() => setLegacyFeature(null)} onGoRun={() => { setLegacyFeature(null); setActiveTab('home'); }} onDraw={drawMedalLottery} /></motion.div>
         : legacyFeature === 'weekendMedley' ? <motion.div className="screen-layer" key="weekend-medley" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeekendMedleyView onBack={() => setLegacyFeature(null)} selectedRouteIds={medleySelectedRouteIds} completedRouteIds={medleyCompletedRouteIds} lotteryChances={medleyLotteryChances} drawHistory={medleyDrawHistory} shareBonusClaimed={medleyShareBonusClaimed} activityStarted={medleyActivityStarted} onUpdateState={(next) => { if (next.selectedRouteIds !== undefined) setMedleySelectedRouteIds(next.selectedRouteIds); if (next.completedRouteIds !== undefined) setMedleyCompletedRouteIds(next.completedRouteIds); if (next.lotteryChances !== undefined) setMedleyLotteryChances(next.lotteryChances); if (next.drawHistory !== undefined) setMedleyDrawHistory(next.drawHistory); if (next.shareBonusClaimed !== undefined) setMedleyShareBonusClaimed(next.shareBonusClaimed); if (next.activityStarted !== undefined) setMedleyActivityStarted(next.activityStarted); }} onNavigateToRouteDetail={openMedleyRoute} /></motion.div>
         : legacyFeature === 'teamRelay' ? <motion.div className="screen-layer" key="team-relay" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><TeamRelayView preview={puzzleDemo} state={puzzle.state} cities={puzzleCities} routes={puzzleRoutes} storageFailed={puzzle.storageFailed} onBack={() => setLegacyFeature(null)} onCreate={puzzle.create} onJoin={puzzle.join} onDraw={puzzle.draw} now={puzzle.now()} onRun={openTeamRelayRoute} onSimulatePartner={puzzleDemo?puzzle.demoFinishPartner:undefined} onSimulateJoin={puzzleDemo?puzzle.demoJoin:undefined} /></motion.div>
-        : legacyFeature === 'weightLossPlan' ? <motion.div className="screen-layer" key="weight-loss-plan" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><WeightLossPlanView started={weightPlanStarted} completedDays={weightCompletedDays} rewardBoxes={weightRewardBoxes} openedRewardDays={weightOpenedRewardDays} rewardHistory={weightRewardHistory} newbieTasks={{ treadmillActivated: deviceConnected, activationClaimed, completedRoutes: getJourneyTotals(state).completedRoutes, firstRouteClaimed }} onBack={() => setLegacyFeature(null)} onStartPlan={() => setWeightPlanStarted(true)} onOpenReward={openWeightReward} onClaimActivationTask={() => { setActivationClaimed(true); setNotice('首次激活红包已领取'); }} onClaimFirstRouteTask={() => { setFirstRouteClaimed(true); setNotice('首次路线红包已领取'); }} onNavigateToRouteDetail={openWeightRoute} /></motion.div>
-        : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
+        : legacyFeature === 'firstCityRewards' ? <motion.div className="screen-layer" key="first-city-rewards" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><FirstCityRewardsView state={firstCityRewards.state} city={{ name:rewardCity.name, image:cityImageFor(rewardCity), total:rewardCity.routes.length }} storageFailed={firstCityRewards.storageFailed} onBack={() => setLegacyFeature(null)} onDevice={openFirstCityActivation} onContinue={continueFirstCityTask} onClaim={firstCityRewards.claim} /></motion.div>
+        : runningCity && runningRouteData ? <motion.div className="screen-layer" key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RunPlaybackView cityId={runningCity.id} cityName={runningCity.name} routeIndex={runningRouteData.order} image={cityImageFor(runningCity)} routeOverride={toLegacyRouteItem(runningRouteData, state, recommendationsOpen)} onExit={() => { setRunningRoute(null); setRouteCityId(runningCity.id); setSelectedRouteId(runningRouteData.id); }} onComplete={(stats) => completeRun({ distanceKm: stats.distance, durationSeconds: stats.duration, calories: stats.calories })} /></motion.div>
         : state.currentPage === 'routeComplete' && state.lastRun && lastRunCity && lastRunRoute ? <motion.div className="screen-layer" key="route-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><RouteCompletePage city={lastRunCity} route={lastRunRoute} completed={getCompletedRouteIds(state, lastRunCity.id).length} result={state.lastRun} firstCompletion={state.lastRun.isFirstCompletion} onNext={() => { setActiveTab('home'); dispatch({ type: 'NAVIGATE', page: 'home' }); window.setTimeout(() => openCity(state.currentCityId), 0); }} onMap={() => selectPrimaryTab('world')} /></motion.div>
         : state.currentPage === 'cityComplete' ? <motion.div className="screen-layer" key="city-complete" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><CityCompletePage city={currentCity} candidates={candidateCities} selectedId={effectiveCandidateId} onSelect={setSelectedCandidateId} onContinue={() => effectiveCandidateId && dispatch({ type: 'SELECT_NEXT_CITY', cityId: effectiveCandidateId })} /></motion.div>
         : state.currentPage === 'travel' && pendingCity ? <motion.div className="screen-layer" key="travel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TravelPage from={currentCity} to={pendingCity} reduceMotion={reduceMotion} /></motion.div>
-        : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state)} onBack={() => setSelectedRouteId(null)} onStart={startSelectedRoute} /></motion.div>
-        : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={() => { setRouteCityId(null); setSelectedRouteId(null); }} onRouteClick={openLegacyRoute} /></motion.div>
+        : routeSheetCity && selectedRouteData ? <motion.div className="screen-layer" key="legacy-route-detail" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><RouteDetailView cityId={routeSheetCity.id} routeIndex={selectedRouteData.order} image={cityImageFor(routeSheetCity)} routeOverride={toLegacyRouteItem(selectedRouteData, state, recommendationsOpen)} currentJourney={{ name:currentCity.name, image:cityImageFor(currentCity), completed:currentCityCompletedRoutes, total:currentCity.routes.length }} onContinueJourney={continueCurrentJourney} unselectedCityName={!recommendationsOpen && !['current', 'completed'].includes(getCityStatus(state, routeSheetCity.id)) ? routeSheetCity.name : undefined} onBack={() => { setSelectedRouteId(null); if (recommendationsOpen) setRouteCityId(null); }} onStart={startSelectedRoute} /></motion.div>
+        : recommendationsOpen ? (
+          <motion.div className="screen-layer" key="daily-recommendations" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
+            <DailyRouteRecommendationsView
+              cityImageFor={cityImageFor}
+              day={recommendationDay}
+              recommendations={recommendations}
+              scrollTop={recommendationScrollTop.current}
+              onBack={() => setRecommendationsOpen(false)}
+              onRouteClick={openRecommendedRoute}
+            />
+          </motion.div>
+        )
+        : routeSheetCity ? <motion.div className="screen-layer" key="legacy-route-list" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><CityRoutesView city={toLegacyCity(routeSheetCity, state)} routeItems={routeSheetCity.routes.map(route => toLegacyRouteItem(route, state))} completedRouteIndices={routeSheetCity.routes.filter(route => getCompletedRouteIds(state, routeSheetCity.id).includes(route.id)).map(route => route.order)} openRouteCount={getRouteListOpenCount(state, routeSheetCity.id)} onBack={closeCityRoutes} onRouteClick={openLegacyRoute} /></motion.div>
         : activeTab === 'profile' ? <motion.div className="screen-layer" key="profile" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><ProfilePage totals={totals} countryLevel={countryLevel} onDevice={() => setUtilityMode('device')} onLevel={() => openLegacyFeature('level')} onSettings={() => setUtilityMode('profile')} onFeature={label => setNotice(`${label} · 演示入口`)} /></motion.div>
-        : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => openLegacyFeature('medalLottery')} onSelectMedley={() => openLegacyFeature('weekendMedley')} onSelectWeightLossPlan={() => openLegacyFeature('weightLossPlan')} onSelectTeamRelay={() => {openLegacyFeature('teamRelay');}} onSelectHundredCities={() => setNotice('百人百城计划 · 筹备中')} /></motion.div>
+        : activeTab === 'activity' ? <motion.div className="screen-layer" key="activity" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><EventsTab onSelectMedalLottery={() => openLegacyFeature('medalLottery')} onSelectMedley={() => openLegacyFeature('weekendMedley')} onSelectFirstCityRewards={() => openLegacyFeature('firstCityRewards')} onSelectTeamRelay={() => {openLegacyFeature('teamRelay');}} onSelectHundredCities={() => setNotice('百人百城计划 · 筹备中')} /></motion.div>
         : activeTab === 'world' ? <motion.div className="screen-layer" key="world" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}><MapPage state={state} totals={totals} onOpenCity={openCity} onCities={() => setCityListOpen(true)} onLeaderboard={() => openLegacyFeature('leaderboard')} onCountryLevel={() => openLegacyFeature('level')} /></motion.div>
-        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} todayExercise={dailyExercise.totals} dailyGoalKm={dailyExercise.goalKm} allowGoalAnimation={!showDeviceConnectedPrompt && !reduceMotion} onEditDailyGoal={() => { setNotice(''); setDailyGoalOpen(true); }} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onPreviewRoute={openPreviewRoute} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} onCarouselEnd={() => setNotice('更多城市敬请期待')} /></motion.div>}
+        : <motion.div className="screen-layer" key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><HomePage state={state} newCityIds={newCityIds} recommendations={recommendations} todayExercise={dailyExercise.totals} dailyGoalKm={dailyExercise.goalKm} allowGoalAnimation={!showDeviceConnectedPrompt && !reduceMotion} onEditDailyGoal={() => { setNotice(''); setDailyGoalOpen(true); }} city={homeCity} deviceConnected={deviceConnected} onRoutes={openCity} onRecommendations={openRecommendations} onBrowseCity={setHomeCityId} onSelectNextCity={(cityId) => { setSelectedCandidateId(cityId); dispatch({ type: 'SELECT_NEXT_CITY', cityId }); }} focusNextStation={focusNextStation} onNextStationFocused={clearNextStationFocus} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} onCarouselEnd={() => setNotice('更多城市敬请期待')} /></motion.div>}
       </AnimatePresence>
       <AnimatePresence>
         {cityListOpen && !runningRoute && <motion.div className="overlay-layer" key="city-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CityListSheet state={state} selectedCityId={homeCity.id} onSelect={openCityRoutesFromList} onClose={() => setCityListOpen(false)} /></motion.div>}
-        {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{utilityMode === 'device' ? <MyDevicesView connected={deviceConnected} onBack={() => setUtilityMode(null)} onAdd={() => setNotice('添加设备暂未接入，当前为页面预览')} onScan={() => setNotice('扫码绑定暂未接入，当前为页面预览')} /> : <UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} />}</motion.div>}
+        {utilityMode && <motion.div className="overlay-layer" key="utility" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>{utilityMode === 'device' ? <MyDevicesView connected={deviceConnected} onBack={closeDevicePage} onAdd={() => { if (deviceConnected) { setNotice('当前设备已连接'); return; } connectPreviewDevice(); setNotice('设备已连接'); }} onScan={() => setNotice('扫码绑定暂未接入，当前为页面预览')} /> : <UtilityPanel mode={utilityMode} deviceConnected={deviceConnected} manualReducedMotion={manualReducedMotion} onToggleDevice={() => setDeviceConnected(value => !value)} onToggleMotion={() => setManualReducedMotion(value => !value)} onReset={resetDemo} onClose={() => setUtilityMode(null)} />}</motion.div>}
         {showDeviceConnectedPrompt && <motion.div className="overlay-layer" key="device-connected" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18 }}><DeviceConnectedPrompt onDismiss={() => setDeviceConnectionAcknowledged(true)} onViewDevice={() => { setDeviceConnectionAcknowledged(true); setUtilityMode('device'); }} /></motion.div>}
       </AnimatePresence>
       {dailyGoalOpen && <DailyGoalEditor goalKm={dailyExercise.goalKm} onClose={() => setDailyGoalOpen(false)} onSave={value => { if (dailyExercise.setGoalKm(value)) { setDailyGoalOpen(false); setNotice(`今日目标已设为 ${value} 公里`); } }} />}
-      {!isFirstUse && utilityMode !== 'device' && !runningRoute && !runningActivityRoute && !activityRoute && !runningWeightRoute && !weightRoute && !legacyFeature && !routeSheetCity && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
+      {!isFirstUse && utilityMode !== 'device' && !runningRoute && !runningActivityRoute && !activityRoute && !legacyFeature && !routeSheetCity && !recommendationsOpen && (state.currentPage === 'home' || state.currentPage === 'map') && <BottomNavigation active={activeTab} onChange={selectPrimaryTab} />}
       <div className={`toast ${notice ? 'is-visible' : ''} ${notice === '更多城市敬请期待' ? 'toast--centered' : ''}`} role="status" aria-live="polite">{notice}</div>
     </div></div>
   );

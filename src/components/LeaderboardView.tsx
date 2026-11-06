@@ -122,7 +122,7 @@ export default function LeaderboardView({ onBack, currentLevel }: LeaderboardVie
               <ol>
                 <li><b>01</b><p><strong>按环球等级排名</strong><span>每完成一个国家或地区，环球等级提升一级。</span></p></li>
                 <li><b>02</b><p><strong>所有跑者统一排名</strong><span>不区分设备类型，所有用户共同参与全球排名。</span></p></li>
-                <li><b>03</b><p><strong>同等级按升级时间排序</strong><span>环球等级相同时，较早达到该等级的用户优先。</span></p></li>
+                <li><b>03</b><p><strong>同等级按累计里程排序</strong><span>环球等级相同时，用户累计运动里程越多，排名越靠前。</span></p></li>
               </ol>
             </motion.section>
           </motion.div>

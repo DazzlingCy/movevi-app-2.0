@@ -2,9 +2,9 @@ import type { RunResult } from './types';
 
 export interface DailyExercise { day: string; runs: (RunResult & { id: string })[] }
 export const DAILY_EXERCISE_STORAGE = 'movevi-daily-exercise-v1';
-export const DAILY_EXERCISE_PREVIEW_STORAGE = 'movevi-daily-exercise-preview-v1';
+export const DAILY_EXERCISE_PREVIEW_STORAGE = 'movevi-daily-exercise-preview-v2';
 export const DEFAULT_DAILY_GOAL_KM = 5;
-export const DAILY_GOAL_STORAGE = 'movevi-daily-goal-km-v1';
+export const DAILY_GOAL_STORAGE = 'movevi-daily-goal-km-v2';
 export const isValidDailyGoal = (goalKm: number) => Number.isFinite(goalKm) && goalKm >= .1 && goalKm <= 100 && Math.abs(goalKm * 10 - Math.round(goalKm * 10)) < 1e-7;
 export const readDailyGoal = (raw: string | null) => isValidDailyGoal(Number(raw)) ? Number(raw) : DEFAULT_DAILY_GOAL_KM;
 export function dailyGoalPercentage(distanceKm: number, goalKm = DEFAULT_DAILY_GOAL_KM) {
@@ -16,7 +16,7 @@ export const exerciseDay = (now = Date.now()) => dayFormatter.format(now);
 const validResult = (result: RunResult) => [result.distanceKm, result.durationSeconds, result.calories].every(value => Number.isFinite(value) && value >= 0);
 export const emptyDailyExercise = (now = Date.now()): DailyExercise => ({ day: exerciseDay(now), runs: [] });
 export function createPreviewDailyExercise(now = Date.now()): DailyExercise {
-  const distanceKm = 1;
+  const distanceKm = 2.5;
   return { day: exerciseDay(now), runs: [{ id:'preview-today', distanceKm, durationSeconds:Math.round(distanceKm * 480), calories:Math.round(distanceKm * 65) }] };
 }
 

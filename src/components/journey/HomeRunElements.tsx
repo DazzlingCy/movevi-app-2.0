@@ -22,32 +22,21 @@ export function CityRunProgress({ cityName, completed, total, current }: { cityN
   const count = Math.min(total, Math.max(0, completed));
   const finished = total > 0 && count === total;
   return <div className={styles.track} data-state={finished ? 'completed' : current ? 'current' : 'locked'} role="progressbar" aria-label={`${cityName}跑步路线进度`} aria-valuemin={0} aria-valuemax={total} aria-valuenow={count} aria-valuetext={`已完成 ${count} / ${total} 条路线`}>
-    <div className={styles.lanes} aria-hidden="true"><div className={styles.segments} style={{ gridTemplateColumns: `repeat(${Math.max(1,total)}, minmax(0, 1fr))` }}>
-      {Array.from({ length: total }, (_, index) => <i key={index} data-complete={index < count} style={{ '--segment-index':index } as CSSProperties} />)}
-    </div></div>
+    <div className={styles.segments} aria-hidden="true" style={{ gridTemplateColumns: `repeat(${Math.max(1,total)}, minmax(0, 1fr))` }}>
+      {Array.from({ length: total }, (_, index) => (
+        <i key={index} data-complete={index < count} data-latest={current && !finished && index === count - 1} />
+      ))}
+      {current && total > 0 && !finished && (
+        <span className={styles.runnerMarker} style={{ '--runner-progress': `${count / total * 100}%` } as CSSProperties}>
+          <RunIcon animated />
+        </span>
+      )}
+    </div>
     <svg className={styles.finish} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 22V3h15v11H4" />
       <path d="M4 3h5v5H4zm5 5h5v6H9zm5-5h5v5h-5z" fill="currentColor" stroke="none" />
     </svg>
   </div>;
-}
-
-function TreadmillRunner() {
-  return <svg className={styles.treadmillMotion} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <g className={styles.treadmillPerson}>
-      <circle cx="25" cy="9" r="3" fill="currentColor" stroke="none" />
-      <path d="m23 16-4 10" />
-      <path className={styles.treadmillArmFront} d="m23 16 5 5 5-3" />
-      <path className={styles.treadmillArmBack} d="m23 16-6 4-4-2" />
-      <path className={styles.treadmillLegFront} d="m19 26 7 4-2 6" />
-      <path className={styles.treadmillLegBack} d="m19 26-5 7-5-1" />
-    </g>
-    <g className={styles.treadmillMachine}>
-      <path d="m36 36-3-17m-4-2h7" />
-      <rect x="6" y="36" width="34" height="5" rx="2.5" />
-      <path className={styles.treadmillBelt} d="M13 38.5h2m7 0h2m7 0h2" />
-    </g>
-  </svg>;
 }
 
 function DailyGoalRing({ distanceKm, goalKm, animate }: { distanceKm: number; goalKm: number; animate: boolean }) {
@@ -62,12 +51,12 @@ function DailyGoalRing({ distanceKm, goalKm, animate }: { distanceKm: number; go
     motion.addEventListener('change', cancel);
     return () => { cancel(); motion.removeEventListener('change', cancel); };
   }, [percentage, goalKm, animate]);
-  return <div className={styles.goalRing} data-state={state} data-animate={animate} data-complete={percentage === 100} role="progressbar" aria-label="今日里程目标" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} aria-valuetext={`${state === 'empty' ? '尚未开始，' : state === 'complete' ? '目标已达成，' : ''}已完成 ${percentage}%，今日 ${distanceKm} 公里，目标 ${goalKm} 公里`}>
+  return <div className={styles.goalRing} data-state={state} data-complete={percentage === 100} role="progressbar" aria-label="今日里程目标" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} aria-valuetext={`${state === 'empty' ? '尚未开始，' : state === 'complete' ? '目标已达成，' : ''}已完成 ${percentage}%，今日 ${distanceKm} 公里，目标 ${goalKm} 公里`}>
     <svg viewBox="0 0 60 60" aria-hidden="true">
       <circle className={styles.goalTrack} cx="30" cy="30" r="25" />
       <circle ref={fill} className={styles.goalFill} cx="30" cy="30" r="25" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - percentage} strokeOpacity={percentage > 0 ? 1 : 0} />
     </svg>
-    <TreadmillRunner />
+    <span className={styles.goalPercentage} aria-hidden="true">{percentage}<small>%</small></span>
   </div>;
 }
 
