@@ -1,7 +1,7 @@
-import StickyHeroNav from './StickyHeroNav';
+import StickyHeroNav, { HeroBackButton } from './StickyHeroNav';
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, LockOpen, Star } from 'lucide-react';
+import { ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, LockOpen, Star } from 'lucide-react';
 import { getRouteData, type CityData } from '../data/cities';
 import CityImage from './CityImage';
 import RouteRunners from './RouteRunners';
@@ -168,7 +168,10 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
   return (
     <div ref={pageRef} className={styles.page} role="main" id="main-content" data-list-pinned={isListPinned} onScroll={handleListScroll}>
       <StickyHeroNav transparent>
-        <button type="button" onClick={()=>{routeListPositions.delete(city.id);onBack();}} className={styles.back} aria-label="返回城市"><ChevronLeft size={22} /></button>
+        <HeroBackButton label="返回城市" onClick={() => {
+          routeListPositions.delete(city.id);
+          onBack();
+        }} />
         {isListPinned?<div ref={pinnedTabsRef} className={styles.pinnedCategories} role="group" aria-label="路线分类">{categoryButtons()}</div>:<svg className={styles.journeyIcon} viewBox="0 0 28 28" role="img" aria-label="城市旅程">
           <rect x="3" y="11" width="5" height="15" rx="1" fill="currentColor" />
           <rect x="11.5" y="3" width="5" height="23" rx="1" fill="currentColor" />

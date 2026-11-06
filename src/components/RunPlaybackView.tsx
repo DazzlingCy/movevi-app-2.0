@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Award, ChevronLeft, MapPin, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
 import { CITIES, getRouteData } from '../data/cities';
+import { reloadRunSceneryVideo } from '../lib/runScenery';
 import CityImage from './CityImage';
 import type { CityRouteListItem } from './CityRoutesView';
 import Modal from './journey/Modal';
@@ -115,10 +116,8 @@ export default function RunPlaybackView({ cityId, routeIndex, image, cityName: c
     const video = sceneryVideoRef.current;
     if (!video) return;
     if (video.paused || retry) setSceneryStatus('loading');
-    if (retry && (video.error || video.readyState < video.HAVE_FUTURE_DATA)) {
-      const position = video.currentTime;
-      video.load();
-      video.currentTime = position;
+    if (video.error || (retry && video.readyState < video.HAVE_FUTURE_DATA)) {
+      reloadRunSceneryVideo(video);
     }
     void video.play().catch(error => {
       if (error.name !== 'AbortError') setSceneryStatus('retry');

@@ -19,6 +19,24 @@
 
 .nav button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
 
+.back {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #ffffff26;
+  border-radius: 50%;
+  background: #0b0d1266;
+  color: #fff;
+}
+
+.inFlow {
+  margin-bottom: 0;
+  background: inherit;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .transparent {
   background: transparent;
   -webkit-backdrop-filter: none;

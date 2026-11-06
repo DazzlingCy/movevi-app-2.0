@@ -32,7 +32,6 @@
 .heroImage { z-index:-2; object-fit:cover; object-position:center 42%; }
 .heroShade { z-index:-1; background:linear-gradient(180deg,#080c144d, #080c1408 30%,#0b0d128c 62%,#0b0d12e6 86%,var(--route-bg) 100%); }
 .journeyIcon { width:28px; height:28px; flex-shrink:0; color:#fff; filter:drop-shadow(0 1px 4px #0006); }
-.back { display:grid; place-items:center; width:44px; height:44px; flex-shrink:0; border:1px solid #ffffff26; border-radius:50%; background:#0b0d1266; color:#fff; }
 .heroContent { margin-top:auto; padding:36px 22px 24px; }
 .englishName { margin:0 0 4px; color:#e2e6ef; font-size:12px; letter-spacing:.2em; text-transform:uppercase; overflow-wrap:anywhere; }
 .heroContent h1 { margin:0; font-size:clamp(2.375rem,11vw,3.25rem); line-height:1.15; font-weight:750; letter-spacing:-.04em; color:#fff; overflow-wrap:anywhere; }

@@ -1,4 +1,3 @@
-import { ChevronLeft } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import { getRouteCategory } from '../data/routeCategories';
 import { getRouteCover } from '../data/routeCovers';
@@ -6,6 +5,7 @@ import type { DailyRouteRecommendation } from '../journey/routeRecommendations';
 import type { JourneyCity, JourneyRoute } from '../journey/types';
 import { resolveRecommendationCover } from '../lib/localImages';
 import CityImage from './CityImage';
+import StickyHeroNav, { HeroBackButton } from './StickyHeroNav';
 import styles from './DailyRouteRecommendationsView.module.css';
 
 interface Props {
@@ -32,9 +32,9 @@ export default function DailyRouteRecommendationsView({ cityImageFor, day, recom
 
   return (
     <main ref={pageRef} className={styles.page} id="main-content">
-      <header className={styles.nav}>
-        <button type="button" aria-label="返回首页" onClick={onBack}><ChevronLeft size={22} aria-hidden="true" />首页</button>
-      </header>
+      <StickyHeroNav overlapHero={false}>
+        <HeroBackButton label="返回首页" onClick={onBack} />
+      </StickyHeroNav>
       <div className={styles.content}>
         <header className={styles.listHeader}>
           <h1>每日推荐</h1>

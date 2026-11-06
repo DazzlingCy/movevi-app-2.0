@@ -15,28 +15,6 @@
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', system-ui, sans-serif;
 }
 
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  padding: env(safe-area-inset-top, 0px) var(--recommendation-gutter) 0;
-  background: #0b0c0ef5;
-}
-
-.nav button {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 44px;
-  margin-left: -6px;
-  padding: 0 8px 0 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--recommendation-accent);
-  font-size: 15px;
-}
-
 .page button { cursor: pointer; touch-action: manipulation; }
 .page button:focus-visible { outline: 2px solid var(--recommendation-accent); outline-offset: 3px; }
 .content {
