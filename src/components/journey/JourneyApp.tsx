@@ -844,20 +844,22 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
                       {item.id === state.currentCityId && <TodayExerciseSummary today={todayExercise} goalKm={dailyGoalKm} animate={allowGoalAnimation && item.id === city.id} onEdit={handleDailyGoalEdit} />}
                     </div>
                   </div>
-                  <section className={`journey-progress ${homeRunStyles.panel}`} aria-label={`${item.name}旅程进度`}>
-                    <div className="journey-progress__topline">
-                      <span>城市进度</span><strong>{itemCompleted}<small>/{item.routes.length}</small></strong>
+                  <section className={`journey-progress ${homeRunStyles.panel}`} data-status={itemStatus} aria-label={`${item.name}旅程进度`}>
+                    <div>
+                      <div className="journey-progress__topline">
+                        <span>城市进度</span><strong>{itemCompleted}<small>/{item.routes.length}</small></strong>
+                      </div>
+                      <CityRunProgress cityName={item.name} completed={itemCompleted} total={item.routes.length} current={itemStatus === 'current'} />
                     </div>
-                    <CityRunProgress cityName={item.name} completed={itemCompleted} total={item.routes.length} current={itemStatus === 'current'} />
                     {itemHasJourneyProgress && (
-                      <HomeSportStats cumulative={{ distanceKm:itemExerciseTotals.distance, durationSeconds:itemExerciseTotals.duration*60, calories:itemExerciseTotals.calories }} completed={itemStatus === 'completed'} />
+                      <HomeSportStats cumulative={{ distanceKm:itemExerciseTotals.distance, durationSeconds:itemExerciseTotals.duration*60, calories:itemExerciseTotals.calories }} />
                     )}
                     <button className={`${itemHasJourneyProgress ? 'primary-button ' : ''}journey-cta journey-cta--${itemStatus}`} type="button" aria-label={itemHasJourneyProgress ? undefined : `${item.name}，尚未解锁，查看路线`} onPointerDown={handleCtaPointerDown} onClick={(event) => { event.stopPropagation(); handleRoutesClick(item.id); }}>
                       {itemHasJourneyProgress ? (
                         <>
                           {itemStatus === 'current' && <RunIcon />}
                           {itemStatus === 'completed' ? `查看${item.name}旅程` : '开始跑步'}
-                          <ArrowRight aria-hidden="true" />
+                          <ArrowRight className="journey-cta__arrow" aria-hidden="true" />
                         </>
                       ) : (
                         <>

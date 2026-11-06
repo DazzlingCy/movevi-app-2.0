@@ -1,11 +1,24 @@
+.panel {
+  --progress-accent: #aaa3ff;
+  display: grid;
+  gap: 12px;
+}
+
+.panel[data-status='completed'] { --progress-accent: #6bd7b3; }
+.panel:is([data-status='locked'], [data-status='candidate']) { --progress-accent: #9da1af; }
+
 .panel :global(.journey-progress__topline) {
   align-items: baseline;
   justify-content: flex-start;
   gap: 8px;
 }
-.panel :global(.journey-progress__topline) strong { font-size:26px; }
-.panel :global(.journey-progress__topline) strong small { font-size:12px; }
-.panel :global(.journey-progress__topline) > span { color:#b0b3bf; }
+.panel :global(.journey-progress__topline) strong {
+  color: #f4f3fa;
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+}
+.panel :global(.journey-progress__topline) strong small { margin-inline-start: 2px; color: #aeb0be; font-size: 12px; }
+.panel :global(.journey-progress__topline) > span { color: #c5c6d2; font-weight: 550; }
 .coverContent { align-items:flex-end; gap:16px; }
 .coverContent > div { flex:1; min-width:0; }
 .browseRoute { position:absolute; z-index:4; left:15%; right:15%; bottom:clamp(10px,2.5%,22px); display:flex; align-items:center; gap:10px; min-width:0; min-height:60px; margin:0; padding:8px 12px; border:1px solid #a9a2f33b; border-radius:13px; background:#171b27; color:#edf0f8; text-align:left; cursor:pointer; opacity:0; visibility:hidden; pointer-events:none; translate:0 6px; transition:opacity .18s ease,translate .2s ease,visibility .18s; }
@@ -32,14 +45,24 @@
 .dailyTarget { grid-column:2; grid-row:3; display:flex; align-items:center; gap:4px; color:#aab2c2; font-size:9px; line-height:13px; white-space:nowrap; }
 .targetDistance { color:#c0c4d1; }
 .dailySummary[data-state='empty'] .targetDistance { margin-left:2px; }
-.cityTotals { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:4px 0 14px; padding:11px 0; border-block:1px solid #ffffff0c; }
-.cityTotals > div { display:grid; min-width:0; gap:5px; }
-.cityTotals > div + div { border-left:1px solid #ffffff0c; padding-left:12px; }
-.cityTotals span { display:flex; align-items:center; gap:4px; color:#a5a9b5; font-size:9px; line-height:12px; }
-.cityTotals span svg { width:11px; height:11px; color:#aaa3ff; }
-.cityTotals strong { color:#eef0f7; font-size:14px; font-weight:650; line-height:17px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.cityTotals small { margin-left:3px; color:#9ca2af; font-size:8px; font-weight:450; }
-.cityTotals[data-complete='true'] svg { color:#6bd7b3; }
+.cityTotals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-block: 10px;
+  border-radius: 10px;
+  background: #1b1d26;
+}
+.cityTotals > div { display: grid; min-width: 0; gap: 4px; padding-inline: 10px; }
+.cityTotals > div + div { border-inline-start: 1px solid #ffffff12; }
+.cityTotals span { display: flex; align-items: center; gap: 5px; color: #bec1d0; font-size: 11px; line-height: 14px; }
+.cityTotals span svg { flex: 0 0 12px; width: 12px; height: 12px; color: var(--progress-accent); }
+.cityTotals strong { color: #f2f3fa; font-size: 16px; font-weight: 650; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cityTotals small { margin-inline-start: 4px; color: #b3b7c6; font-size: 10px; font-weight: 450; }
+@media (max-width: 360px) {
+  .panel { gap: 10px; }
+  .cityTotals > div { padding-inline: 8px; }
+  .cityTotals strong { font-size: 15px; }
+}
 .goalRing { --goal-color:#b8acff; position:relative; display:grid; width:58px; height:58px; place-items:center; }
 .goalRing[data-complete='true'] { --goal-color:#6bd7b3; }
 .goalRing[data-state='empty'] { --goal-color:#c2c7d4; }
@@ -79,28 +102,93 @@
 @media (prefers-reduced-motion:reduce) { .browseRoute { transition:none; } .goalFill { transition:none; } }
 :global([data-reduced-motion='true']) .browseRoute { transition:none; }
 :global([data-reduced-motion='true']) .goalFill { transition:none; }
-.track { --track-accent:#a7a3ff; --run-play-state:paused; position:relative; height:18px; margin:6px 0 4px; }
-.track[data-state='current'] { height:40px; }
-.track[data-state='completed'] { --track-accent:#6bd7b3; }
-.track[data-state='locked'] { --track-accent:#7f8491; }
-.segments { position:absolute; right:26px; bottom:6px; left:0; display:grid; gap:4px; height:5px; }
-.segments i { position:relative; overflow:hidden; border-radius:999px; background:#343640; }
-.segments i[data-complete='true'] { background:color-mix(in srgb,var(--track-accent) 86%,#262938); }
-.segments i[data-latest='true'] { background:color-mix(in srgb,var(--track-accent) 72%,#fff); }
-.segments i[data-latest='true']::after { content:''; position:absolute; inset:0; background:linear-gradient(100deg,transparent 12%,#ffffffe6 58%,transparent 84%); translate:-110% 0; animation:progressFlow 1.65s ease-out infinite; animation-play-state:var(--run-play-state); }
-@keyframes progressFlow { 0%,16% { translate:-110% 0; } 60%,100% { translate:110% 0; } }
-.finish { position:absolute; right:0; bottom:1px; width:17px; height:17px; color:var(--track-accent); }
-.runnerMarker { --stride-duration:.52s; position:absolute; left:clamp(13px,var(--runner-progress),calc(100% - 13px)); bottom:3px; width:26px; height:26px; transform:translateX(-50%); color:var(--track-accent); transition:left .4s ease-out; }
-.runnerMarker > svg { display:block; width:100%; height:100%; }
-.runnerMarker::before, .runnerMarker::after { content:''; position:absolute; right:calc(100% - 4px); top:42%; width:10px; height:2px; border-radius:2px; background:currentColor; opacity:0; transform-origin:right; animation:runTrail var(--stride-duration) ease-out infinite; animation-play-state:var(--run-play-state); }
-.runnerMarker::after { top:62%; width:7px; animation-delay:calc(var(--stride-duration) / -2); }
-.runningFigure { animation:runBounce var(--stride-duration) ease-in-out infinite; animation-play-state:var(--run-play-state); }
+.track {
+  --track-accent: var(--progress-accent);
+  --run-play-state: paused;
+  --run-effect-visibility: hidden;
+  position: relative;
+  height: 22px;
+  margin-top: 5px;
+}
+.track[data-state='current'] { height: 38px; }
+.segments { position: absolute; right: 31px; bottom: 6px; left: 0; display: grid; gap: 4px; height: 8px; }
+.segments i { position: relative; overflow: hidden; border-radius: 999px; background: #323441; }
+.segments i[data-complete='true'] {
+  background: linear-gradient(180deg, var(--track-accent), color-mix(in srgb, var(--track-accent) 76%, #24253f));
+}
+.segments i[data-latest='true'] {
+  background: color-mix(in srgb, var(--track-accent) 54%, #fff);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--track-accent) 52%, transparent);
+}
+.segments i:is([data-latest='true'], :has(+ i[data-latest='true']), :has(+ i + i[data-latest='true']))::after {
+  position: absolute;
+  inset: 0;
+  visibility: var(--run-effect-visibility);
+  background: linear-gradient(105deg, transparent 18%, #fffffff5 57%, transparent 88%);
+  translate: -110% 0;
+  animation: progressFlow 1.85s linear infinite;
+  animation-play-state: var(--run-play-state);
+  content: '';
+}
+.segments i:has(+ i[data-latest='true'])::after { animation-delay: -.19s; }
+.segments i:has(+ i + i[data-latest='true'])::after { animation-delay: -.38s; }
+@keyframes progressFlow { 0%, 12% { translate: -110% 0; } 32%, 100% { translate: 110% 0; } }
+.finish {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--track-accent) 12%, transparent);
+  color: var(--track-accent);
+}
+.runnerMarker {
+  --runner-size: 28px;
+  --stride-duration: .54s;
+  position: absolute;
+  left: clamp(calc(var(--runner-size) / 2), var(--runner-progress), calc(100% - var(--runner-size) / 2));
+  bottom: 4px;
+  width: var(--runner-size);
+  height: var(--runner-size);
+  transform: translateX(-50%);
+  color: color-mix(in srgb, var(--track-accent) 60%, #fff);
+  transition: left .4s ease-out;
+}
+.runnerMarker > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--track-accent) 50%, transparent));
+}
+.runnerMarker::before, .runnerMarker::after {
+  position: absolute;
+  right: calc(100% - 5px);
+  top: 43%;
+  width: 15px;
+  height: 2px;
+  visibility: var(--run-effect-visibility);
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--track-accent));
+  opacity: 0;
+  transform-origin: right;
+  animation: runTrail var(--stride-duration) ease-out infinite;
+  animation-play-state: var(--run-play-state);
+  content: '';
+}
+.runnerMarker::after { top: 62%; width: 10px; animation-delay: calc(var(--stride-duration) / -2); }
+.runningFigure { animation: runStep var(--stride-duration) ease-in-out infinite; animation-play-state: var(--run-play-state); }
 .runningFigure .frontArm, .runningFigure .backArm { transform-box:view-box; transform-origin:50% 37.5%; animation:armStride var(--stride-duration) ease-in-out infinite; animation-play-state:var(--run-play-state); }
 .runningFigure .frontLeg, .runningFigure .backLeg { transform-box:view-box; transform-origin:41.67% 62.5%; animation:legStride var(--stride-duration) ease-in-out infinite; animation-play-state:var(--run-play-state); }
 .runningFigure .backArm, .runningFigure .backLeg { animation-delay:calc(var(--stride-duration) / -2); }
-:global(.destination-journey-card.is-active) .track[data-state='current'] { --run-play-state:running; }
-:global(.destination-carousel.is-browsing) .track[data-state='current'] { --run-play-state:paused; }
-@keyframes runBounce { 0%,100% { translate:0 0; } 50% { translate:0 -3px; } }
+:global(.destination-journey-card.is-active) .track[data-state='current'] { --run-play-state: running; --run-effect-visibility: visible; }
+:global(.destination-carousel.is-browsing) .track[data-state='current'] { --run-play-state: paused; --run-effect-visibility: hidden; }
+@keyframes runStep {
+  0%, 100% { transform: translate(-1px, 0) rotate(-3deg); }
+  48% { transform: translate(1px, -3px) rotate(4deg); }
+}
 @keyframes armStride { 0%,100% { rotate:-30deg; } 50% { rotate:36deg; } }
 @keyframes legStride { 0%,100% { rotate:34deg; } 50% { rotate:-36deg; } }
 @keyframes runTrail {
@@ -108,9 +196,13 @@
   28% { opacity:.85; transform:translateX(0) scaleX(1); }
   100% { opacity:0; transform:translateX(-8px) scaleX(.45); }
 }
-@media (prefers-reduced-motion:reduce) { .segments i[data-latest='true']::after, .runnerMarker::before, .runnerMarker::after { display:none; } .runningFigure, .runningFigure path { animation:none; } .runnerMarker { transition:none; } }
-:global([data-reduced-motion='true']) .segments i[data-latest='true']::after,
+@media (prefers-reduced-motion: reduce) {
+  .track i::after, .runnerMarker::before, .runnerMarker::after { display: none; }
+  .runningFigure, .runningFigure path { animation: none; }
+  .runnerMarker { transition: none; }
+}
+:global([data-reduced-motion='true']) .track i::after,
 :global([data-reduced-motion='true']) .runnerMarker::before,
-:global([data-reduced-motion='true']) .runnerMarker::after { display:none; }
+:global([data-reduced-motion='true']) .runnerMarker::after { display: none; }
 :global([data-reduced-motion='true']) .runningFigure, :global([data-reduced-motion='true']) .runningFigure path { animation:none; }
 :global([data-reduced-motion='true']) .runnerMarker { transition:none; }

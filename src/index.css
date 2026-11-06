@@ -1405,7 +1405,7 @@ body { background: var(--bg); }
 .passport-stamp { color: #b8beff; border-color: rgba(184,190,255,.72); }
 
 .journey-progress { margin-top: 11px; padding: 20px 17px 22px; border-color: var(--line); border-radius: 18px; background: #0f1014; }
-.destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-radius: 0; background: linear-gradient(180deg, #111216, #0f1014); }
+.destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-top: 1px solid #ffffff10; border-radius: 0; background: #13141b; }
 .journey-progress__topline span { color: var(--muted); font-weight: 400; }
 .journey-progress__topline strong { font-family: var(--font-display); font-weight: 600; }
 .progress-segments span { background: #2a2c33; }
@@ -1431,6 +1431,7 @@ body { background: var(--bg); }
 }
 .primary-button:active { transform: scale(.97); }
 .journey-cta {
+  position: relative;
   width: 100%;
   min-height: 46px;
   display: flex;
@@ -1444,16 +1445,16 @@ body { background: var(--bg); }
   font-weight: 600;
 }
 .journey-cta--current {
-  background: linear-gradient(135deg, #737cf7, #5e6ad2);
-  box-shadow: 0 12px 32px rgba(94,106,210,.28);
+  background: #aaa3ff;
+  color: #211b46;
 }
 .journey-cta--completed {
-  background: linear-gradient(135deg, #23a987, #15816f);
-  box-shadow: 0 12px 28px rgba(35,169,135,.18);
+  background: #1b6d5a;
 }
+.journey-cta:is(.journey-cta--current, .journey-cta--completed) { padding-inline: 38px; font-weight: 700; }
+.journey-cta__arrow { position: absolute; inset-inline-end: 13px; }
 .journey-cta:is(.journey-cta--candidate, .journey-cta--locked) {
   justify-content: space-between;
-  margin-top: 10px;
   padding-inline: 12px;
   border-color: #a9a2f340;
   background: #20212e;
@@ -1463,7 +1464,8 @@ body { background: var(--bg); }
 .journey-cta__status { color: #b9bdca; font-size: 12px; font-weight: 500; }
 .journey-cta__label { color: #d5cdff; }
 .journey-cta__status svg, .journey-cta__label svg { width: 15px; height: 15px; }
-.journey-cta:is(.journey-cta--candidate, .journey-cta--locked):focus-visible { outline: 2px solid #c5baff; outline-offset: 2px; }
+.journey-cta:focus-visible { outline: 2px solid #c5baff; outline-offset: 2px; }
+@media (hover:hover) { .journey-cta:is(.journey-cta--current, .journey-cta--completed):hover { filter: brightness(1.09); } }
 @media (hover:hover) { .journey-cta:is(.journey-cta--candidate, .journey-cta--locked):hover { background: #292a3a; } }
 .journey-cta:is(.journey-cta--candidate, .journey-cta--locked):active { background: #34354a; }
 .secondary-button { border-color: var(--line); border-radius: 12px; background: #111216; }

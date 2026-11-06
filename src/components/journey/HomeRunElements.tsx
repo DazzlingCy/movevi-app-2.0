@@ -96,8 +96,8 @@ export function DailyGoalEditor({ goalKm, onSave, onClose }: { goalKm: number; o
   </Modal></div>;
 }
 
-export function HomeSportStats({ cumulative, completed }: { cumulative: RunResult; completed: boolean }) {
-  return <div className={styles.cityTotals} data-complete={completed} role="group" aria-label="城市累计运动数据">
+export function HomeSportStats({ cumulative }: { cumulative: RunResult }) {
+  return <div className={styles.cityTotals} role="group" aria-label="城市累计运动数据">
       <div><span><Footprints aria-hidden="true" />里程</span><strong aria-label={`累计里程 ${cumulative.distanceKm.toFixed(1)} 公里`}>{cumulative.distanceKm.toFixed(1)}<small>km</small></strong></div>
       <div><span><Clock3 aria-hidden="true" />时长</span><strong aria-label={`累计时长 ${(cumulative.durationSeconds / 3600).toFixed(1)} 小时`}>{(cumulative.durationSeconds / 3600).toFixed(1)}<small>h</small></strong></div>
       <div><span><Flame aria-hidden="true" />消耗</span><strong aria-label={`累计消耗 ${Math.round(cumulative.calories)} 千卡`}>{Math.round(cumulative.calories).toLocaleString('zh-CN')}<small>kcal</small></strong></div>
