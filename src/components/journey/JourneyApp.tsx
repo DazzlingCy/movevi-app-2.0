@@ -759,7 +759,9 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
                   <span className="destination-upcoming-card__shade" aria-hidden="true" />
                   <span className="destination-upcoming-card__status"><Clock3 />尚未开放</span>
                   <div className="destination-upcoming-card__copy">
-                    <h2>{item.name}</h2>
+                    <h2 className={homeRunStyles.cityHeading}>
+                      <span>{item.name}</span><small>{item.countryName}</small>
+                    </h2>
                     <p>{item.englishName}</p>
                     <span><CalendarDays />预计 {releaseDate} 开放</span>
                   </div>
@@ -841,7 +843,9 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
                     <div className={`destination-card__content ${homeRunStyles.coverContent}`}>
                       <div>
                         <span className="destination-card__kicker"><MapPin aria-hidden="true" /> {itemLabel}</span>
-                        <h2>{item.name}</h2>
+                        <h2 className={homeRunStyles.cityHeading}>
+                          <span>{item.name}</span><small>{item.countryName}</small>
+                        </h2>
                       </div>
                       {SHOW_TODAY_EXERCISE && item.id === state.currentCityId && <TodayExerciseSummary today={todayExercise} goalKm={dailyGoalKm} animate={allowGoalAnimation && item.id === city.id} onEdit={handleDailyGoalEdit} />}
                     </div>
