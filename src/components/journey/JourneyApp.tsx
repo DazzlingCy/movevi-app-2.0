@@ -230,6 +230,9 @@ interface HomePageProps {
   onCarouselEnd: () => void;
 }
 
+const SHOW_TODAY_EXERCISE = false;
+const SHOW_DAILY_RECOMMENDATIONS = false;
+
 type LegacyFeature = 'onlineSupport' | 'firstCityRewards' | 'leaderboard' | 'level' | 'medalLottery' | 'weekendMedley' | 'teamRelay';
 
 type ActivityRouteTarget = {
@@ -281,7 +284,7 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
     if (distance >= 48 && distance > Math.abs(start.y - y) * 1.2) notifyCarouselEnd();
   };
   const [videoNeedsTap, setVideoNeedsTap] = useState(false);
-  const featuredRecommendation = recommendations[0];
+  const featuredRecommendation = SHOW_DAILY_RECOMMENDATIONS ? recommendations[0] : undefined;
   const [candidateBatchIndex, setCandidateBatchIndex] = useState(0);
   const homeJourneyCities = getHomeJourneyCityIds(state).map(cityId => getJourneyCity(cityId)!).filter(Boolean);
   const cityIndex = Math.max(0, homeJourneyCities.findIndex(item => item.id === city.id));
@@ -837,17 +840,22 @@ function HomePage({ state, newCityIds, recommendations, todayExercise, dailyGoal
                     {isNew && <span className="city-new-badge destination-card__new" aria-hidden="true">NEW</span>}
                     <div className={`destination-card__content ${homeRunStyles.coverContent}`}>
                       <div>
-                        <span className="destination-card__kicker"><MapPin /> {itemLabel}</span>
+                        <span className="destination-card__kicker"><MapPin aria-hidden="true" /> {itemLabel}</span>
                         <h2>{item.name}</h2>
-                        <span className={`destination-card__runners ${homeRunStyles.coverRunners}`}><UsersRound aria-hidden="true" />{(CITY_RUNNER_COUNTS[item.id] ?? 1000).toLocaleString('zh-CN')} 人跑过</span>
                       </div>
-                      {item.id === state.currentCityId && <TodayExerciseSummary today={todayExercise} goalKm={dailyGoalKm} animate={allowGoalAnimation && item.id === city.id} onEdit={handleDailyGoalEdit} />}
+                      {SHOW_TODAY_EXERCISE && item.id === state.currentCityId && <TodayExerciseSummary today={todayExercise} goalKm={dailyGoalKm} animate={allowGoalAnimation && item.id === city.id} onEdit={handleDailyGoalEdit} />}
                     </div>
                   </div>
                   <section className={`journey-progress ${homeRunStyles.panel}`} data-status={itemStatus} aria-label={`${item.name}旅程进度`}>
                     <div>
-                      <div className="journey-progress__topline">
-                        <span>城市进度</span><strong>{itemCompleted}<small>/{item.routes.length}</small></strong>
+                      <div className={homeRunStyles.progressHeader}>
+                        <span className={homeRunStyles.runnerCount}>
+                          <UsersRound aria-hidden="true" />
+                          {(CITY_RUNNER_COUNTS[item.id] ?? 1000).toLocaleString('zh-CN')} 人跑过
+                        </span>
+                        <div className="journey-progress__topline">
+                          <span>城市进度</span><strong>{itemCompleted}<small>/{item.routes.length}</small></strong>
+                        </div>
                       </div>
                       <CityRunProgress cityName={item.name} completed={itemCompleted} total={item.routes.length} current={itemStatus === 'current'} />
                     </div>

@@ -7,7 +7,15 @@
 .panel[data-status='completed'] { --progress-accent: #6bd7b3; }
 .panel:is([data-status='locked'], [data-status='candidate']) { --progress-accent: #9da1af; }
 
-.panel :global(.journey-progress__topline) {
+.progressHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+
+.progressHeader :global(.journey-progress__topline) {
+  margin-inline-start: auto;
   align-items: baseline;
   justify-content: flex-start;
   gap: 8px;
@@ -19,8 +27,19 @@
 }
 .panel :global(.journey-progress__topline) strong small { margin-inline-start: 2px; color: #aeb0be; font-size: 12px; }
 .panel :global(.journey-progress__topline) > span { color: #c5c6d2; font-weight: 550; }
-.coverContent { align-items:flex-end; gap:16px; }
+.runnerCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #bec1d0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.runnerCount svg { width: 13px; height: 13px; color: var(--progress-accent); }
+.coverContent { align-items:flex-end; gap:16px; inset-inline:18px; }
 .coverContent > div { flex:1; min-width:0; }
+.coverContent :global(.destination-card__kicker) { margin-bottom:8px; color:#d9dae2; }
 .browseRoute { position:absolute; z-index:4; left:15%; right:15%; bottom:clamp(10px,2.5%,22px); display:flex; align-items:center; gap:10px; min-width:0; min-height:60px; margin:0; padding:8px 12px; border:1px solid #a9a2f33b; border-radius:13px; background:#171b27; color:#edf0f8; text-align:left; cursor:pointer; opacity:0; visibility:hidden; pointer-events:none; translate:0 6px; transition:opacity .18s ease,translate .2s ease,visibility .18s; }
 :global(.home-city-swipe-zone:has(.destination-carousel.is-browsing)) .browseRoute { opacity:1; visibility:visible; pointer-events:auto; translate:0 0; }
 .browseRoute:focus-visible { outline:2px solid #b8acff; outline-offset:3px; }
@@ -30,7 +49,6 @@
 .browseRouteBody > strong { color:#ece9ff; font-size:14px; font-weight:650; line-height:18px; }
 .browseRouteDetail { overflow:hidden; color:#b5b9ce; font-size:11px; line-height:14px; white-space:nowrap; text-overflow:ellipsis; }
 .browseRouteArrow { flex:0 0 14px; width:14px; height:14px; color:#b9b2f2; }
-.coverContent .coverRunners { max-width:100%; margin:10px 0 0; min-height:22px; padding-inline:7px; gap:5px; font-size:9px; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .dailySummary { position:relative; flex:0 0 166px; display:grid; grid-template-columns:58px minmax(0,1fr); align-items:center; column-gap:8px; row-gap:3px; width:166px; margin:0; padding:11px 10px; border:1px solid #ffffff14; border-radius:14px; background:#0d121c99; text-align:left; text-shadow:0 1px 4px #00000080; transition:background .18s ease,border-color .18s ease; }
 .dailySummary .goalRing { grid-column:1; grid-row:1 / 4; }
 .dailySummary[data-state='complete'] { border-color:#6bd7b330; }

@@ -146,14 +146,15 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
         <Modal labelId={cityUnlockTitleId} onClose={closeCityUnlock} className={styles.cityUnlockSheet} backdropClassName={styles.cityUnlockBackdrop}>
           <div className={styles.cityUnlockCard}>
             <div className={styles.cityUnlockHeader}>
-              <h2 id={cityUnlockTitleId}>{journeyComplete ? '当前城市已完成' : '完成当前城市后，可选择下一站'}</h2>
+              <h2 id={cityUnlockTitleId}>
+                {journeyComplete ? '当前城市已完成' : currentJourney ? `正在${currentJourney.name}地图奔跑` : '完成当前城市后，可选择下一站'}
+              </h2>
               <button type="button" className={styles.cityUnlockClose} onClick={closeCityUnlock} aria-label="关闭提示"><X size={19} aria-hidden="true" /></button>
             </div>
-            {journeyComplete && <p>当前城市已完成，可以选择下一座城市了。</p>}
+            {currentJourney && <p>{journeyComplete ? '当前城市已完成，可以选择下一座城市了。' : `需要${currentJourney.name}地图完全解锁才能开跑当前城市`}</p>}
             {currentJourney && <section className={styles.currentJourney} aria-label="当前城市进度">
               <CityImage src={currentJourney.image} alt="" className={styles.currentJourneyImage} loading="eager" />
               <div className={styles.currentJourneyInfo}>
-                <span>当前城市</span>
                 <div><strong>{currentJourney.name}</strong><span>{Math.min(currentJourney.completed, currentJourney.total)}<small>/{currentJourney.total}</small></span></div>
                 <div className={styles.currentJourneyProgress} role="progressbar" aria-label={`${currentJourney.name}路线完成进度`} aria-valuemin={0} aria-valuemax={currentJourney.total} aria-valuenow={Math.min(currentJourney.completed, currentJourney.total)}><i style={{ width:`${currentJourney.total ? Math.min(100, currentJourney.completed / currentJourney.total * 100) : 0}%` }} /></div>
                 <small>{journeyComplete ? '全部路线已完成' : `再跑完 ${journeyRemaining} 条路线即可完成`}</small>

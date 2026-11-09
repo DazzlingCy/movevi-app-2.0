@@ -1138,7 +1138,7 @@ body { background: var(--bg); }
 .destination-card__video-play:active { transform: scale(.97); }
 .destination-card__overlay {
   background:
-    linear-gradient(180deg, rgba(3,4,7,.02) 0%, rgba(3,4,7,.16) 42%, rgba(3,4,7,.92) 100%),
+    linear-gradient(180deg, rgba(3,4,7,.02) 0%, rgba(3,4,7,.16) 42%, #13141b 100%),
     linear-gradient(90deg, rgba(3,4,7,.18), transparent 58%);
 }
 @keyframes destinationVideoReveal { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: scale(1.018); } }
@@ -1148,8 +1148,6 @@ body { background: var(--bg); }
 .destination-card__kicker { color: rgba(255,255,255,.62); font-weight: 500; }
 .destination-card h2 { font-size: 48px; font-weight: 600; letter-spacing: -.065em; }
 .destination-card p { color: rgba(255,255,255,.55); }
-.destination-card__runners { flex: 0 0 auto; width: max-content; min-height: 24px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 2px; padding: 0 9px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; background: rgba(5,7,12,.42); color: rgba(255,255,255,.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 10px; font-weight: 650; letter-spacing: .02em; }
-.destination-card__runners svg { width: 13px; height: 13px; color: #65ddb1; }
 .destination-upcoming-card {
   position: relative;
   height: calc(100% - 18px);
@@ -1405,7 +1403,7 @@ body { background: var(--bg); }
 .passport-stamp { color: #b8beff; border-color: rgba(184,190,255,.72); }
 
 .journey-progress { margin-top: 11px; padding: 20px 17px 22px; border-color: var(--line); border-radius: 18px; background: #0f1014; }
-.destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-top: 1px solid #ffffff10; border-radius: 0; background: #13141b; }
+.destination-journey-card .journey-progress { margin-top: 0; padding: 14px 18px 16px; border: 0; border-radius: 0; background: #13141b; }
 .journey-progress__topline span { color: var(--muted); font-weight: 400; }
 .journey-progress__topline strong { font-family: var(--font-display); font-weight: 600; }
 .progress-segments span { background: #2a2c33; }
