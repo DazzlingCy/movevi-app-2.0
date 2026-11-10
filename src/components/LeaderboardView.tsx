@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ChevronLeft, Info, Trophy, X } from 'lucide-react';
+import { Activity, ChevronLeft, Footprints, Info, Trophy, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 interface LeaderboardViewProps {
   onBack: () => void;
   currentLevel: number;
 }
+
+type EquipmentCategory = 'treadmill' | 'walking-pad';
 
 type LeaderboardUser = {
   id: number;
@@ -25,7 +27,8 @@ const avatars = [
   'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=160&h=160'
 ];
 
-const leaderboardData: LeaderboardUser[] = [
+const leaderboardData: Record<EquipmentCategory, LeaderboardUser[]> = {
+  treadmill: [
     { id: 1, name: '极光闪电', avatar: avatars[0], level: 186 },
     { id: 2, name: '城市探险家', avatar: avatars[1], level: 174 },
     { id: 3, name: '追光者·星', avatar: avatars[2], level: 168 },
@@ -33,7 +36,9 @@ const leaderboardData: LeaderboardUser[] = [
     { id: 5, name: '风行无阻', avatar: avatars[4], level: 146 },
     { id: 6, name: '地球狂奔', avatar: avatars[5], level: 139 },
     { id: 7, name: '阿兹特克', avatar: avatars[6], level: 128 },
-    { id: 8, name: '超越极限', avatar: avatars[7], level: 116 },
+    { id: 8, name: '超越极限', avatar: avatars[7], level: 116 }
+  ],
+  'walking-pad': [
     { id: 11, name: '漫步云端', avatar: avatars[4], level: 172 },
     { id: 12, name: '日行万步', avatar: avatars[2], level: 165 },
     { id: 13, name: '轻盈步履', avatar: avatars[6], level: 157 },
@@ -42,31 +47,47 @@ const leaderboardData: LeaderboardUser[] = [
     { id: 16, name: '晨光漫行', avatar: avatars[1], level: 124 },
     { id: 17, name: '步履不停', avatar: avatars[5], level: 118 },
     { id: 18, name: '万步达人', avatar: avatars[3], level: 109 }
-];
-const ranking = [...leaderboardData].sort((a, b) => b.level - a.level);
+  ]
+};
+
+const equipmentTabs = [
+  { id: 'treadmill', label: '跑步机', icon: Activity, previewRank: 142 },
+  { id: 'walking-pad', label: '走步机', icon: Footprints, previewRank: 186 }
+] as const;
 
 export default function LeaderboardView({ onBack, currentLevel }: LeaderboardViewProps) {
   const [showRules, setShowRules] = useState(false);
-  // Keep the global preview rank consistent with the world-page entry.
-  const currentRank = 142;
+  const [category, setCategory] = useState<EquipmentCategory>('treadmill');
+  const selectedEquipment = category === 'treadmill' ? equipmentTabs[0] : equipmentTabs[1];
+  const ranking = [...leaderboardData[category]].sort((a, b) => b.level - a.level);
+  const currentRank = selectedEquipment.previewRank;
   const podiumOrder = [ranking[1], ranking[0], ranking[2]];
 
   return (
-    <main className="leaderboard-page" id="main-content">
+    <main className={`leaderboard-page leaderboard-page--${category}`} id="main-content">
       <header className="leaderboard-header">
         <button type="button" onClick={onBack} aria-label="返回世界页"><ChevronLeft /></button>
         <div><h1>全球排行榜</h1></div>
         <button type="button" onClick={() => setShowRules(true)} aria-label="查看排行榜规则"><Info /><span>规则</span></button>
       </header>
 
+      <div className="leaderboard-tabs" role="group" aria-label="设备类型">
+        {equipmentTabs.map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" aria-pressed={category === id} onClick={() => setCategory(id)}>
+            <Icon aria-hidden="true" /><span>{label}</span>
+          </button>
+        ))}
+      </div>
+
       <AnimatePresence mode="wait" initial={false}>
         <motion.section
           className="leaderboard-ranking"
+          key={category}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.2 }}
-          aria-label="全球排行榜"
+          aria-label={`${selectedEquipment.label}排行榜`}
         >
           <div className="leaderboard-podium">
             {podiumOrder.map((user, podiumIndex) => {
@@ -121,7 +142,7 @@ export default function LeaderboardView({ onBack, currentLevel }: LeaderboardVie
               <header><div><small>排名规则</small><h2 id="leaderboard-rules-title">怎样提升排名？</h2></div><button type="button" onClick={() => setShowRules(false)} aria-label="关闭规则"><X /></button></header>
               <ol>
                 <li><b>01</b><p><strong>按环球等级排名</strong><span>每完成一个国家或地区，环球等级提升一级。</span></p></li>
-                <li><b>02</b><p><strong>所有跑者统一排名</strong><span>不区分设备类型，所有用户共同参与全球排名。</span></p></li>
+                <li><b>02</b><p><strong>设备榜单独立展示</strong><span>跑步机与走步机用户分别进入对应榜单。</span></p></li>
                 <li><b>03</b><p><strong>同等级按累计里程排序</strong><span>环球等级相同时，用户累计运动里程越多，排名越靠前。</span></p></li>
               </ol>
             </motion.section>
