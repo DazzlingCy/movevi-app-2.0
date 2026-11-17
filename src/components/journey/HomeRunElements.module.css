@@ -1,5 +1,5 @@
 .panel {
-  --progress-accent: #aaa3ff;
+  --progress-accent: var(--journey-accent);
   display: grid;
   gap: 12px;
 }

@@ -10,6 +10,7 @@ export interface JourneyRoute {
   order: number;
   name: string;
   landmarks: string[];
+  medalLandmarks?: readonly string[];
   distanceKm: number;
   durationMinutes: number;
   calories: number;

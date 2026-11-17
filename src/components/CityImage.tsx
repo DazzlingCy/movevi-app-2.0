@@ -6,6 +6,7 @@ import { resolveLocalImage } from '../lib/localImages';
 
 interface CityImageProps {
   src?: string;
+  optimizedSrc?: string;
   alt: string;
   className?: string;
   fallbackLabel?: string;
@@ -25,9 +26,12 @@ function getGradientIndex(label: string) {
   return Array.from(label).reduce((sum, char) => sum + char.charCodeAt(0), 0) % cityGradientStops.length;
 }
 
-export default function CityImage({ src, alt, className, fallbackLabel, referrerPolicy = 'no-referrer', loading = 'lazy', fetchPriority = 'auto' }: CityImageProps) {
+export default function CityImage({ src, optimizedSrc, alt, className, fallbackLabel, referrerPolicy = 'no-referrer', loading = 'lazy', fetchPriority = 'auto' }: CityImageProps) {
   const [failed, setFailed] = useState(false);
+  const [failedVariant, setFailedVariant] = useState<string>();
   const label = fallbackLabel || alt || 'CITY';
+  const original = resolveLocalImage(src);
+  const variant = optimizedSrc !== original && optimizedSrc !== failedVariant ? optimizedSrc : undefined;
 
   useEffect(() => {
     setFailed(false);
@@ -41,14 +45,14 @@ export default function CityImage({ src, alt, className, fallbackLabel, referrer
   if (src && !failed) {
     return (
       <img
-        src={resolveLocalImage(src)}
+        src={variant ?? original}
         alt={alt}
         className={className}
         loading={loading}
         fetchPriority={fetchPriority}
         decoding="async"
         referrerPolicy={referrerPolicy}
-        onError={() => setFailed(true)}
+        onError={() => variant ? setFailedVariant(variant) : setFailed(true)}
       />
     );
   }

@@ -14,7 +14,7 @@ interface Props {
   recommendations: DailyRouteRecommendation[];
   scrollTop: number;
   onBack: () => void;
-  onRouteClick: (route: JourneyRoute, scrollTop: number) => void;
+  onRouteClick: (route: JourneyRoute, position: number) => void;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -40,37 +40,36 @@ export default function DailyRouteRecommendationsView({ cityImageFor, day, recom
           <h1>每日推荐</h1>
           <time dateTime={day}>{dateFormatter.format(new Date(day))}</time>
         </header>
-        {recommendations.length > 0 ? (
+        {!recommendations.length ? <p className={styles.empty}>今日暂无推荐路线</p> : (
           <ul className={styles.routes} aria-label="每日推荐路线">
-            {recommendations.map(({ city, route }, index) => (
-              <li key={route.id}>
-                <button type="button" className={`${styles.route}${index === 0 ? ` ${styles.featured}` : ''}`} onClick={() => onRouteClick(route, pageRef.current?.scrollTop ?? 0)}>
-                  <span className={styles.cover}>
-                    <CityImage
-                      className={styles.image}
-                      src={resolveRecommendationCover(getRouteCover(city.name, route.order)?.src, index === 0 ? 'feature' : 'thumbnail') ?? cityImageFor(city)}
-                      alt=""
-                      fallbackLabel={route.landmarks[0]}
-                      loading={index < 3 ? 'eager' : 'lazy'}
-                      fetchPriority={index === 0 ? 'high' : 'low'}
-                    />
-                  </span>
-                  {index === 0 && <span className={styles.kicker}>今日精选</span>}
-                  <span className={styles.routeBody}>
-                    <span className={styles.routeMeta}>
-                      {city.name}
-                      <span className={styles.routeType}>{getRouteCategory(city.name, route.order)}</span>
+            {recommendations.map(({ city, route }, index) => {
+              const featured = index === 0;
+              const category = getRouteCategory(city.name, route.order);
+              const cover = getRouteCover(city.name, route.order)?.src;
+              return (
+                <li key={route.id}>
+                  <button type="button" className={styles.route + (featured ? ' ' + styles.featured : '')}
+                    onClick={() => onRouteClick(route, pageRef.current?.scrollTop ?? 0)}>
+                    <span className={styles.cover}>
+                      <CityImage className={styles.image} src={cover ?? cityImageFor(city)}
+                        optimizedSrc={resolveRecommendationCover(cover, featured ? 'feature' : 'thumbnail')}
+                        alt="" fallbackLabel={route.landmarks[0]} loading={index < 3 ? 'eager' : 'lazy'}
+                        fetchPriority={featured ? 'high' : 'low'} />
                     </span>
-                    <strong>{route.name}</strong>
-                    {index === 0 && <span className={styles.landmarks}>{route.landmarks.join(' · ')}</span>}
-                  </span>
-                  <span className={styles.metrics}>{route.distanceKm.toFixed(1)} km · 约 {route.durationMinutes} 分钟</span>
-                  <span className={styles.action}>{index === 0 ? '查看路线' : '查看'}</span>
-                </button>
-              </li>
-            ))}
+                    {featured && <span className={styles.kicker}>今日精选</span>}
+                    <span className={styles.routeBody}>
+                      <span className={styles.routeMeta}>{city.name}<span className={styles.routeType}>{category}</span></span>
+                      <strong>{route.name}</strong>
+                      {featured && <span className={styles.landmarks}>{route.landmarks.join(' · ')}</span>}
+                    </span>
+                    <span className={styles.metrics}>{route.distanceKm.toFixed(1)} km · 约 {route.durationMinutes} 分钟</span>
+                    <span className={styles.action}>{featured ? '查看路线' : '查看'}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
-        ) : <p className={styles.empty}>今日暂无推荐路线</p>}
+        )}
       </div>
     </main>
   );

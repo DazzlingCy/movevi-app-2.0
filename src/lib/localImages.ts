@@ -9,13 +9,28 @@ export function resolveLocalImage(src: string | undefined, base = appBase): stri
   return localPath ? `${base.endsWith('/') ? base : `${base}/`}${localPath}` : src;
 }
 
-/** Recommendation variants are generated from the vendored route covers. */
-export function recommendationCoverPath(localPath: string, size: 'feature' | 'thumbnail'): string {
-  const name = localPath.slice(localPath.lastIndexOf('/') + 1, localPath.lastIndexOf('.'));
-  return `images/recommendations/${size}/${name}.webp`;
+type RouteCoverSize = 'feature' | 'thumbnail' | 'list';
+type CityCoverSize = 'cover' | 'grid';
+
+function coverName(localPath: string) {
+  return localPath.slice(localPath.lastIndexOf('/') + 1, localPath.lastIndexOf('.'));
 }
 
-export function resolveRecommendationCover(src: string | undefined, size: 'feature' | 'thumbnail'): string | undefined {
+/** Route variants are generated from the vendored route covers. */
+export function recommendationCoverPath(localPath: string, size: RouteCoverSize): string {
+  return `images/recommendations/${size}/${coverName(localPath)}.webp`;
+}
+
+export function resolveRecommendationCover(src: string | undefined, size: RouteCoverSize): string | undefined {
   const localPath = src && LOCAL_IMAGE_MANIFEST[src];
   return localPath ? `${appBase}${recommendationCoverPath(localPath, size)}` : src;
+}
+
+export function cityCoverPath(localPath: string, size: CityCoverSize): string {
+  return `images/cities/${size}/${coverName(localPath)}.webp`;
+}
+
+export function resolveCityCover(src: string, size: CityCoverSize): string {
+  const localPath = LOCAL_IMAGE_MANIFEST[src];
+  return localPath ? `${appBase}${cityCoverPath(localPath, size)}` : src;
 }

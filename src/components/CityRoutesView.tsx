@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, Globe2, Lock, Award, Route, Sparkles, Check, Clock3, MapPin, LockOpen, Star } from 'lucide-react';
 import { getRouteData, type CityData } from '../data/cities';
 import CityImage from './CityImage';
+import { resolveRecommendationCover } from '../lib/localImages';
 import RouteRunners from './RouteRunners';
 
 import CityRouteOverviewView from './CityRouteOverviewView';
@@ -33,6 +34,7 @@ export interface CityRouteListItem {
 
 interface CityRoutesViewProps {
   city: CityData;
+  cityCover?: string;
   onBack: () => void;
   onRouteClick: (routeIndex: number) => void;
   onExploreNext?: (currentCityId: string) => void;
@@ -41,7 +43,7 @@ interface CityRoutesViewProps {
   openRouteCount?: number;
 }
 
-export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
+export default function CityRoutesView({ city, cityCover, onBack, onRouteClick, onExploreNext, routeItems, completedRouteIndices, openRouteCount }: CityRoutesViewProps) {
   const [showLitModal, setShowLitModal] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
   const [isListPinned,setIsListPinned] = useState(false);
@@ -179,7 +181,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
         </svg>}
       </StickyHeroNav>
       <header className={styles.hero}>
-        <CityImage src={city.image} alt="" fallbackLabel={city.name} className={styles.heroImage} loading="eager" fetchPriority="high" />
+        <CityImage src={city.image} optimizedSrc={cityCover} alt="" fallbackLabel={city.name} className={styles.heroImage} loading="eager" fetchPriority="high" />
         <div className={styles.heroShade} />
         <div className={styles.heroContent}>
           <p className={styles.englishName}>{city.englishName || 'CITY'}</p>
@@ -201,6 +203,8 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
         </div>
         <div className={styles.routeRows}>
         {group.routes.map(({ routeId, data, isCompleted, isUnlocked }) => {
+          const bundledCover = getRouteCover(city.name, routeId)?.src;
+          const cover = routeItems?.[routeId - 1]?.coverImage || bundledCover;
           const numSpots = data.spots.split(/—|→/).filter(spot => spot.trim()).length;
           const statusLabel = isCompleted ? '已完成' : isUnlocked ? '已解锁' : '未解锁';
           const durationParts = data.duration.split(':').map(Number);
@@ -217,7 +221,7 @@ export default function CityRoutesView({ city, onBack, onRouteClick, onExploreNe
               onClick={() => {rememberPosition();onRouteClick(routeId);}}
             >
               <span className={styles.thumbnail}>
-                <CityImage src={routeItems?.[routeId - 1]?.coverImage || getRouteCover(city.name, routeId)?.src} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} loading={routeId<=3?'eager':'lazy'} />
+                <CityImage src={cover} optimizedSrc={cover === bundledCover ? resolveRecommendationCover(cover, 'list') : undefined} alt="" fallbackLabel={data.spots.split(/—|→/)[0].trim()} className={styles.routeImage} />
                 <span className={styles.routeStatus}>
                   {isCompleted ? <Check size={11} /> : isUnlocked ? <LockOpen size={11} /> : <Lock size={11} />}{statusLabel}
                 </span>

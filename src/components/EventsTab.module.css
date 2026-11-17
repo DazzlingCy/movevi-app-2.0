@@ -1,0 +1,386 @@
+.page, .sheet {
+  --benefits-paper: #faf7f2;
+  --benefits-ink: #311e19;
+  --benefits-muted: #69554d;
+  --benefits-line: #eee7dd;
+  --benefits-accent: #a32921;
+  --benefits-accent-soft: #fce7df;
+  --benefits-success: #806444;
+  --benefits-gold: #865010;
+  --wallet-surface: #faf0d9;
+  --wallet-ink: #432c12;
+  --wallet-muted: #75562e;
+  --wallet-gradient: linear-gradient(165deg, #f8e6b8 0%, #fbefce 28%, #fcf3e1 52%, #fbf6ed 76%, var(--benefits-paper) 100%);
+  color: var(--benefits-ink);
+}
+.page { height: 100%; overflow-y: auto; overscroll-behavior-y: contain; padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); background: var(--benefits-paper); scrollbar-width: none; }
+.page button:focus-visible, .sheet button:focus-visible { outline: 2px solid var(--benefits-accent); outline-offset: 2px; }
+.content { display: grid; gap: 16px; padding: 8px 14px 0; }
+.wallet {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0;
+  padding: calc(30px + env(safe-area-inset-top, 0px)) clamp(22px, 6vw, 32px) 20px;
+  border: 0;
+  border-radius: 0;
+  background: var(--wallet-gradient);
+  color: var(--wallet-ink);
+}
+.page:not(.earningsPage) { padding-top: 0; }
+.walletTop { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
+.walletTop button { min-width: 0; display: grid; gap: 6px; border: 0; background: transparent; color: inherit; text-align: left; }
+.walletTop span { display: flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.walletTop span svg { flex: none; }
+.walletTop strong { font-size: clamp(27px, 8vw, 40px); line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.walletSummary button { min-height: 58px; padding: 0; border-radius: 4px; }
+.walletSummary button + button { padding-inline-start: 14px; border-inline-start: 1px solid #a577291c; border-start-start-radius: 0; border-end-start-radius: 0; }
+.walletSummary span { gap: 4px; color: var(--wallet-muted); font-size: 12px; white-space: normal; }
+.walletSummary strong { font-size: clamp(24px, 8vw, 36px); }
+.walletCoin { color: #956012; }
+.walletCash { color: #75562e; }
+.walletBottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding-top: 9px; border-top: 1px solid #a577291c; }
+.walletBottom button, .stickyWallet button { display: flex; align-items: center; gap: 4px; border: 0; white-space: nowrap; font-size: 12px; font-weight: 720; }
+.walletBottom button { min-height: 44px; padding: 0 10px 0 14px; border-radius: 999px; background: #ffffff80; color: var(--wallet-ink); transition: background .18s ease; }
+.walletBottom button:active { background: #f1dfb9; }
+.walletBottom .exchangeLink { padding-inline: 0 8px; background: transparent; color: var(--wallet-muted); }
+.walletBottom .exchangeLink:active { color: var(--wallet-ink); }
+.wallet button:focus-visible, .stickyWallet button:focus-visible { outline-color: #865010; }
+.stickyAnchor { position: sticky; top: 0; z-index: 2; height: 0; }
+.stickyWallet { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 48px; padding: 0 14px; border-bottom: 1px solid #e4c58b; background: var(--wallet-surface); }
+.stickyWallet button { min-height: 44px; padding: 0; background: transparent; color: var(--wallet-ink); }
+.stickyBalances { display: flex; align-items: center; gap: 6px; min-width: 0; font-variant-numeric: tabular-nums; }
+.stickyBalances button { min-width: 0; }
+.stickyBalances button + button { padding-inline-start: 7px; }
+.stickyBalances button + button::before { position: absolute; width: 1px; height: 13px; margin-inline-start: -7px; background: #a5772933; content: ''; }
+.stickyBalances button:first-child svg { color: #956012; }
+.stickyBalances button:last-child svg { color: #75562e; }
+.stickyBalances b { overflow: hidden; text-overflow: ellipsis; }
+.stickyWallet > button { flex-shrink: 0; }
+.tasks, .more { border: 1px solid var(--benefits-line); border-radius: 18px; background: #fff; box-shadow: 0 3px 14px #68441603; }
+.tasks { padding-inline: 14px; }
+.tasks > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-inline: -14px;
+  padding: 14px;
+  border-bottom: 1px solid var(--benefits-line);
+  border-radius: 17px 17px 0 0;
+  background: linear-gradient(110deg, #fff8e9, #fffdf8);
+}
+.tasks h2, .more h2 { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 750; }
+.tasks header p { margin: 4px 0 0; color: var(--benefits-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tasks header p strong { color: var(--benefits-ink); }
+.tasksSummary { flex: 1; max-width: 220px; }
+.dailyProgress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 8px;
+  appearance: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #f4ddce;
+}
+.dailyProgress::-webkit-progress-bar { background: #f4ddce; }
+.dailyProgress::-webkit-progress-value { border-radius: 999px; background: var(--benefits-accent); }
+.dailyProgress::-moz-progress-bar { border-radius: 999px; background: var(--benefits-accent); }
+.run, .confirm { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--benefits-accent); color: #fff; font-size: 13px; font-weight: 750; white-space: nowrap; }
+.run { min-height: 44px; margin-inline-start: 5px; }
+.run:active, .confirm:active:not(:disabled) { background: #7f211c; }
+.task { padding: 18px 0; }
+.task + .task { border-top: 1px solid var(--benefits-line); }
+.taskHeading { display: flex; align-items: center; gap: 7px; }
+.taskHeading > span, .benefitIcon { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 9px; }
+.taskHeading > span { flex-basis: 26px; width: 26px; height: 26px; border-radius: 7px; }
+.taskHeading svg { width: 15px; height: 15px; }
+.page [data-theme='sand'] { background: #f6eee4; color: #785542; }
+.page [data-theme='gold'] { background: #fff1dd; color: var(--benefits-gold); }
+.page [data-theme='red'] { background: var(--benefits-accent-soft); color: var(--benefits-accent); }
+.taskHeading h3 { margin: 0; flex: 1; font-size: 14px; font-weight: 700; }
+.taskHeading > strong { display: inline-flex; align-items: baseline; gap: 3px; padding: 5px 9px; border-radius: 8px; background: #f7f5f1; color: var(--benefits-ink); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.taskHeading small { color: var(--benefits-muted); font-size: 11px; font-weight: 600; }
+.milestones {
+  --milestone-gap: 10px;
+  --milestone-track: #ebded4;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--milestone-gap);
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.milestones li { position: relative; min-width: 0; }
+.rewardTile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--benefits-muted);
+}
+.tierReward {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--benefits-line);
+  background: #faf6f1;
+  color: var(--benefits-muted);
+}
+.milestones li[data-claimable='true'] .tierReward {
+  border-color: #e5ad64;
+  background: linear-gradient(140deg, #b93929, #9a231d);
+  box-shadow: 0 2px 5px #a3292133, inset 0 1px #ffdc9d42;
+  color: #fff9ed;
+}
+.milestones li[data-reached='true'] .tierReward {
+  border-color: #d6ad61;
+  background: #f3dba5;
+  color: #684416;
+}
+.milestones li[data-reached='false'][data-claimable='false'] .tierReward { border-color: #e8e5df; background: #f7f6f3; color: #817c73; }
+.milestones li[data-reached='false'][data-claimable='false'] .tierCoinIcon { border-color: #d7d0c3; background: #ebe6dc; color: #8c8170; }
+.milestones li[data-reached='true'] .tierCoinIcon { border-color: #8a5d21; background: #8a5d21; color: #fff8e7; }
+.milestones li[data-reached='true'] .tierCoinIcon svg { fill: none; }
+.tierGoal { font-size: 12px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.tierCoins { font-size: 15px; line-height: 1; font-weight: 750; font-variant-numeric: tabular-nums; }
+.tierCoinIcon {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #d89a43;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #ffeb9f, #f7be61);
+  color: #884711;
+}
+.tierCoinIcon svg { fill: currentColor; }
+.milestones button.rewardTile { cursor: pointer; }
+@media (hover: hover) {
+  .milestones button.rewardTile:hover .tierReward { background: #a32921; }
+}
+.milestones button.rewardTile:active .tierReward { background: #7f211c; }
+
+.mileageTimeline .rewardTile { grid-template-rows: 36px 8px 18px; row-gap: 8px; }
+.mileageTimeline .tierReward { flex-direction: row-reverse; gap: 4px; width: min(100%, 78px); height: 36px; padding: 4px; border-radius: 9px; }
+.mileageTimeline .tierCoins { font-size: 15px; }
+.mileageTimeline li:not(:last-child)::before {
+  position: absolute;
+  top: 47px;
+  inset-inline-start: 50%;
+  width: calc(100% + var(--milestone-gap));
+  height: 2px;
+  background: linear-gradient(90deg, var(--benefits-accent) var(--segment-progress), var(--milestone-track) 0);
+  content: '';
+}
+.timelineDot { z-index: 1; width: 8px; height: 8px; border: 2px solid #decec2; border-radius: 50%; background: #fff; }
+.mileageTimeline [data-claimable='true'] .timelineDot { border-color: #f5ce8e; background: var(--benefits-accent); box-shadow: 0 0 0 2px var(--benefits-accent); }
+.mileageTimeline [data-reached='true'] .timelineDot { border-color: #9b6b28; background: #9b6b28; box-shadow: 0 0 0 2px #f3dba5; }
+
+.routeRewards .rewardTile { grid-template-rows: 44px 18px; row-gap: 8px; }
+.routeRewards .tierReward { flex-direction: row-reverse; gap: 5px; width: 100%; height: 100%; border-radius: 10px; }
+.claimError { margin: 0 0 12px; color: #a1301b; font-size: 12px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.more { padding: 14px 14px 5px; }
+.more h2 { margin-bottom: 6px; font-size: 16px; }
+.benefitList { margin: 0; padding: 0; list-style: none; }
+.benefitList li { position: relative; }
+.benefitList li + li::before { position: absolute; inset: 0 0 auto 42px; height: 1px; background: #f1ece5; content: ''; pointer-events: none; }
+.benefitLink {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--benefits-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.benefitLink:active { background: #fcf3ec; }
+@media (hover: hover) { .benefitLink:hover { background: #fcf3ec; } }
+.benefitIcon { width: 32px; height: 32px; }
+.benefitCopy { display: grid; gap: 3px; min-width: 0; }
+.benefitCopy strong { font-size: 14px; font-weight: 700; }
+.benefitCopy small { color: var(--benefits-muted); font-size: 11px; line-height: 1.4; }
+.benefitChevron { color: var(--benefits-muted); }
+.footer { display: flex; justify-content: center; margin: 0; }
+.footer button { display: inline-flex; align-items: center; gap: 3px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--benefits-accent); font-size: 12px; font-weight: 650; }
+.earningsPage { position: absolute; inset: 0; z-index: 3; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+:global(.screen-layer):has(> .earningsPage, > .backdrop, > .claimBackdrop) ~ :global(.bottom-nav) { display: none; }
+.earningsHeader { background: var(--wallet-gradient); }
+.earningsNav { display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px 0; }
+.earningsNav h1 { margin: 0; text-align: center; font-size: 19px; font-weight: 750; }
+.earningsNav button { display: grid; place-items: center; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 14px; }
+.earningsBalance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px 24px 24px; }
+.historyHeader { padding-bottom: 20px; background: linear-gradient(transparent 25%, var(--benefits-paper)), var(--wallet-gradient); }
+.historyBalance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 17px 24px 15px; }
+.historyBalance dt { margin-bottom: 3px; font-size: 13px; font-weight: 650; }
+.historyBalance dd { margin: 0; font-size: clamp(25px, 8vw, 39px); line-height: 1.15; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.historyRate { margin: 0 24px; padding-top: 11px; border-top: 1px solid var(--benefits-line); color: var(--benefits-muted); font-size: 12px; }
+.historyCard { margin: 0 12px; border: 1px solid var(--benefits-line); border-radius: 16px; background: #fff; }
+.historyTabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--benefits-line); }
+.historyTabs button { position: relative; min-height: 44px; padding: 0 6px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--benefits-muted); font-size: 14px; font-weight: 500; }
+.historyTabs button[aria-pressed='true'] { background: var(--benefits-accent-soft); color: var(--benefits-accent); font-weight: 750; }
+.historyTabs button[aria-pressed='true']::after { position: absolute; inset: auto 0 6px; width: 20px; height: 2px; margin-inline: auto; border-radius: 999px; background: var(--benefits-accent); content: ''; }
+.historyCard .empty { margin: 0; padding: 20px 16px; }
+.withdrawCard { margin: 12px; padding: 16px; border: 1px solid var(--benefits-line); border-radius: 16px; background: #fff; }
+.withdrawCard h2 { margin: 0; font-size: 17px; font-weight: 750; }
+.wechatBindingRow {
+  display: flex;
+  width: 100%;
+  min-height: 62px;
+  align-items: center;
+  gap: 11px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--benefits-line);
+  border-radius: 10px;
+  background: var(--benefits-paper);
+  color: var(--benefits-ink);
+  text-align: left;
+}
+.wechatBindingRow:not(:disabled):active { background: var(--wallet-surface); }
+.wechatBindingRow:disabled { opacity: .7; }
+.wechatIcon { display: grid; width: 38px; height: 38px; flex: none; place-items: center; border-radius: 50%; background: #21834f; }
+.wechatIcon img { display: block; }
+.wechatName { flex: 1; font-size: 15px; font-weight: 700; }
+.wechatAction { display: flex; flex: none; align-items: center; gap: 7px; color: var(--benefits-muted); font-size: 14px; }
+.wechatDialogActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.wechatCancel { min-height: 44px; border: 1px solid var(--benefits-line); border-radius: 10px; background: var(--benefits-paper); color: var(--benefits-ink); font-size: 14px; font-weight: 650; }
+.withdrawalResult .wechatError { margin: -10px 0 12px; color: #a1301b; font-size: 13px; }
+.customWithdrawal { display: grid; gap: 6px; margin-top: 14px; }
+.customWithdrawal label { font-size: 13px; font-weight: 700; }
+.customWithdrawal input { min-width: 0; min-height: 44px; padding: 0 11px; border: 1px solid #dfcfc4; border-radius: 9px; background: #fff; color: var(--benefits-ink); font-size: 16px; }
+.customWithdrawal[data-selected='true'] input { border-color: var(--benefits-accent); }
+.customWithdrawal input:focus-visible { outline: 2px solid var(--benefits-accent); outline-offset: 2px; }
+.customWithdrawal input[aria-invalid='true'] { border-color: #ab4631; }
+.customWithdrawal small { color: var(--benefits-muted); font-size: 12px; }
+.customWithdrawal small[data-error='true'] { color: #a1301b; }
+.withdrawTiers strong { font-size: clamp(17px, 5vw, 22px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.withdrawTiers strong small { font-size: 11px; font-weight: 600; }
+.confirmWechat { margin-top: 18px; }
+.backdrop { z-index: 15; }
+:global(.screen-layer):has(> .backdrop) { z-index: 25; }
+.claimBackdrop:global(.modal-backdrop) {
+  z-index: 15;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: rgb(18 14 10 / 78%);
+  backdrop-filter: none;
+}
+:global(.screen-layer):has(> .claimBackdrop) { z-index: 25; }
+.claimDialog:global(.modal-sheet) {
+  display: flex;
+  width: min(100%, 370px);
+  max-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #fff9ed;
+  text-align: center;
+  animation: claim-reveal .28s ease-out both;
+}
+.claimDialog:global(.modal-sheet)::before { content: none; }
+.claimDialog h2 { margin: 0; font-size: clamp(23px, 7vw, 32px); font-weight: 750; line-height: 1.2; }
+.claimDialog h2 strong { color: #ffaf43; font-size: 1.24em; font-variant-numeric: tabular-nums; }
+.claimDialog p { margin: 6px 0 0; color: #e9decd; font-size: 13px; }
+.claimArt {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: min(100%, 264px, 39dvh);
+  aspect-ratio: 1;
+  place-items: center;
+  margin-block: 2px 7px;
+  background: radial-gradient(ellipse, #ffcc7259, transparent 72%);
+}
+.claimArt img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.fallingCoin {
+  position: absolute;
+  top: 0;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid #ffe49c;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #fff3b2, #ffca62 56%, #df891e);
+  box-shadow: inset 0 0 0 1px #ffc864, 0 2px 0 #b87020, 0 0 9px #ffbe5266;
+  color: #a45512;
+  font-size: 8px;
+  line-height: 1;
+  pointer-events: none;
+  animation: claim-coin-fall 1.3s cubic-bezier(.33, .14, .72, .93) both;
+}
+@keyframes claim-coin-fall {
+  0% { top: 0; opacity: 0; transform: translate(-50%, -28px) rotate(var(--coin-tilt)) scaleX(.45); }
+  14% { opacity: 1; }
+  40% { transform: translate(calc(-50% + var(--coin-drift) * .45), 0) rotate(calc(var(--coin-tilt) * -1)) scaleX(.95); }
+  74% { opacity: 1; }
+  100% { top: 93%; opacity: 0; transform: translate(calc(-50% + var(--coin-drift)), 0) rotate(var(--coin-tilt)) scaleX(.5); }
+}
+.claimDone, .claimClose { display: grid; min-height: 44px; flex: none; place-items: center; cursor: pointer; }
+.claimDone { width: min(100%, 248px); padding: 0 16px; border: 1px solid #ffc177; border-radius: 13px; background: linear-gradient(110deg, #ffa43f, #ffb965); color: #45240b; font-size: 16px; font-weight: 750; }
+.claimDone:active { background: #ff9b38; }
+.claimClose { width: 44px; margin-top: 16px; border: 1px solid #fff9ed66; border-radius: 50%; background: #150e0b40; color: #fff9ed; }
+.claimDialog button:focus-visible { outline: 2px solid #fff2c7; outline-offset: 3px; }
+@keyframes claim-reveal { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .claimDialog:global(.modal-sheet), .milestones button.rewardTile { animation: none; transition: none; }
+  .fallingCoin { display: none; }
+}
+.sheet:global(.modal-sheet) { background: #fff; padding-inline: 16px; }
+.sheet:global(.modal-sheet)::before { background: #d4bfb3; }
+.withdrawalBackdrop:global(.modal-backdrop) { align-items: center; justify-content: center; padding: 16px; }
+.withdrawalResult:global(.modal-sheet) { width: min(100%, 320px); padding: 24px 22px 22px; border-radius: 18px; text-align: center; }
+.withdrawalResult:global(.modal-sheet)::before { content: none; }
+.withdrawalSuccessIcon { display: grid; width: 44px; height: 44px; place-items: center; margin: 0 auto 10px; border-radius: 50%; background: #e2f7eb; color: #17744c; }
+.withdrawalResult h2 { margin: 0; font-size: 21px; font-weight: 750; line-height: 1.25; }
+.withdrawalReceipt { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; margin: 18px 0 0; padding: 10px 14px; border-radius: 10px; background: var(--benefits-paper); }
+.withdrawalReceipt dt { color: var(--benefits-muted); font-size: 13px; }
+.withdrawalReceipt dd { margin: 0; overflow-wrap: anywhere; font-size: 24px; font-weight: 750; line-height: 1.2; text-align: end; font-variant-numeric: tabular-nums; }
+.withdrawalResult p { margin: 11px 0 20px; }
+.sheetHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.sheetHeader h2 { margin: 0; font-size: 19px; font-weight: 750; }
+.sheetHeader button { display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 50%; background: var(--benefits-paper); }
+.exchangeAmounts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 12px; border: 1px solid var(--benefits-line); border-radius: 10px; background: var(--benefits-paper); }
+.exchangeAmounts > div { padding-inline: 8px; }
+.exchangeAmounts > div + div { border-inline-start: 1px solid var(--benefits-line); }
+.exchangeAmounts dt { color: var(--benefits-muted); font-size: 12px; }
+.exchangeAmounts dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 20px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.withdrawTiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.withdrawTiers button { min-height: 66px; padding-inline: 1px; border: 1px solid var(--benefits-line); border-radius: 9px; background: var(--benefits-paper); }
+.withdrawTiers button[aria-pressed='true'] { border-color: var(--benefits-accent); background: var(--benefits-accent-soft); color: var(--benefits-accent); font-weight: 750; }
+.sheetNote, .notice, .empty, .rules { color: var(--benefits-muted); font-size: 13px; line-height: 1.6; }
+.sheetNote { margin-block: 12px; }
+.confirm { width: 100%; min-height: 44px; font-size: 14px; }
+.confirm:disabled { background: #f2eae4; color: var(--benefits-muted); }
+.demo { display: block; min-height: 40px; margin: 3px auto 0; border: 0; background: transparent; color: var(--benefits-accent); font-size: 13px; }
+.notice { margin-block: 8px 0; }
+.notice:empty { margin: 0; }
+.history { display: grid; margin: 0; padding: 0 16px; list-style: none; }
+.history li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 64px; padding-block: 10px; font-size: 14px; }
+.history li + li { border-top: 1px solid var(--benefits-line); }
+.history li > div { display: grid; min-width: 0; gap: 3px; overflow-wrap: anywhere; }
+.history small { color: var(--benefits-muted); font-size: 11px; }
+.history b { color: #a6520c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rules { margin: 0; padding-inline-start: 22px; list-style: decimal; }
+.rules li + li { margin-top: 9px; }

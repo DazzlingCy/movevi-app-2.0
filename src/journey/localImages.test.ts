@@ -6,14 +6,14 @@ import { LOCAL_IMAGE_MANIFEST } from '../data/localImageManifest';
 import { ROUTE_COVERS } from '../data/routeCovers';
 import { CITIES } from '../data/cities';
 import { getRouteRunners } from '../data/routeRunners';
-import { resolveLocalImage } from '../lib/localImages';
+import { cityCoverPath, recommendationCoverPath, resolveLocalImage } from '../lib/localImages';
 
 test('all default route covers, city covers and runner portraits have bundled files', () => {
   const app = readFileSync(resolve('src/components/journey/JourneyApp.tsx'), 'utf8');
   const cityBlock = app.match(/const JOURNEY_CITY_IMAGES[^=]*= ([\s\S]*?);/)![1];
-  const urls = [...Object.values(ROUTE_COVERS).flat().map(cover => cover.src),
-    ...CITIES.map(city => city.image), ...getRouteRunners().avatars,
-    ...[...cityBlock.matchAll(/https:\/\/[^']+/g)].map(match => match[0])];
+  const routeUrls = Object.values(ROUTE_COVERS).flat().map(cover => cover.src);
+  const cityUrls = [...CITIES.map(city => city.image), ...[...cityBlock.matchAll(/https:\/\/[^']+/g)].map(match => match[0])];
+  const urls = [...routeUrls, ...cityUrls, ...getRouteRunners().avatars];
   for (const url of urls) {
     const file = LOCAL_IMAGE_MANIFEST[url];
     assert.ok(file, `Missing bundled image: ${url}`);
@@ -22,6 +22,14 @@ test('all default route covers, city covers and runner portraits have bundled fi
     assert.ok(bytes.length > 100, `${file} is empty`);
     assert.ok((bytes[0] === 255 && bytes[1] === 216) || bytes[0] === 137
       || bytes.toString('ascii', 0, 4) === 'RIFF' || bytes.toString('ascii', 0, 3) === 'GIF', `${file} is not an image`);
+  }
+  const variants = [
+    ...cityUrls.flatMap(url => (['cover', 'grid'] as const).map(size => cityCoverPath(LOCAL_IMAGE_MANIFEST[url], size))),
+    ...routeUrls.flatMap(url => (['feature', 'thumbnail', 'list'] as const).map(size => recommendationCoverPath(LOCAL_IMAGE_MANIFEST[url], size))),
+  ];
+  for (const file of new Set(variants)) {
+    const bytes = readFileSync(resolve('public', file));
+    assert.ok(bytes.length > 100 && bytes.toString('ascii', 8, 12) === 'WEBP', `${file} is not a WebP image`);
   }
   assert.ok(existsSync('public/images/journey/attribution.json'));
 });

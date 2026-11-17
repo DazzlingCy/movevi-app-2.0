@@ -46,16 +46,17 @@ test('prototype journey starts selected city at 8/10 with five completed cities'
   state.completedCityIds.forEach(cityId => assert.equal(getCompletedRouteIds(state, cityId).length, 10));
   assert.ok(state.discoveredSpotKeys.length > 0);
   assert.equal(state.currentPage, 'home');
-  assert.equal(getHomeJourneyCityIds(state)[5], 'paris');
+  assert.equal(getHomeJourneyCityIds(state)[0], 'paris');
 });
 
-test('home journey order never places a locked city before the current city', () => {
+test('home carousel starts at the current city and excludes other completed cities', () => {
   const freshShanghai = createPrototypeJourneyState('shanghai');
-  assert.equal(getHomeJourneyCityIds(freshShanghai)[4], 'shanghai');
-  assert.ok(getHomeJourneyCityIds(freshShanghai).slice(0, 4).every(cityId => getCityStatus(freshShanghai, cityId) === 'completed'));
-
   const demo = createDemoJourneyState();
-  assert.deepEqual(getHomeJourneyCityIds(demo).slice(0, 6), ['beijing', 'shanghai', 'cairo', 'los-angeles', 'singapore', 'tokyo']);
+  for (const state of [freshShanghai, demo]) {
+    const [first, ...remaining] = getHomeJourneyCityIds(state);
+    assert.equal(first, state.currentCityId);
+    assert.ok(remaining.every(cityId => getCityStatus(state, cityId) !== 'completed'));
+  }
 });
 
 test('unpublished cities follow every route-ready city and never enter next-city candidates', () => {

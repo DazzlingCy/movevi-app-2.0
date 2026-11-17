@@ -2,6 +2,7 @@ import StickyHeroNav from './StickyHeroNav';
 import { useId, useRef, useState } from 'react';
 import { Play, ChevronLeft, MessageCircle, MapPin, AlignLeft, X, Lock, UserRound } from 'lucide-react';
 import { getRouteData } from '../data/cities';
+import { resolveRecommendationCover } from '../lib/localImages';
 import CityImage from './CityImage';
 import RouteRunners from './RouteRunners';
 import Modal from './journey/Modal';
@@ -13,6 +14,7 @@ interface RouteDetailViewProps {
   routeIndex: number;
   image: string;
   routeOverride?: CityRouteListItem;
+  exampleRoute?: boolean;
   collectionIntent?: 'review' | 'collect';
   unselectedCityName?: string;
   currentJourney?: { name: string; image: string; completed: number; total: number };
@@ -38,7 +40,7 @@ function renderCommentEntry(comment: RouteComment, index: number) {
   );
 }
 
-export default function RouteDetailView({ cityId, routeIndex, image, routeOverride, collectionIntent, unselectedCityName, currentJourney, onContinueJourney, onBack, onStart }: RouteDetailViewProps) {
+export default function RouteDetailView({ cityId, routeIndex, image, routeOverride, exampleRoute = false, collectionIntent, unselectedCityName, currentJourney, onContinueJourney, onBack, onStart }: RouteDetailViewProps) {
   const routeData = routeOverride ?? getRouteData(cityId, routeIndex);
   const isLocked = routeOverride?.isUnlocked === false && !routeOverride?.isCompleted;
   const gradientId = useId();
@@ -65,7 +67,7 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
     { value: routeData.distance, label: '预计里程', unit: 'km' },
     { value: routeData.duration, label: '预计时长', unit: 'min' },
     { value: routeData.calories, label: '预计消耗', unit: 'kcal' },
-    { value: routeData.rating, label: '路线评分', unit: '分' },
+    { value: routeData.rating, label: '路线评分', unit: exampleRoute ? undefined : '分' },
   ];
 
   return (
@@ -77,7 +79,7 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
           </button>
         </StickyHeroNav>
         <header className={styles.hero}>
-          <CityImage src={routeOverride?.coverImage || image} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
+          <CityImage src={routeOverride?.coverImage || image} optimizedSrc={resolveRecommendationCover(routeOverride?.coverImage, 'feature')} alt="" fallbackLabel={routeData.title} className={styles.heroImage} loading="eager" fetchPriority="high" />
           <div className={styles.heroShade} />
           <div className={styles.heroContent}>
             <h1>{routeData.title}</h1>
@@ -91,7 +93,7 @@ export default function RouteDetailView({ cityId, routeIndex, image, routeOverri
               {stats.map((stat, index) => (
                 <div key={stat.label} className={index === 3 ? styles.rating : undefined}>
                   <dt>{stat.label}</dt>
-                  <dd>{stat.value}<span>{stat.unit}</span></dd>
+                  <dd>{stat.value}{stat.unit && <span>{stat.unit}</span>}</dd>
                 </div>
               ))}
             </dl>

@@ -110,6 +110,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.coinFloat {
+  position: absolute;
+  top: 45%;
+  right: max(16px, var(--player-safe-right));
+}
+
+.summaryCoins:has(.summaryCoinBadge) { position: relative; padding-inline-end: 76px; min-height: 84px; }
+.summaryCoinBadge { position: absolute; top: 9px; right: 8px; }
+
 .pausedLabel {
   margin: 0;
   padding: 3px 8px;
@@ -300,6 +309,16 @@ button.sceneryNotice {
 .summaryStats dd { margin: 3px 0 0; font-size: 21px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .summaryStats small { color: var(--run-muted); font-size: 11px; font-weight: 600; }
 
+.summaryCoins { display: grid; gap: 7px; padding: 10px 12px; border: 1px solid #d7ad5940; border-radius: 12px; background: #282620; color: #f6d48d; }
+.summaryCoins h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 750; }
+.summaryCoins h3 > strong { margin-left: auto; font-size: 18px; font-variant-numeric: tabular-nums; }
+.summaryCoins dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.summaryCoins dl > div { display: flex; justify-content: space-between; gap: 5px; font-size: 11px; }
+.summaryCoins dt, .summaryCoins small { color: #d1c5ad; }
+.summaryCoins dd { margin: 0; font-weight: 750; }
+.coinDemoActions { display: flex; flex-wrap: wrap; gap: 7px; }
+.coinDemoActions button { min-height: 36px; padding-inline: 8px; border: 1px solid #d7ad5960; border-radius: 7px; background: #fff1c715; color: #ffe3a5; font-size: 12px; }
+
 .summaryMedals {
   display: flex;
   align-items: center;
@@ -307,17 +326,18 @@ button.sceneryNotice {
   gap: 6px 12px;
 }
 .summaryMedals h3 { display: flex; align-items: center; gap: 5px; margin: 0; color: var(--run-accent); font-size: 12px; font-weight: 750; }
-.summaryMedals ul { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.summaryMedals ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .summaryMedals li {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
   border: 1px solid var(--run-line);
-  border-radius: 50%;
+  border-radius: 999px;
   background: #28333f;
-  font-size: 14px;
+  font-size: 11px;
 }
+.summaryMedals li svg { flex: none; color: #ffda88; }
 
 .summaryFooter { padding: 8px 18px; border-top: 1px solid var(--run-line); }
 .summaryButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -337,4 +357,5 @@ button.sceneryNotice {
   cursor: pointer;
 }
 .summaryButtons button:last-child { border-color: transparent; background: var(--run-accent); color: #102a23; }
+.summaryButtons button:only-child { grid-column: 1 / -1; }
 .summaryButtons button:active { filter: brightness(.88); }

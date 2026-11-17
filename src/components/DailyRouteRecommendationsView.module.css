@@ -17,6 +17,33 @@
 
 .page button { cursor: pointer; touch-action: manipulation; }
 .page button:focus-visible { outline: 2px solid var(--recommendation-accent); outline-offset: 3px; }
+.sceneHome {
+  --scene-background-tone: hsl(var(--scene-background-hue) 30% 16%);
+  --scene-background-glow: hsl(var(--scene-background-hue) 58% 70%);
+  --recommendation-bg: var(--scene-background-tone);
+  --recommendation-accent: color-mix(in srgb, var(--scene-background-glow) 68%, white);
+  --recommendation-muted: #e0e3e8;
+  --route-rail-focus: var(--recommendation-accent);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(64px + max(10px, env(safe-area-inset-bottom, 0px)));
+  background-image:
+    radial-gradient(ellipse at 6% 13%, #090b13c2, transparent 62%),
+    radial-gradient(ellipse at 100% 29%,
+      color-mix(in srgb, var(--scene-background-glow) 30%, transparent), transparent 60%);
+}
+.homeBar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px;
+  background: linear-gradient(180deg, #090b1380, #090b1300);
+}
+.sceneHome .listHeader h1 { font-size: clamp(23px, 6.8vw, 30px); overflow-wrap: anywhere; }
 .content {
   max-width: 550px;
   margin: 0 auto;
@@ -32,6 +59,8 @@
 }
 .listHeader time { color: var(--recommendation-muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .listHeader h1 { margin: 0; font-size: clamp(28px, 8.6vw, 34px); font-weight: 800; line-height: 1.15; }
+.sceneHome .content { display: flex; flex: 1 0 auto; flex-direction: column; width: 100%; padding-bottom: 0; }
+.sceneHome .listHeader { margin-bottom: 0; text-shadow: 0 2px 12px #090b13d9; }
 
 .routes { list-style: none; margin: 0; padding: 0; }
 .routes > li:first-child:not(:only-child) { margin-bottom: 18px; }
@@ -148,7 +177,55 @@
 }
 .featured .landmarks, .featured .metrics { font-size: 12px; }
 .featured .action { padding: 7px 14px; background: #f5f5f7; color: #17171d; }
-.featured:hover .action, .featured:active .action { background: #ded8ff; }
+.featured:active .action { background: #ded8ff; }
+@media (hover: hover) {
+  .featured:hover .action { background: #ded8ff; }
+}
+
+.sceneRail {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  margin-inline: calc(-1 * var(--recommendation-gutter) + 8px);
+  padding-block: 12px;
+}
+.sceneRail > div { flex: 0 0 auto; }
+.sceneRail .route {
+  min-height: clamp(272px, 65dvh, 580px);
+  border: 1px solid color-mix(in srgb, var(--recommendation-accent) 24%, transparent);
+  cursor: inherit;
+}
+.sceneCard .action { border: 0; min-height: 38px; }
+.sceneCard .landmarks { white-space: normal; }
+.sceneRail .cover { background: var(--scene-background-tone); }
+.sceneRail .cover::after {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--scene-background-tone) 18%, transparent),
+    transparent 27%, transparent 50%,
+    color-mix(in srgb, var(--scene-background-tone) 85%, transparent) 76%,
+    var(--scene-background-tone));
+}
+.sceneRail .routeBody > strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  text-wrap: balance;
+}
+.sceneRail .sceneType {
+  grid-area: kicker;
+  place-self: start;
+}
+.sceneRail .sceneType, .sceneRail .action {
+  background: var(--recommendation-accent);
+  color: var(--scene-background-tone);
+}
+.sceneRail .action { cursor: pointer; }
+.sceneRail .route:active .action { background: color-mix(in srgb, var(--recommendation-accent) 75%, white); }
+@media (hover: hover) {
+  .sceneRail .route:hover .action { background: color-mix(in srgb, var(--recommendation-accent) 75%, white); }
+}
 
 .empty { margin: 0; padding: 28px 0; color: var(--recommendation-muted); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .action { transition: none; } }

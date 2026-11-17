@@ -120,7 +120,6 @@ export const getHomeJourneyCityIds = (state: JourneyState): string[] => {
   if (currentIndex < 0) return [...JOURNEY_SEQUENCE];
 
   const completed = new Set(state.completedCityIds);
-  const completedBeforeCurrent = state.completedCityIds.filter(cityId => cityId !== state.currentCityId && getJourneyCity(cityId));
   const futureFromCurrent = [
     ...JOURNEY_SEQUENCE.slice(currentIndex + 1),
     ...JOURNEY_SEQUENCE.slice(0, currentIndex)
@@ -129,7 +128,7 @@ export const getHomeJourneyCityIds = (state: JourneyState): string[] => {
   const publishedFutureCities = futureFromCurrent.filter(hasPublishedCityRoutes);
   const upcomingFutureCities = futureFromCurrent.filter(cityId => !hasPublishedCityRoutes(cityId));
 
-  return [...completedBeforeCurrent, state.currentCityId, ...publishedFutureCities, ...upcomingFutureCities];
+  return [state.currentCityId, ...publishedFutureCities, ...upcomingFutureCities];
 };
 
 export const getCityStatus = (state: JourneyState, cityId: string): CityJourneyStatus => {
