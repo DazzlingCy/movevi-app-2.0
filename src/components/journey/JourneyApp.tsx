@@ -1863,18 +1863,9 @@ export default function JourneyApp() {
     }
     return { workout, saved: !!entry };
   };
-  const runCoinRewards = (route?: JourneyRoute, mileageOnly = false) => ({
+  const runCoinRewards = (route?: JourneyRoute) => ({
     demo: coinRewards.demo,
     tracking: !!route && coinRewards.trackWorkouts,
-    preview: (evidence: CoinExerciseEvidence) => {
-      const workout = coinWorkoutFor(route, evidence, mileageOnly);
-      return workout && coinRewards.preview(workout);
-    },
-    progress: (evidence: CoinExerciseEvidence) => {
-      if (!coinRewards.trackWorkouts) return;
-      const workout = coinWorkoutFor(route, evidence, mileageOnly);
-      return workout && coinRewards.progress(workout);
-    },
   });
   const completeRun = (result: RunResult, evidence?: CoinExerciseEvidence) => {
     if (!runningRoute || !exerciseSessionId.current) return;
@@ -2143,7 +2134,7 @@ export default function JourneyApp() {
               routeOverride={runningRoute.scene
                 ? toSceneRouteItem(runningRouteData, runningRoute.scene, state)
                 : toLegacyRouteItem(runningRouteData, state, recommendationsOpen)}
-              coinRewards={runCoinRewards(runningRouteData, !!runningRoute.scene?.preview)}
+              coinRewards={runCoinRewards(runningRouteData)}
               onExit={() => {
                 setRunningRoute(null);
                 if (runningRoute.scene) setSceneRoute({ entry: runningRoute.scene, route: runningRouteData });

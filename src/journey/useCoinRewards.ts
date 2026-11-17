@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { exerciseDay } from './dailyExercise';
-import { cashBalance, coinBalance, coinDayProgress, coinWorkoutProgress, getAvailableMedals, getExchangedMedals, getMedalDraws, readCoinLedger, recordCashExchange, recordCashWithdrawal, recordMedalDraw, recordMedalExchange, recordStarterClaim, settleCoinWorkout, type CoinLedger, type CoinTrack, type CoinWorkout } from './coinRewards';
+import { cashBalance, coinBalance, coinDayProgress, getAvailableMedals, getExchangedMedals, getMedalDraws, readCoinLedger, recordCashExchange, recordCashWithdrawal, recordMedalDraw, recordMedalExchange, recordStarterClaim, settleCoinWorkout, type CoinLedger, type CoinTrack, type CoinWorkout } from './coinRewards';
 import { MEDAL_LOTTERY_DRAW_COST, MEDAL_LOTTERY_POOL_SIZE, PREVIEW_AVAILABLE_MEDALS, PREVIEW_EXCHANGED_MEDALS } from './medalLottery';
 
 declare const __APP_VERSION__: string;
@@ -133,8 +133,6 @@ export function useCoinRewards(demo: boolean) {
     async claimStarter(track: CoinTrack) {
       return withLedgerLock(() => update(previous => recordStarterClaim(previous, track, Date.now())));
     },
-    preview: (workout: CoinWorkout) => trackWorkouts ? settleCoinWorkout(ledger, workout)?.reward : undefined,
-    progress: (workout: CoinWorkout) => trackWorkouts ? coinWorkoutProgress(ledger, workout) : undefined,
     record(workout: CoinWorkout): ReturnType<typeof settleCoinWorkout> | undefined {
       if (!trackWorkouts) return;
       let entry: ReturnType<typeof settleCoinWorkout> = null;
