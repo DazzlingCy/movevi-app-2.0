@@ -19,7 +19,7 @@ export function useCoinRewards(demo: boolean) {
   const publishedPreview = githubPages && /^\/movevi-app-2\.0(?:\/|$)/.test(pathname);
   const transientPreview = localPreview || hostedPreview;
   const isPreview = transientPreview || publishedPreview;
-  const trackWorkouts = transientPreview || demo;
+  const trackWorkouts = isPreview || demo;
   const canSimulateWithdrawal = isPreview || demo;
   const previewMedals = isPreview ? PREVIEW_AVAILABLE_MEDALS : [];
   const key = demo ? 'movevi-coins-demo-v1' : 'movevi-coins-v1';
