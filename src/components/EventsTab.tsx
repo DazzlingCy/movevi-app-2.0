@@ -507,7 +507,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
                 <button key={tab} type="button" aria-pressed={historyTab === tab} onClick={() => setHistoryTab(tab)}>{historyTabs[tab]}</button>
               ))}
             </div>
-            <RewardHistory ledger={rewards.ledger} showCash={historyTab === 'cashHistory'} showExamples={rewards.transientPreview || rewards.demo} />
+            <RewardHistory ledger={rewards.ledger} showCash={historyTab === 'cashHistory'} showExamples={rewards.isPreview || rewards.demo} />
           </section>
         </main>
       )}

@@ -12,15 +12,16 @@ function createPreviewLedger(): CoinLedger {
 
 export function useCoinRewards(demo: boolean) {
   // Vite preview serves a production build, including over the local network.
-  const localPreview = false;
+  const localPreview = __APP_VERSION__.startsWith('local-');
   const { hostname, pathname } = window.location;
   const githubPages = hostname === 'dazzlingcy.github.io';
   const hostedPreview = githubPages && pathname.startsWith('/movevi-app-preview');
   const publishedPreview = githubPages && /^\/movevi-app-2\.0(?:\/|$)/.test(pathname);
   const transientPreview = localPreview || hostedPreview;
+  const isPreview = transientPreview || publishedPreview;
   const trackWorkouts = transientPreview || demo;
-  const canSimulateWithdrawal = transientPreview || publishedPreview || demo;
-  const previewMedals = transientPreview ? PREVIEW_AVAILABLE_MEDALS : [];
+  const canSimulateWithdrawal = isPreview || demo;
+  const previewMedals = isPreview ? PREVIEW_AVAILABLE_MEDALS : [];
   const key = demo ? 'movevi-coins-demo-v1' : 'movevi-coins-v1';
   const wechatBindingKey = `${key}:wechat-preview-bound`;
   const readWechatBinding = () => {
@@ -80,10 +81,15 @@ export function useCoinRewards(demo: boolean) {
   const starterClaims = new Set(ledger.flatMap(entry =>
     entry.kind === 'starter-claim' && exerciseDay(entry.at) === day ? [entry.track] : [],
   ));
+  const exchangedMedals = getExchangedMedals(ledger).reverse();
+  if (publishedPreview) {
+    const exchangedIds = new Set(exchangedMedals.map(medal => medal.id));
+    exchangedMedals.push(...PREVIEW_EXCHANGED_MEDALS.filter(medal => !exchangedIds.has(medal.id)));
+  }
 
   return {
     demo,
-    transientPreview,
+    isPreview,
     trackWorkouts,
     ledger,
     balance: coinBalance(ledger),
@@ -93,7 +99,7 @@ export function useCoinRewards(demo: boolean) {
     today: coinDayProgress(ledger, now),
     starterClaims,
     availableMedals: getAvailableMedals(ledger, previewMedals),
-    exchangedMedals: getExchangedMedals(ledger).reverse(),
+    exchangedMedals,
     medalDraws: getMedalDraws(ledger),
     async exchangeMedals(ids: readonly string[]) {
       const exchange = () => {
