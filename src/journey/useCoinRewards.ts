@@ -12,12 +12,14 @@ function createPreviewLedger(): CoinLedger {
 
 export function useCoinRewards(demo: boolean) {
   // Vite preview serves a production build, including over the local network.
-  const localPreview = __APP_VERSION__.startsWith('local-');
-  const hostedPreview = window.location.hostname === 'dazzlingcy.github.io'
-    && window.location.pathname.startsWith('/movevi-app-preview');
+  const localPreview = false;
+  const { hostname, pathname } = window.location;
+  const githubPages = hostname === 'dazzlingcy.github.io';
+  const hostedPreview = githubPages && pathname.startsWith('/movevi-app-preview');
+  const publishedPreview = githubPages && /^\/movevi-app-2\.0(?:\/|$)/.test(pathname);
   const transientPreview = localPreview || hostedPreview;
   const trackWorkouts = transientPreview || demo;
-  const canSimulateWithdrawal = transientPreview || demo;
+  const canSimulateWithdrawal = transientPreview || publishedPreview || demo;
   const previewMedals = transientPreview ? PREVIEW_AVAILABLE_MEDALS : [];
   const key = demo ? 'movevi-coins-demo-v1' : 'movevi-coins-v1';
   const wechatBindingKey = `${key}:wechat-preview-bound`;

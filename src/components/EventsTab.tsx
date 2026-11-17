@@ -33,7 +33,7 @@ const coinHistoryExamples = [
   { title: '金币兑换现金', delta: -1_000 },
 ];
 const cashHistoryExamples = [
-  { title: '幸运大转盘中奖', delta: 166, detail: '现金红包到账' },
+  { title: '幸运大转盘中奖', delta: 166 },
   { title: '金币兑换现金', delta: 80 },
   { title: '微信提现', delta: -20 },
   { title: '金币兑换现金', delta: 100 },
@@ -117,7 +117,7 @@ function RewardHistory({ ledger, showCash, showExamples }: { ledger: CoinEntry[]
       ...entry,
       id: `example-${index}`,
       date: entryDate.format(oldestDate - (index + 1) * 86_400_000),
-      detail: 'detail' in entry ? entry.detail : '',
+      detail: '',
     })),
   ];
   if (!rows.length) return <p className={styles.empty}>{showCash ? '暂无现金记录，兑换或提现后可在这里查看。' : '完成有效运动后，奖励明细会显示在这里。'}</p>;
