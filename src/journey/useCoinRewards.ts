@@ -36,6 +36,7 @@ export function useCoinRewards(demo: boolean) {
   const latest = useRef(ledger);
   const [now, setNow] = useState(Date.now);
   const [wechatBound, setWechatBound] = useState(readWechatBinding);
+  const [previewStarterClaims, setPreviewStarterClaims] = useState<Partial<Record<CoinTrack, string>>>({});
 
   useEffect(() => {
     const refreshDay = () => setNow(Date.now());
@@ -78,9 +79,9 @@ export function useCoinRewards(demo: boolean) {
     ? navigator.locks.request(key, mutate) : mutate();
 
   const day = exerciseDay(now);
-  const starterClaims = new Set(ledger.flatMap(entry =>
-    entry.kind === 'starter-claim' && exerciseDay(entry.at) === day ? [entry.track] : [],
-  ));
+  const starterClaims = new Set(publishedPreview
+    ? (['mileage', 'route'] as const).filter(track => previewStarterClaims[track] === day)
+    : ledger.flatMap(entry => entry.kind === 'starter-claim' && exerciseDay(entry.at) === day ? [entry.track] : []));
   const exchangedMedals = getExchangedMedals(ledger).reverse();
   if (publishedPreview) {
     const exchangedIds = new Set(exchangedMedals.map(medal => medal.id));
@@ -98,6 +99,7 @@ export function useCoinRewards(demo: boolean) {
     wechatBound,
     today: coinDayProgress(ledger, now),
     starterClaims,
+    replayStarterClaims: publishedPreview,
     availableMedals: getAvailableMedals(ledger, previewMedals),
     exchangedMedals,
     medalDraws: getMedalDraws(ledger),
@@ -139,7 +141,23 @@ export function useCoinRewards(demo: boolean) {
       return withLedgerLock(draw);
     },
     async claimStarter(track: CoinTrack) {
-      return withLedgerLock(() => update(previous => recordStarterClaim(previous, track, Date.now())));
+      return withLedgerLock(() => {
+        const at = Date.now();
+        const claimDay = exerciseDay(at);
+        if (publishedPreview && previewStarterClaims[track] === claimDay) return null;
+        let alreadyAwarded = false;
+        const credited = update(previous => {
+          const next = recordStarterClaim(previous, track, at);
+          alreadyAwarded = next === previous;
+          return next;
+        });
+        if (!credited && !(publishedPreview && alreadyAwarded)) return null;
+        if (publishedPreview) {
+          setPreviewStarterClaims(previous => ({ ...previous, [track]: claimDay }));
+          if (!credited) setNow(at);
+        }
+        return { credited };
+      });
     },
     record(workout: CoinWorkout): ReturnType<typeof settleCoinWorkout> | undefined {
       if (!trackWorkouts) return;
