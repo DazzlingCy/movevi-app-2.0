@@ -11,6 +11,7 @@ export const MILEAGE_REWARDS = [{ goal: 1, coins: 120 }, { goal: 2, coins: 100 }
 export const ROUTE_REWARDS = [{ goal: 1, coins: 120 }, { goal: 2, coins: 100 }, { goal: 3, coins: 80 }] as const;
 export const DAILY_COIN_CAP = [...MILEAGE_REWARDS, ...ROUTE_REWARDS].reduce((total, tier) => total + tier.coins, 0);
 export const WITHDRAWAL_TIERS = [1, 3, 5] as const;
+export const MAX_WITHDRAWAL_CENTS = 20_000;
 export type WithdrawalTier = typeof WITHDRAWAL_TIERS[number];
 export type CoinTrack = 'mileage' | 'route';
 export const STARTER_COIN_REWARDS = { mileage: MILEAGE_REWARDS[0], route: ROUTE_REWARDS[0] } as const;
@@ -226,7 +227,8 @@ export function recordCashExchange(ledger: CoinLedger, coins: number, id: string
 
 export function recordCashWithdrawal(ledger: CoinLedger, amount: string | number, id: string, at: number): CoinLedger {
   const cents = parseWithdrawalCents(amount);
-  if (cents === null || !id || !validTimestamp(at) || cashBalance(ledger) < cents || ledger.some(entry => entry.id === id)) return ledger;
+  if (cents === null || cents > MAX_WITHDRAWAL_CENTS || !id || !validTimestamp(at)
+    || cashBalance(ledger) < cents || ledger.some(entry => entry.id === id)) return ledger;
   return [...ledger, { kind: 'cash-withdrawal', id, at, cents }];
 }
 

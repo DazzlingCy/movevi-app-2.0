@@ -27,7 +27,7 @@ const stepItems = [
   { description: '跑完路线，获得景点勋章', action: '去跑步' },
   { description: `每枚勋章可兑换 ${medalValue} 金币`, action: '兑换金币' },
   { description: `消耗 ${drawCost} 金币抽一次现金红包`, action: '去抽奖' },
-  { description: '前往「我的收益」提现', action: '去提现' },
+  { description: '前往「我的钱包」提现', action: '去提现' },
 ];
 
 const infoPanels = {
@@ -69,7 +69,7 @@ function LotteryRules() {
       <section>
         <h3>五、通用条款</h3>
         <p>参与者应遵守平台规则及活动约定。对作弊获取勋章、金币或恶意刷奖等行为，主办方可取消参与及获奖资格，并收回相关奖励。</p>
-        <p>中奖记录可在「我的奖品」查看。提取现金奖励时，请前往「我的收益」申请提现，并核对提现信息。</p>
+        <p>中奖记录可在「我的奖品」查看。提取现金奖励时，请前往「我的钱包」申请提现，并核对提现信息。</p>
       </section>
     </div>
   );

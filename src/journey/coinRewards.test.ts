@@ -112,6 +112,20 @@ test('withdrawals use cash only and accept exact cents without overdrawing or re
   assert.equal(cashBalance(recordCashWithdrawal(withdrawn, '0.71', 'custom-2', beforeMidnight)), 0);
 });
 
+test('withdrawals cap each request at 200 yuan and retain older larger receipts', () => {
+  const ledger: CoinLedger = [{ kind: 'cash-exchange', id: 'funded-wallet', at: beforeMidnight, coins: 3_000_000 }];
+  for (const amount of ['199.99', '200', '200.00', 200]) {
+    const result = recordCashWithdrawal(ledger, amount, 'at-limit', beforeMidnight);
+    assert.equal(result.length, 2);
+    assert.equal(cashBalance(result), 30_000 - Math.round(Number(amount) * 100));
+  }
+  for (const amount of ['200.01', 200.01, '201', '300']) {
+    assert.equal(recordCashWithdrawal(ledger, amount, 'over-limit', beforeMidnight), ledger);
+  }
+  const history: CoinLedger = [...ledger, { kind: 'cash-withdrawal', id: 'older-withdrawal', at: beforeMidnight, cents: 20_100 }];
+  assert.deepEqual(readCoinLedger(JSON.stringify(history)), history);
+});
+
 test('previous direct withdrawals retain their original coin deductions', () => {
   const history: CoinLedger = [
     { kind: 'demo-credit', id: 'demo-credit', at: beforeMidnight, coins: 10_000 },

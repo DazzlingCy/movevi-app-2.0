@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type CSSProperties } from 'react';
 import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, Coins, Footprints, Gift, Globe2, Route, Sparkle, Users, Wallet, X } from 'lucide-react';
-import { COINS_PER_CENT, COINS_PER_YUAN, DAILY_COIN_CAP, MILEAGE_REWARDS, ROUTE_REWARDS, STARTER_COIN_REWARDS, WITHDRAWAL_TIERS, cashChange, coinChange, formatCashValue, parseWithdrawalCents, quoteCashExchange, type CoinEntry, type CoinTrack, type WithdrawalTier } from '../journey/coinRewards';
+import { COINS_PER_CENT, COINS_PER_YUAN, DAILY_COIN_CAP, MAX_WITHDRAWAL_CENTS, MILEAGE_REWARDS, ROUTE_REWARDS, STARTER_COIN_REWARDS, WITHDRAWAL_TIERS, cashChange, coinChange, formatCashValue, parseWithdrawalCents, quoteCashExchange, type CoinEntry, type CoinTrack, type WithdrawalTier } from '../journey/coinRewards';
 import { COIN_LOTTERY_NAME, COINS_PER_LANDMARK_MEDAL, MEDAL_LOTTERY_DRAW_COST } from '../journey/medalLottery';
 import type { useCoinRewards } from '../journey/useCoinRewards';
 import Modal from './journey/Modal';
@@ -184,14 +184,16 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
   const routeCount = Math.min(rewards.today.routes.size, ROUTE_REWARDS.length);
   const amount = tier === 'custom' ? customAmount : tier;
   const withdrawalCents = parseWithdrawalCents(amount);
+  const exceedsWithdrawalLimit = withdrawalCents !== null && withdrawalCents > MAX_WITHDRAWAL_CENTS;
   const canWithdraw = rewards.canSimulateWithdrawal && rewards.wechatBound && !withdrawPending && !withdrawn
-    && withdrawalCents !== null && rewards.cashCents >= withdrawalCents;
+    && withdrawalCents !== null && !exceedsWithdrawalLimit && rewards.cashCents >= withdrawalCents;
   const invalidAmount = tier === 'custom' && customAmount.trim() !== '' && withdrawalCents === null;
   const insufficientBalance = !withdrawn && withdrawalCents !== null && withdrawalCents > rewards.cashCents;
   const demoCreditLoaded = rewards.ledger.some(entry => entry.kind === 'demo-credit' || entry.kind === 'demo-cash-credit');
   const cashLabel = formatCashValue(rewards.cashCents);
   const withdrawalHint = invalidAmount ? '请输入大于 0、最多两位小数的金额。'
-    : insufficientBalance ? `现金余额不足，可用现金 ${cashLabel}`
+    : exceedsWithdrawalLimit ? `单次最高提现${MAX_WITHDRAWAL_CENTS / 100}元`
+      : insufficientBalance ? `现金余额不足，可用现金 ${cashLabel}`
       : !rewards.canSimulateWithdrawal ? '微信提现暂未开通。'
         : !rewards.wechatBound ? `可用现金 ${cashLabel}，请先绑定微信。` : `可用现金 ${cashLabel}`;
 
@@ -345,11 +347,11 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
         <section ref={walletRef} className={styles.wallet} aria-label="金币钱包">
           <div className={`${styles.walletTop} ${styles.walletSummary}`}>
             <button type="button" onClick={event => openHistory('history', event.currentTarget)}>
-              <span><Coins className={styles.walletCoin} size={15} aria-hidden="true" />金币收益 (金币)<ChevronRight size={14} aria-hidden="true" /></span>
+              <span><Coins className={styles.walletCoin} size={15} aria-hidden="true" />金币余额 (金币)<ChevronRight size={14} aria-hidden="true" /></span>
               <strong>{numberFormat.format(rewards.balance)}</strong>
             </button>
             <button type="button" onClick={event => openHistory('cashHistory', event.currentTarget)}>
-              <span><Wallet className={styles.walletCash} size={15} aria-hidden="true" />现金收益 (元)<ChevronRight size={14} aria-hidden="true" /></span>
+              <span><Wallet className={styles.walletCash} size={15} aria-hidden="true" />现金余额 (元)<ChevronRight size={14} aria-hidden="true" /></span>
               <strong>{cashLabel}</strong>
             </button>
           </div>
@@ -406,11 +408,11 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
           <header className={styles.earningsHeader}>
             <nav className={styles.earningsNav} aria-label="收益页导航">
               <button type="button" autoFocus ref={earningsBack} disabled={withdrawPending} onClick={onBackToLottery ?? closeEarnings} aria-label={onBackToLottery ? `返回${COIN_LOTTERY_NAME}` : '返回福利'}><ChevronLeft size={24} aria-hidden="true" /></button>
-              <h1 id="earnings-title">我的收益</h1>
+              <h1 id="earnings-title">我的钱包</h1>
             </nav>
             <div className={`${styles.walletTop} ${styles.earningsBalance}`}>
-              <button type="button" onClick={event => openHistory('history', event.currentTarget)}><span>金币收益 (金币)<ChevronRight size={14} aria-hidden="true" /></span><strong>{numberFormat.format(rewards.balance)}</strong></button>
-              <button type="button" onClick={event => openHistory('cashHistory', event.currentTarget)}><span>现金收益 (元)<ChevronRight size={14} aria-hidden="true" /></span><strong>{cashLabel}</strong></button>
+              <button type="button" onClick={event => openHistory('history', event.currentTarget)}><span>金币余额 (金币)<ChevronRight size={14} aria-hidden="true" /></span><strong>{numberFormat.format(rewards.balance)}</strong></button>
+              <button type="button" onClick={event => openHistory('cashHistory', event.currentTarget)}><span>现金余额 (元)<ChevronRight size={14} aria-hidden="true" /></span><strong>{cashLabel}</strong></button>
             </div>
           </header>
 
@@ -451,9 +453,9 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
                   setTier('custom');
                   setCustomAmount(event.target.value);
                 }} disabled={withdrawn || withdrawPending}
-                aria-invalid={(invalidAmount || (tier === 'custom' && insufficientBalance)) || undefined}
+                aria-invalid={(invalidAmount || exceedsWithdrawalLimit || (tier === 'custom' && insufficientBalance)) || undefined}
                 aria-describedby="custom-withdrawal-hint" />
-              <small id="custom-withdrawal-hint" data-error={invalidAmount || insufficientBalance} role="status">{withdrawalHint}</small>
+              <small id="custom-withdrawal-hint" data-error={invalidAmount || exceedsWithdrawalLimit || insufficientBalance} role="status">{withdrawalHint}</small>
             </div>
             <button className={`${styles.confirm} ${styles.confirmWechat}`} type="button" disabled={!canWithdraw} onClick={submitWithdrawal}>
               {withdrawPending ? '提交中…' : '立即提现'}
@@ -501,8 +503,8 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
               <h1 id="history-title">收益记录</h1>
             </nav>
             <dl className={styles.historyBalance}>
-              <div><dt>金币收益 (金币)</dt><dd>{numberFormat.format(rewards.balance)}</dd></div>
-              <div><dt>现金收益 (元)</dt><dd>{cashLabel}</dd></div>
+              <div><dt>金币余额 (金币)</dt><dd>{numberFormat.format(rewards.balance)}</dd></div>
+              <div><dt>现金余额 (元)</dt><dd>{cashLabel}</dd></div>
             </dl>
             <p className={styles.historyRate}>{exchangeRate}，确认兑换后计入现金余额。</p>
           </header>
@@ -578,7 +580,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
             <li>
               <strong>兑换与提现。</strong>{exchangeRate}，手动确认后计入现金余额。每次最低兑换 ¥0.01，不足一分钱的金币继续保留。
               绑定微信后，可选择 {WITHDRAWAL_TIERS.map(amount => `¥${amount}`).join('、')} 或自定义金额申请提现。
-              单次最高提现 ¥200，且不得超过可提现余额。提交申请后 1–3 个工作日内到账。
+              单次最高提现 {formatCashValue(MAX_WITHDRAWAL_CENTS)}，且不得超过可提现余额。提交申请后 1–3 个工作日内到账。
             </li>
           </ol>
         </Modal>
