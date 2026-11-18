@@ -561,26 +561,39 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
       )}
 
       {rulesOpen && (
-        <Modal labelId={headingId} onClose={() => setRulesOpen(false)} className={styles.sheet} backdropClassName={styles.backdrop}>
+        <Modal labelId={headingId} onClose={() => setRulesOpen(false)} className={`${styles.sheet} ${styles.rulesSheet}`} backdropClassName={styles.backdrop}>
           <header className={styles.sheetHeader}><h2 id={headingId}>活动规则</h2><button type="button" onClick={() => setRulesOpen(false)} aria-label="关闭活动规则"><X size={21} aria-hidden="true" /></button></header>
           <ol className={styles.rules}>
             <li>
-              <strong>里程奖励。</strong>仅统计观看路线视频期间产生的运动里程，以运动设备记录为准。
-              当日累计达到 {MILEAGE_REWARDS.map(({ goal, coins }) => `${goal} 公里奖励 ${coins} 金币`).join('、')}。
+              <h3>里程奖励</h3>
+              <p>仅统计观看路线视频期间产生的运动里程，以运动设备记录为准。</p>
+              <p>当日累计达到以下里程，可获得对应奖励。</p>
+              <dl className={styles.ruleTiers} aria-label="里程奖励档位">
+                {MILEAGE_REWARDS.map(({ goal, coins }) => (
+                  <div key={goal}><dt>{goal} 公里</dt><dd>{coins} <span>金币</span></dd></div>
+                ))}
+              </dl>
             </li>
             <li>
-              <strong>路线通关奖励。</strong>完整播放一条路线的视频至结束即为通关，提前退出不计。
-              同一路线当天只计一次，次日可重新计入。
-              当天通关不同路线，{ROUTE_REWARDS.map(({ goal, coins }) => `第 ${goal} 条奖励 ${coins} 金币`).join('、')}。
+              <h3>路线通关奖励</h3>
+              <p>完整播放一条路线的视频至结束即为通关，提前退出不计。同一路线当天只计一次，次日可重新计入。</p>
+              <p>当天通关不同路线，可获得对应奖励。</p>
+              <dl className={styles.ruleTiers} aria-label="路线通关奖励档位">
+                {ROUTE_REWARDS.map(({ goal, coins }) => (
+                  <div key={goal}><dt>第 {goal} 条</dt><dd>{coins} <span>金币</span></dd></div>
+                ))}
+              </dl>
             </li>
             <li>
-              <strong>奖励结算。</strong>里程和通关奖励可叠加，达标后在结算时自动入账，每档每天只发放一次。
-              运动任务每天最多获得 {DAILY_COIN_CAP} 金币。每日任务于北京时间 0 点重置，已入账金币继续保留。
+              <h3>奖励结算</h3>
+              <p>里程和通关奖励可叠加，达标后在结算时自动入账，每档每天只发放一次。运动任务每天最多获得 <strong>{DAILY_COIN_CAP} 金币</strong>。</p>
+              <p>每日任务于北京时间 0 点重置，已入账金币继续保留。</p>
             </li>
             <li>
-              <strong>兑换与提现。</strong>{exchangeRate}，手动确认后计入现金余额。每次最低兑换 ¥0.01，不足一分钱的金币继续保留。
-              绑定微信后，可选择 {WITHDRAWAL_TIERS.map(amount => `¥${amount}`).join('、')} 或自定义金额申请提现。
-              单次最高提现 {formatCashValue(MAX_WITHDRAWAL_CENTS)}，且不得超过可提现余额。提交申请后 1–3 个工作日内到账。
+              <h3>兑换与提现</h3>
+              <p>{exchangeRate}，手动确认后计入现金余额。每次最低兑换 ¥0.01，不足一分钱的金币继续保留。</p>
+              <p>绑定微信后，可选择 {WITHDRAWAL_TIERS.map(amount => `¥${amount}`).join('、')} 或自定义金额申请提现。单次最高提现 <strong>{formatCashValue(MAX_WITHDRAWAL_CENTS)}</strong>，且不得超过可提现余额。</p>
+              <p>提交申请后 1–3 个工作日内到账。</p>
             </li>
           </ol>
         </Modal>
