@@ -566,7 +566,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
           <ol className={styles.rules}>
             <li>
               <h3>里程奖励</h3>
-              <p>仅统计观看路线视频期间产生的运动里程，以运动设备记录为准。</p>
+              <p>仅统计观看路线视频期间产生的运动里程。</p>
               <p>当日累计达到 {MILEAGE_REWARDS.map(({ goal, coins }) => `${goal} 公里奖励 ${coins} 金币`).join('、')}。</p>
             </li>
             <li>
@@ -575,8 +575,8 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
               <p>当天完成不同路线，{ROUTE_REWARDS.map(({ goal, coins }) => `第 ${goal} 条奖励 ${coins} 金币`).join('、')}。</p>
             </li>
             <li>
-              <h3>奖励结算</h3>
-              <p>里程奖励和路线完成奖励可叠加，达标后在结算时自动入账，每档每天只发放一次。运动任务每天最多获得 <strong>{DAILY_COIN_CAP} 金币</strong>。</p>
+              <h3>奖励领取</h3>
+              <p>里程奖励和路线完成奖励可叠加，达标后领取时自动入账，每档每天只发放一次。运动任务每天最多获得 <strong>{DAILY_COIN_CAP} 金币</strong>。</p>
               <p>每日任务于北京时间 0 点重置，已入账金币继续保留。</p>
             </li>
             <li>
