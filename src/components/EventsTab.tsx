@@ -563,7 +563,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
           <header className={styles.sheetHeader}><h2 id={headingId}>活动规则</h2><button type="button" onClick={() => setRulesOpen(false)} aria-label="关闭活动规则"><X size={21} aria-hidden="true" /></button></header>
           <ol className={styles.rules}>
             <li>
-              <strong>里程奖励。</strong>以运动设备记录的有效里程为准。
+              <strong>里程奖励。</strong>仅统计观看路线视频期间产生的运动里程，以运动设备记录为准。
               当日累计达到 {MILEAGE_REWARDS.map(({ goal, coins }) => `${goal} 公里奖励 ${coins} 金币`).join('、')}。
             </li>
             <li>
@@ -578,7 +578,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
             <li>
               <strong>兑换与提现。</strong>{exchangeRate}，手动确认后计入现金余额。每次最低兑换 ¥0.01，不足一分钱的金币继续保留。
               绑定微信后，可选择 {WITHDRAWAL_TIERS.map(amount => `¥${amount}`).join('、')} 或自定义金额申请提现。
-              提现金额不得超过可提现余额，提交申请后 1–3 个工作日内到账。
+              单次最高提现 ¥200，且不得超过可提现余额。提交申请后 1–3 个工作日内到账。
             </li>
           </ol>
         </Modal>
