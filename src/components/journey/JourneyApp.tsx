@@ -263,10 +263,10 @@ type ActivityRouteTarget = {
   taskId: string;
 };
 
-function HomeRunModeButton({ onClick }: { onClick: () => void }) {
+function HomeRunModeButton({ modeName, onClick }: { modeName?: string; onClick: () => void }) {
   return (
-    <button className="home-run-mode-entry" type="button" aria-label="跑步模式" aria-haspopup="dialog" title="跑步模式" onClick={onClick}>
-      <SlidersHorizontal aria-hidden="true" /><span>跑步模式</span>
+    <button className="home-run-mode-entry" type="button" data-mode-selected={modeName ? true : undefined} aria-label={modeName ? `跑步模式：${modeName}，切换模式` : '跑步模式'} aria-haspopup="dialog" title={modeName ? `切换跑步模式（${modeName}）` : '跑步模式'} onClick={onClick}>
+      <SlidersHorizontal aria-hidden="true" /><span>{modeName ?? '跑步模式'}</span>
     </button>
   );
 }
@@ -2180,7 +2180,7 @@ export default function JourneyApp() {
                   scene={selectedScene}
                   homeControls={<>
                     <div className="home-destination-actions">
-                      <HomeRunModeButton onClick={openRunScenes} />
+                      <HomeRunModeButton modeName={selectedScene.label} onClick={openRunScenes} />
                       <HomeCityListButton hasNewCity={newCityIds.length > 0} label="城市列表，切回城市卡片模式" onClick={() => selectRunScene(null)} />
                     </div>
                     <HomeQuickActions deviceConnected={deviceConnected} onDevice={() => setUtilityMode('device')} onLegacyFeature={openLegacyFeature} />

@@ -41,7 +41,7 @@ export default function RunSceneContentView({ scene, homeControls, routeIndex, o
     <main className={styles.page + ' ' + styles.sceneHome} style={backdropStyle} id="main-content">
       <header className={styles.homeBar}>{homeControls}</header>
       <div className={styles.content}>
-        <header className={styles.listHeader}><h1>{scene.label}</h1></header>
+        <h1 className="sr-only">{scene.label}</h1>
         <div className={styles.sceneRail} aria-label={scene.label + '场景'}>
           <RouteCardRail items={cards} initialIndex={routeIndex} onSelect={index => {
             setActiveIndex(index);

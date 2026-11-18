@@ -43,7 +43,6 @@
   padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px;
   background: linear-gradient(180deg, #090b1380, #090b1300);
 }
-.sceneHome .listHeader h1 { font-size: clamp(23px, 6.8vw, 30px); overflow-wrap: anywhere; }
 .content {
   max-width: 550px;
   margin: 0 auto;
@@ -60,7 +59,11 @@
 .listHeader time { color: var(--recommendation-muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .listHeader h1 { margin: 0; font-size: clamp(28px, 8.6vw, 34px); font-weight: 800; line-height: 1.15; }
 .sceneHome .content { display: flex; flex: 1 0 auto; flex-direction: column; width: 100%; padding-bottom: 0; }
-.sceneHome .listHeader { margin-bottom: 0; text-shadow: 0 2px 12px #090b13d9; }
+
+@media (max-width: 380px) {
+  .homeBar :global(.home-city-list-entry) { min-width: 38px; padding-inline: 8px; }
+  .homeBar :global(.home-city-list-entry > span:not(.home-city-list-entry__new)) { display: none; }
+}
 
 .routes { list-style: none; margin: 0; padding: 0; }
 .routes > li:first-child:not(:only-child) { margin-bottom: 18px; }

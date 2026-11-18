@@ -1026,7 +1026,7 @@ body { background: var(--bg); }
 .home-city-list-entry__new { top:-5px; right:-7px; }
 .page--home:has(.destination-carousel.is-browsing) .home-destination-actions { opacity:0; visibility:hidden; }
 .page--home:has(.destination-carousel.is-browsing) .home-destination-actions > button { pointer-events:none; }
-@media (max-width:380px) { .home-run-mode-entry span { display:none; } }
+@media (max-width:380px) { .home-run-mode-entry:not([data-mode-selected]) span { display:none; } }
 @media(hover:hover) {
   .home-city-list-entry:hover { background:rgba(13,25,34,.84); }
   .home-run-mode-entry:hover { background: color-mix(in srgb, var(--run-mode-accent) 12%, var(--journey-surface)); border-color: var(--run-mode-accent); }
