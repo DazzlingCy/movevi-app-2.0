@@ -22,7 +22,7 @@ const numberFormat = new Intl.NumberFormat('zh-CN');
 const entryDate = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
 });
-const trackNames = { mileage: '累计运动里程', route: '路线通关' };
+const trackNames = { mileage: '累计运动里程', route: '路线完成' };
 const historyTabs = { history: '金币记录', cashHistory: '现金记录' } as const;
 const previewHistoryRowCount = 5;
 const coinHistoryExamples = [
@@ -114,7 +114,7 @@ function RewardHistory({ ledger, showCash, showExamples }: { ledger: CoinEntry[]
         : entry.kind === 'cash-withdrawal' ? '微信提现'
         : entry.kind === 'withdrawal' ? '模拟提现' : '演示余额',
       date: entryDate.format(entry.at),
-      detail: entry.kind === 'exercise' && !showCash ? `里程 +${entry.reward.mileage} · 通关 +${entry.reward.route}` : '',
+      detail: entry.kind === 'exercise' && !showCash ? `里程 +${entry.reward.mileage} · 路线完成 +${entry.reward.route}` : '',
       delta: change(entry),
     })),
     ...exampleRows.slice(0, exampleCount).map((entry, index) => ({
@@ -378,7 +378,7 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
               <RewardMilestones tiers={MILEAGE_REWARDS} value={rewards.today.meters / 1000} track="mileage" starterClaimed={rewards.starterClaims.has('mileage')} replayStarter={rewards.replayStarterClaims} onClaim={() => void claimStarter('mileage')} />
             </div>
             <div className={styles.task}>
-              <div className={styles.taskHeading}><span data-theme="gold"><Route size={18} aria-hidden="true" /></span><h3>路线通关</h3><strong>{routeCount}<small> / {ROUTE_REWARDS.length} 条</small></strong></div>
+              <div className={styles.taskHeading}><span data-theme="gold"><Route size={18} aria-hidden="true" /></span><h3>{trackNames.route}</h3><strong>{routeCount}<small> / {ROUTE_REWARDS.length} 条</small></strong></div>
               <RewardMilestones tiers={ROUTE_REWARDS} value={routeCount} track="route" starterClaimed={rewards.starterClaims.has('route')} replayStarter={rewards.replayStarterClaims} onClaim={() => void claimStarter('route')} />
             </div>
             {claimError && <p className={styles.claimError} role="alert">{claimError}</p>}
@@ -567,26 +567,16 @@ export default function EventsTab({ rewards, onRun, onToast, onSelectMedalLotter
             <li>
               <h3>里程奖励</h3>
               <p>仅统计观看路线视频期间产生的运动里程，以运动设备记录为准。</p>
-              <p>当日累计达到以下里程，可获得对应奖励。</p>
-              <dl className={styles.ruleTiers} aria-label="里程奖励档位">
-                {MILEAGE_REWARDS.map(({ goal, coins }) => (
-                  <div key={goal}><dt>{goal} 公里</dt><dd>{coins} <span>金币</span></dd></div>
-                ))}
-              </dl>
+              <p>当日累计达到 {MILEAGE_REWARDS.map(({ goal, coins }) => `${goal} 公里奖励 ${coins} 金币`).join('、')}。</p>
             </li>
             <li>
-              <h3>路线通关奖励</h3>
-              <p>完整播放一条路线的视频至结束即为通关，提前退出不计。同一路线当天只计一次，次日可重新计入。</p>
-              <p>当天通关不同路线，可获得对应奖励。</p>
-              <dl className={styles.ruleTiers} aria-label="路线通关奖励档位">
-                {ROUTE_REWARDS.map(({ goal, coins }) => (
-                  <div key={goal}><dt>第 {goal} 条</dt><dd>{coins} <span>金币</span></dd></div>
-                ))}
-              </dl>
+              <h3>{trackNames.route}奖励</h3>
+              <p>完整播放一条路线的视频至结束即为完成，提前退出不计。同一路线当天只计一次，次日可重新计入。</p>
+              <p>当天完成不同路线，{ROUTE_REWARDS.map(({ goal, coins }) => `第 ${goal} 条奖励 ${coins} 金币`).join('、')}。</p>
             </li>
             <li>
               <h3>奖励结算</h3>
-              <p>里程和通关奖励可叠加，达标后在结算时自动入账，每档每天只发放一次。运动任务每天最多获得 <strong>{DAILY_COIN_CAP} 金币</strong>。</p>
+              <p>里程奖励和路线完成奖励可叠加，达标后在结算时自动入账，每档每天只发放一次。运动任务每天最多获得 <strong>{DAILY_COIN_CAP} 金币</strong>。</p>
               <p>每日任务于北京时间 0 点重置，已入账金币继续保留。</p>
             </li>
             <li>
